@@ -1,0 +1,133 @@
+import { PrismaClient } from '@prisma/client';
+import { TrackingService } from '../modules/tracking/tracking.service';
+import { ETAService } from '../modules/tracking/services/eta.service';
+import { GeofenceService } from '../modules/tracking/services/geofence.service';
+
+const prisma = new PrismaClient();
+
+async function testETADirectly() {
+  console.log('🚀 Testing ETA calculations directly...');
+
+  try {
+    // Create service instances
+    const etaService = new ETAService(prisma, { get: () => null } as any);
+    const geofenceService = new GeofenceService(prisma);
+    const trackingService = new TrackingService(
+      prisma,
+      undefined, // trackingGateway
+      etaService,
+      geofenceService
+    );
+
+    // Test location data
+    const testLocationData = {
+      jobId: 'job-test-001',
+      driverId: 'driver-test-001',
+      vehicleId: 'vehicle-test-001',
+      lat: 19.2183, // Slightly further north from Mumbai (current position)
+      lng: 72.9781,
+      accuracy: 5.0,
+      speed: 70.0,
+      heading: 45.0,
+      timestamp: new Date().toISOString(),
+      batteryLevel: 80,
+      source: 'MOBILE_GPS',
+      metadata: { test: true }
+    };
+
+    console.log('📍 Updating location and calculating ETA...');
+    console.log('Location data:', testLocationData);
+
+    // Call the tracking service directly
+    const result = await trackingService.updateLocation(testLocationData);
+    console.log('✅ Location update result:', result);
+
+    // Check ETA calculations were created
+    console.log('\n📊 Checking ETA calculations...');
+    const etaCalculations = await prisma.eTACalculation.findMany({
+      where: { jobId: testLocationData.jobId },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      include: {
+        job: {
+          select: { id: true, status: true, etaTs: true }
+        }
+      }
+    });
+
+    console.log(`Found ${etaCalculations.length} ETA calculations for job ${testLocationData.jobId}:`);
+    etaCalculations.forEach((eta, index) => {
+      console.log(`${index + 1}. ETA Calculation:`);
+      console.log(`   - ID: ${eta.id}`);
+      console.log(`   - Current position: ${eta.currentLat}, ${eta.currentLng}`);
+      console.log(`   - Destination: ${eta.destinationLat}, ${eta.destinationLng}`);
+      console.log(`   - ETA: ${eta.estimatedTimeMinutes} minutes`);
+      console.log(`   - Distance: ${eta.estimatedDistance}m`);
+      console.log(`   - Method: ${eta.calculationMethod}`);
+      console.log(`   - Confidence: ${eta.confidence}`);
+      console.log(`   - Traffic factor: ${eta.trafficFactor}`);
+      console.log(`   - Job ETA timestamp: ${eta.job.etaTs}`);
+      console.log(`   - Created: ${eta.createdAt}`);
+      console.log('');
+    });
+
+    // Test another location update to see progression
+    console.log('📍 Testing another location update (closer to destination)...');
+    const secondLocationData = {
+      ...testLocationData,
+      lat: 21.1458, // Somewhere between Mumbai and Delhi
+      lng: 75.7478,
+      speed: 85.0,
+      timestamp: new Date().toISOString()
+    };
+
+    const secondResult = await trackingService.updateLocation(secondLocationData);
+    console.log('✅ Second location update result:', secondResult);
+
+    // Check the latest ETA calculation
+    const latestETA = await prisma.eTACalculation.findFirst({
+      where: { jobId: testLocationData.jobId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        job: { select: { etaTs: true } }
+      }
+    });
+
+    if (latestETA) {
+      console.log('\n📈 Latest ETA calculation:');
+      console.log(`   - Position: ${latestETA.currentLat}, ${latestETA.currentLng}`);
+      console.log(`   - Updated ETA: ${latestETA.estimatedTimeMinutes} minutes`);
+      console.log(`   - Distance remaining: ${latestETA.estimatedDistance}m`);
+      console.log(`   - Job ETA updated to: ${latestETA.job.etaTs}`);
+    }
+
+    // Check latest location tracking records
+    console.log('\n📍 Latest location tracking records:');
+    const locations = await prisma.locationTracking.findMany({
+      where: { jobId: testLocationData.jobId },
+      orderBy: { timestamp: 'desc' },
+      take: 3,
+      include: {
+        job: { select: { id: true, status: true, etaTs: true } },
+        driver: { select: { name: true } }
+      }
+    });
+
+    locations.forEach((loc, index) => {
+      console.log(`${index + 1}. ${loc.driver.name}:`);
+      console.log(`   - Location: ${loc.lat}, ${loc.lng}`);
+      console.log(`   - Speed: ${loc.speed} km/h`);
+      console.log(`   - Timestamp: ${loc.timestamp}`);
+      console.log(`   - Job ETA: ${loc.job.etaTs}`);
+      console.log('');
+    });
+
+  } catch (error) {
+    console.error('❌ Error testing ETA calculations:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Run the test
+testETADirectly().catch(console.error);

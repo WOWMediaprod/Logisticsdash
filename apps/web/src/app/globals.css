@@ -1,0 +1,304 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Emergency CSS - Direct styles for working dashboard */
+.bg-red-500 {
+  background-color: #ef4444 !important;
+}
+
+.text-white {
+  color: white !important;
+}
+
+.p-4 {
+  padding: 1rem !important;
+}
+
+.m-4 {
+  margin: 1rem !important;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem !important;
+}
+
+.min-h-screen {
+  min-height: 100vh !important;
+}
+
+.bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #dbeafe, #ffffff, #ecfeff) !important;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.container {
+  max-width: 1200px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.mx-auto {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.px-6 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+.py-4 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+.py-8 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+.flex {
+  display: flex !important;
+}
+
+.items-center {
+  align-items: center !important;
+}
+
+.justify-between {
+  justify-content: space-between !important;
+}
+
+.text-2xl {
+  font-size: 1.5rem !important;
+}
+
+.font-bold {
+  font-weight: 700 !important;
+}
+
+.text-gray-900 {
+  color: #111827 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+.hover\:bg-blue-700:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.px-6 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+.py-3 {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem !important;
+}
+
+.font-semibold {
+  font-weight: 600 !important;
+}
+
+.transition-all {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.grid {
+  display: grid !important;
+}
+
+.md\:grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.gap-6 {
+  gap: 1.5rem !important;
+}
+
+.p-6 {
+  padding: 1.5rem !important;
+}
+
+.rounded-2xl {
+  border-radius: 1rem !important;
+}
+
+.text-sm {
+  font-size: 0.875rem !important;
+}
+
+.text-3xl {
+  font-size: 1.875rem !important;
+}
+
+.w-12 {
+  width: 3rem !important;
+}
+
+.h-12 {
+  height: 3rem !important;
+}
+
+.bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.text-blue-600 {
+  color: #2563eb !important;
+}
+
+.bg-yellow-100 {
+  background-color: #fef3c7 !important;
+}
+
+.text-yellow-600 {
+  color: #d97706 !important;
+}
+
+.bg-green-100 {
+  background-color: #dcfce7 !important;
+}
+
+.text-green-600 {
+  color: #16a34a !important;
+}
+
+.bg-purple-100 {
+  background-color: #f3e8ff !important;
+}
+
+.text-purple-600 {
+  color: #9333ea !important;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Apple-style glass effect */
+.glass {
+  @apply backdrop-blur-md bg-white/70 dark:bg-gray-900/70 shadow-lg;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(155, 155, 155, 0.5);
+}
+
+/* Map container styling */
+.mapbox-gl-map {
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}

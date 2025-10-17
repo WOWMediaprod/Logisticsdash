@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Tracking Dashboard - Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=DEMO_KEY&callback=initMap"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <h1 class="text-xl font-semibold text-gray-900">Live Tracking Dashboard</h1>
+                    <div class="flex items-center space-x-4">
+                        <span class="flex items-center text-sm text-green-600">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            2 Active Jobs
+                        </span>
+                        <button onclick="window.location.reload()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Job Cards -->
+                <div class="lg:col-span-1 space-y-6">
+                    <h2 class="text-lg font-medium text-gray-900">Active Jobs</h2>
+
+                    <!-- Job 1 -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md transition-shadow" onclick="focusJob(1)">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <span class="text-sm font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">IN_TRANSIT</span>
+                                </div>
+                                <h3 class="mt-3 text-lg font-semibold text-gray-900">ABC Corp</h3>
+                                <p class="text-sm text-gray-600">Mumbai Port → Delhi Warehouse</p>
+
+                                <!-- ETA Display -->
+                                <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-blue-700">Estimated Arrival</span>
+                                        <span class="text-lg font-bold text-blue-800">22 hours</span>
+                                    </div>
+                                    <p class="text-xs text-blue-600 mt-1">Expected: Tomorrow 7:30 PM</p>
+                                </div>
+
+                                <div class="mt-4 space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Driver:</span>
+                                        <span class="text-gray-900">Raj Kumar Singh</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Vehicle:</span>
+                                        <span class="text-gray-900">MH-01-AB-1234</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Speed:</span>
+                                        <span class="text-gray-900">65 km/h</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Last Update:</span>
+                                        <span class="text-green-600">2 minutes ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Job 2 -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md transition-shadow" onclick="focusJob(2)">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    <span class="text-sm font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full">AT_PICKUP</span>
+                                </div>
+                                <h3 class="mt-3 text-lg font-semibold text-gray-900">XYZ Ltd</h3>
+                                <p class="text-sm text-gray-600">Pune Factory → Bangalore Hub</p>
+
+                                <!-- ETA Display -->
+                                <div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-orange-700">Estimated Duration</span>
+                                        <span class="text-lg font-bold text-orange-800">14 hours</span>
+                                    </div>
+                                    <p class="text-xs text-orange-600 mt-1">After pickup completion</p>
+                                </div>
+
+                                <div class="mt-4 space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Driver:</span>
+                                        <span class="text-gray-900">Suresh Patil</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Vehicle:</span>
+                                        <span class="text-gray-900">MH-12-CD-5678</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Speed:</span>
+                                        <span class="text-gray-900">0 km/h (Stationary)</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Last Update:</span>
+                                        <span class="text-green-600">5 minutes ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="p-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Live Vehicle Tracking</h3>
+                            <p class="text-sm text-gray-600 mt-1">Real-time GPS positions with ETA calculations</p>
+                        </div>
+                        <div id="map" class="h-[600px] bg-gray-100 flex items-center justify-center">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-900">Interactive Map</h4>
+                                <p class="text-sm text-gray-600">Shows vehicle locations with ETA markers</p>
+                                <p class="text-xs text-gray-500 mt-2">🚛 Job 1: Mumbai → Delhi (22h ETA)</p>
+                                <p class="text-xs text-gray-500">🚚 Job 2: Pune → Bangalore (14h ETA)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">Total Jobs</p>
+                            <p class="text-2xl font-semibold text-gray-900">2</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">With Location</p>
+                            <p class="text-2xl font-semibold text-gray-900">2</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">Avg ETA</p>
+                            <p class="text-2xl font-semibold text-gray-900">18h</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L5.168 19.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">Stale Updates</p>
+                            <p class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function focusJob(jobId) {
+            console.log(`Focusing on job ${jobId}`);
+            // In real implementation, this would center the map on the selected job
+            alert(`Focused on Job ${jobId}.\n\nIn the full implementation, this would:\n• Center the map on the vehicle\n• Highlight the route\n• Show detailed ETA information`);
+        }
+
+        function initMap() {
+            // This would normally initialize Google Maps
+            console.log('Map initialization would happen here with real Google Maps API key');
+        }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            console.log('Simulating real-time location updates...');
+            // In real implementation, this would update locations via WebSocket
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "logistics-platform",
+  "version": "1.0.0-S0",
+  "description": "Production-ready logistics platform for container hires",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @logistics/api dev\" \"pnpm --filter @logistics/web dev\"",
+    "dev:api": "pnpm --filter @logistics/api start:dev",
+    "dev:web": "pnpm --filter @logistics/web dev",
+    "build": "pnpm --filter @logistics/api build && pnpm --filter @logistics/web build",
+    "build:api": "pnpm --filter @logistics/api build",
+    "build:web": "pnpm --filter @logistics/web build",
+    "start": "pnpm --filter @logistics/api start:prod",
+    "lint": "pnpm --filter @logistics/api lint && pnpm --filter @logistics/web lint",
+    "test": "pnpm --filter @logistics/api test && pnpm --filter @logistics/web test",
+    "type-check": "pnpm --filter @logistics/api tsc --noEmit && pnpm --filter @logistics/web type-check",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "db:migrate": "pnpm --filter @logistics/api prisma:migrate",
+    "db:generate": "pnpm --filter @logistics/api prisma:generate",
+    "db:seed": "pnpm --filter @logistics/api prisma:seed",
+    "db:studio": "pnpm --filter @logistics/api prisma studio",
+    "setup": "pnpm install && pnpm docker:up && sleep 10 && pnpm db:generate && pnpm db:migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.16.1"
+}
