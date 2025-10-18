@@ -201,7 +201,8 @@ export default function DriverTracking() {
           });
           return;
         } catch (permApiError) {
-          addDebugLog(`Permission API failed: ${permApiError.message}`);
+          const errorMsg = permApiError instanceof Error ? permApiError.message : String(permApiError);
+          addDebugLog(`Permission API failed: ${errorMsg}`);
         }
       }
 
@@ -210,7 +211,8 @@ export default function DriverTracking() {
       await testGeolocationDirectly();
 
     } catch (err) {
-      addErrorLog(`All permission checks failed: ${err.message}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      addErrorLog(`All permission checks failed: ${errorMsg}`);
       // Set unknown state but allow user to try manual request
       setLocationPermission('prompt');
       addDebugLog('Permission status unknown - user can try manual request');
@@ -271,7 +273,8 @@ export default function DriverTracking() {
         navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
         addDebugLog('iOS Safari getCurrentPosition request initiated...');
       } catch (err) {
-        addErrorLog(`iOS Safari geolocation request failed: ${err}`);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        addErrorLog(`iOS Safari geolocation request failed: ${errorMsg}`);
         resolve(false);
       }
     });
