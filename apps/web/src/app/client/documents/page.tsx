@@ -17,6 +17,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { getApiUrl } from '../../../lib/api-config';
 
 type DocumentType =
   | 'BOL'
@@ -76,7 +77,7 @@ export default function DocumentsPage() {
       setLoading(true);
 
       try {
-        const response = await fetch(`/api/v1/documents`, {
+        const response = await fetch(getApiUrl(`/api/v1/documents`), {
           headers: { 'Accept': 'application/json' }
         });
 

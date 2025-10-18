@@ -16,6 +16,7 @@ import {
   Phone
 } from 'lucide-react';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { getApiUrl } from '../../../lib/api-config';
 
 interface Job {
   id: string;
@@ -96,7 +97,7 @@ export default function TrackingPage() {
       setLoading(true);
 
       try {
-        const response = await fetch(`/api/v1/jobs?limit=50`, {
+        const response = await fetch(getApiUrl(`/api/v1/jobs?limit=50`), {
           headers: { 'Accept': 'application/json' }
         });
 

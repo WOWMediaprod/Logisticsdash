@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { useClientAuth } from '../../../contexts/ClientAuthContext';
+import { getApiUrl } from '../../../lib/api-config';
 import {
   ArrowLeft,
   MapPin,
@@ -91,7 +92,7 @@ export default function JobRequestPage() {
       return;
     }
 
-    fetch(`/api/v1/routes?companyId=${companyId}&clientId=${formData.clientId}&isActive=true`)
+    fetch(getApiUrl(`/api/v1/routes?companyId=${companyId}&clientId=${formData.clientId}&isActive=true`))
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -144,7 +145,7 @@ export default function JobRequestPage() {
         estimatedValue: formData.estimatedValue ? parseFloat(formData.estimatedValue) : undefined,
       };
 
-      const response = await fetch('/api/v1/job-requests', {
+      const response = await fetch(getApiUrl('/api/v1/job-requests'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

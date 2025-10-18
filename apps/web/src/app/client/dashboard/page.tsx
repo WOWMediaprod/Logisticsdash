@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { useClientAuth } from '../../../contexts/ClientAuthContext';
+import { getApiUrl } from '../../../lib/api-config';
 import { ArrowLeft, Package, Clock, CheckCircle, MapPin, Truck, AlertCircle } from 'lucide-react';
 
 interface Job {
@@ -100,14 +101,14 @@ export default function ClientDashboardPage() {
 
       try {
         // Load jobs for this client
-        const jobsResponse = await fetch(`/api/v1/jobs?companyId=${companyId}&clientId=${clientId}&limit=50`);
+        const jobsResponse = await fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&clientId=${clientId}&limit=50`));
         const jobsResult = await jobsResponse.json();
         if (jobsResult.success) {
           setJobs(jobsResult.data);
         }
 
         // Load job requests for this client
-        const requestsResponse = await fetch(`/api/v1/job-requests?companyId=${companyId}&clientId=${clientId}&limit=50`);
+        const requestsResponse = await fetch(getApiUrl(`/api/v1/job-requests?companyId=${companyId}&clientId=${clientId}&limit=50`));
         const requestsResult = await requestsResponse.json();
         if (requestsResult.success) {
           setJobRequests(requestsResult.data);

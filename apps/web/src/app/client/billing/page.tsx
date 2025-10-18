@@ -18,6 +18,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { getApiUrl } from '../../../lib/api-config';
 
 interface Bill {
   id: string;
@@ -97,10 +98,10 @@ export default function ClientBillingPage() {
       try {
         // Note: companyId is handled by @CurrentCompany() decorator in backend (demo mode)
         const [statsResponse, billsResponse] = await Promise.all([
-          fetch(`/api/v1/bills/stats`, {
+          fetch(getApiUrl(`/api/v1/bills/stats`), {
             headers: { 'Accept': 'application/json' }
           }),
-          fetch(`/api/v1/bills?limit=50`, {
+          fetch(getApiUrl(`/api/v1/bills?limit=50`), {
             headers: { 'Accept': 'application/json' }
           })
         ]);
