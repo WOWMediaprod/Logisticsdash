@@ -425,25 +425,6 @@ function BillCard({
   index: number;
   onClick: () => void;
 }) {
-  const statusConfig = getStatusConfig(bill.status);
-  const StatusIcon = statusConfig.icon;
-
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'PAID':
@@ -473,6 +454,25 @@ function BillCard({
         };
     }
   };
+
+  const formatCurrency = (amount: number, currency: string = 'INR') => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const statusConfig = getStatusConfig(bill.status);
+  const StatusIcon = statusConfig.icon;
 
   return (
     <motion.div
@@ -537,36 +537,6 @@ function BillCard({
 }
 
 function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
-  const statusConfig = getStatusConfig(bill.status);
-  const StatusIcon = statusConfig.icon;
-
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Not set';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  const formatDateTime = (dateStr: string | null) => {
-    if (!dateStr) return 'Not set';
-    return new Date(dateStr).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'PAID':
@@ -596,6 +566,36 @@ function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
         };
     }
   };
+
+  const formatCurrency = (amount: number, currency: string = 'INR') => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Not set';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateStr: string | null) => {
+    if (!dateStr) return 'Not set';
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const statusConfig = getStatusConfig(bill.status);
+  const StatusIcon = statusConfig.icon;
 
   return (
     <div className="container mx-auto px-4 py-8">
