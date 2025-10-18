@@ -116,9 +116,9 @@ export default function TrackingPage() {
   const { socket, isConnected, joinTracking } = useSocket();
 
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const driverMarkersRef = useRef<google.maps.Marker[]>([]);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const driverMarkersRef = useRef<any[]>([]);
 
   const [trackingData, setTrackingData] = useState<TrackingJob[]>([]);
   const [summary, setSummary] = useState<TrackingResponse["summary"] | null>(null);
