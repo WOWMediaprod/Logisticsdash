@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { getApiUrl } from '../../../lib/api-config';
 
 interface Client {
   id: string;
@@ -93,11 +94,11 @@ export default function CreateJobPage() {
       try {
         const query = `companyId=${companyId}`;
         const [clientsRes, routesRes, vehiclesRes, driversRes, containersRes] = await Promise.all([
-          fetch(`/api/v1/clients?${query}`),
-          fetch(`/api/v1/routes?${query}`),
-          fetch(`/api/v1/vehicles?${query}`),
-          fetch(`/api/v1/drivers?${query}`),
-          fetch(`/api/v1/containers?${query}`),
+          fetch(getApiUrl(`/api/v1/clients?${query}`)),
+          fetch(getApiUrl(`/api/v1/routes?${query}`)),
+          fetch(getApiUrl(`/api/v1/vehicles?${query}`)),
+          fetch(getApiUrl(`/api/v1/drivers?${query}`)),
+          fetch(getApiUrl(`/api/v1/containers?${query}`)),
         ]);
 
         if (cancelled) {
@@ -182,7 +183,7 @@ export default function CreateJobPage() {
       console.log('🚀 CREATE JOB - Method:', 'POST');
       console.log('🚀 CREATE JOB - Payload:', payload);
 
-      const response = await fetch(url, {
+      const response = await fetch(getApiUrl(url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

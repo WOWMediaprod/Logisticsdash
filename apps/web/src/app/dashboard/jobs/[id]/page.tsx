@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCompany } from "../../../../contexts/CompanyContext";
+import { getApiUrl } from "../../../../lib/api-config";
 
 type RelatedEntity = {
   id: string;
@@ -147,8 +148,7 @@ export default function JobDetailPage() {
         setLoading(true);
         setError(null);
 
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
-        const response = await fetch(`${backendUrl}/api/v1/jobs/${jobId}?companyId=${companyId}`, {
+        const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}?companyId=${companyId}`), {
           headers: { 'Accept': 'application/json' }
         });
         const data = await response.json();
@@ -181,9 +181,9 @@ export default function JobDetailPage() {
 
     try {
       const [vehiclesRes, driversRes, containersRes] = await Promise.all([
-        fetch(`/api/v1/vehicles?companyId=${companyId}`),
-        fetch(`/api/v1/drivers?companyId=${companyId}`),
-        fetch(`/api/v1/containers?companyId=${companyId}`),
+        fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
       ]);
 
       const [vehiclesData, driversData, containersData] = await Promise.all([
@@ -245,8 +245,7 @@ export default function JobDetailPage() {
 
     setUpdating(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
-      const response = await fetch(`${backendUrl}/api/v1/jobs/${job.id}/assign`, {
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${job.id}/assign`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

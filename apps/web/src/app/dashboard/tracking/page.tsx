@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useCompany } from "../../../contexts/CompanyContext";
 import { useSocket } from "../../../contexts/SocketContext";
+import { getApiUrl } from "../../../lib/api-config";
 
 type TrackingJob = {
   jobId: string;
@@ -159,7 +160,7 @@ export default function TrackingPage() {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`/api/v1/tracking/active/${companyId}`, { signal: controller.signal });
+        const response = await fetch(getApiUrl(`/api/v1/tracking/active/${companyId}`), { signal: controller.signal });
         clearTimeout(timeoutId);
 
         const data: TrackingResponse = await response.json();
@@ -196,7 +197,7 @@ export default function TrackingPage() {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`/api/v1/tracking/live-drivers/${companyId}`, { signal: controller.signal });
+        const response = await fetch(getApiUrl(`/api/v1/tracking/live-drivers/${companyId}`), { signal: controller.signal });
         clearTimeout(timeoutId);
 
         const data: LiveDriverResponse = await response.json();

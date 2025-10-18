@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { getApiUrl } from '../../../lib/api-config';
 import {
   FileText,
   DollarSign,
@@ -93,8 +94,8 @@ export default function BillingPage() {
 
       try {
         const [billsRes, statsRes] = await Promise.all([
-          fetch(`/api/v1/bills?companyId=${companyId}&limit=50`),
-          fetch(`/api/v1/bills/stats?companyId=${companyId}`),
+          fetch(getApiUrl(`/api/v1/bills?companyId=${companyId}&limit=50`)),
+          fetch(getApiUrl(`/api/v1/bills/stats?companyId=${companyId}`)),
         ]);
 
         const [billsData, statsData] = await Promise.all([
@@ -143,7 +144,7 @@ export default function BillingPage() {
 
   const handleMarkAsSent = async (billId: string) => {
     try {
-      const response = await fetch(`/api/v1/bills/${billId}/send`, {
+      const response = await fetch(getApiUrl(`/api/v1/bills/${billId}/send`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -161,7 +162,7 @@ export default function BillingPage() {
 
   const handleMarkAsPaid = async (billId: string) => {
     try {
-      const response = await fetch(`/api/v1/bills/${billId}/paid`, {
+      const response = await fetch(getApiUrl(`/api/v1/bills/${billId}/paid`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paidDate: new Date().toISOString() }),

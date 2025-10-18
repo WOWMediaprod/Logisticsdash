@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { getApiUrl } from '../../../lib/api-config';
 import {
   ArrowLeft,
   Search,
@@ -217,7 +218,7 @@ export default function RequestsPage() {
         const url = `/api/v1/job-requests?companyId=${encodeURIComponent(companyId)}`;
         console.log('📡 Fetching:', url);
 
-        const response = await fetch(url, {
+        const response = await fetch(getApiUrl(url), {
           headers: { 'Accept': 'application/json' }
         });
 
@@ -594,7 +595,7 @@ function RequestDetailView({
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/job-requests/${request.id}/accept`, {
+      const response = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}/accept`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -641,7 +642,7 @@ function RequestDetailView({
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/job-requests/${request.id}/decline`, {
+      const response = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}/decline`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { getApiUrl } from '../../../lib/api-config';
 
 // Demo company ID (in real app, this would come from auth)
 const COMPANY_ID = 'cmfmbojit0000vj0ch078cnbu';
@@ -66,7 +67,7 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       const jobParam = selectedJobId === 'ALL' ? '' : `&jobId=${selectedJobId}`;
-      const response = await fetch(`/api/v1/documents?companyId=${COMPANY_ID}${jobParam}`);
+      const response = await fetch(getApiUrl(`/api/v1/documents?companyId=${COMPANY_ID}${jobParam}`));
       const data = await response.json();
       if (data.success) {
         setDocuments(data.data);
@@ -89,7 +90,7 @@ export default function DocumentsPage() {
       formData.append('type', 'OTHER'); // Default type
       formData.append('enableOcr', 'true');
 
-      const response = await fetch('/api/v1/documents/upload', {
+      const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
         method: 'POST',
         body: formData,
       });
@@ -127,7 +128,7 @@ export default function DocumentsPage() {
 
   const downloadDocument = async (documentId: string, fileName: string) => {
     try {
-      const response = await fetch(`/api/v1/documents/${documentId}/download`);
+      const response = await fetch(getApiUrl(`/api/v1/documents/${documentId}/download`));
       const data = await response.json();
       if (data.success && data.data.url) {
         const link = document.createElement('a');
@@ -146,7 +147,7 @@ export default function DocumentsPage() {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const response = await fetch(`/api/v1/documents/${documentId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/documents/${documentId}`), {
         method: 'DELETE',
       });
       const data = await response.json();
