@@ -425,8 +425,30 @@ export default function DriverTracking() {
     // Fetch job details to get real driver ID
     try {
       addDebugLog("Fetching job details to get driver ID...");
-      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId.trim()}?companyId=cmfmbojit0000vj0ch078cnbu`));
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId.trim()}?companyId=cmfmbojit0000vj0ch078cnbu`), {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      addDebugLog(`Fetch response status: ${response.status}`);
+
+      if (!response.ok) {
+        addErrorLog(`API returned error: ${response.status} ${response.statusText}`);
+        setError(`Failed to load job (${response.status}). Check Job ID.`);
+        return;
+      }
+
       const jobData = await response.json();
+      addDebugLog(`Job data received: ${jobData.success ? 'success' : 'failed'}`);
+
+      if (jobData.data?.driver) {
+        addDebugLog(`Driver found: ${jobData.data.driver.name || 'unnamed'}`);
+      } else {
+        addDebugLog(`No driver in response. Keys: ${Object.keys(jobData.data || {}).join(', ')}`);
+      }
 
       if (jobData.success && jobData.data?.driver?.id) {
         setRealDriverId(jobData.data.driver.id);
@@ -439,7 +461,7 @@ export default function DriverTracking() {
         addDebugLog(`✅ Found driver: ${jobData.data.driver.name} (ID: ${jobData.data.driver.id})`);
       } else {
         setError("Could not find driver information for this job");
-        addErrorLog("Job has no driver assigned");
+        addErrorLog(`Job has no driver assigned. Response: ${JSON.stringify(jobData).substring(0, 200)}`);
         return;
       }
     } catch (error) {
