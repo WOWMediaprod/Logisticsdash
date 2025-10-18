@@ -296,10 +296,10 @@ export default function DocumentsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="text-2xl">
-                    {documentTypeIcons[doc.type] || documentTypeIcons.OTHER}
+                    {documentTypeIcons[doc.type as keyof typeof documentTypeIcons] || documentTypeIcons.OTHER}
                   </div>
                   <div>
-                    <div className={`px-3 py-1 rounded-lg text-sm font-semibold border ${documentTypeColors[doc.type] || documentTypeColors.OTHER}`}>
+                    <div className={`px-3 py-1 rounded-lg text-sm font-semibold border ${documentTypeColors[doc.type as keyof typeof documentTypeColors] || documentTypeColors.OTHER}`}>
                       {doc.type.replace('_', ' ')}
                     </div>
                   </div>
