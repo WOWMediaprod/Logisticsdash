@@ -105,10 +105,14 @@ export default function DriverJobPage() {
   };
 
   const sendLocationUpdate = async (location: { lat: number; lng: number }) => {
-    if (!job?.driver?.id) return;
+    if (!job?.driver?.id) {
+      console.error("Cannot send location: No driver ID available");
+      return;
+    }
 
     try {
-      await fetch(getApiUrl('/api/v1/tracking/location'), {
+      console.log(`Sending location update for job ${jobId}, driver ${job.driver.id}`);
+      const response = await fetch(getApiUrl('/api/v1/tracking/location'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,8 +127,15 @@ export default function DriverJobPage() {
           source: "MOBILE_GPS"
         })
       });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("✅ Location sent successfully:", result);
+      } else {
+        console.error("❌ Failed to send location:", response.status, result);
+      }
     } catch (error) {
-      console.warn("Failed to send location:", error);
+      console.error("❌ Error sending location:", error);
     }
   };
 
