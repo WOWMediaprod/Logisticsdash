@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft } from 'lucide-react';
+import { getApiUrl } from '../../../lib/api-config';
 
 type TabType = 'containers' | 'vehicles' | 'drivers' | 'routes' | 'clients';
 
@@ -99,7 +100,7 @@ export default function ResourcesPage() {
           break;
       }
 
-      const response = await fetch(endpoint);
+      const response = await fetch(getApiUrl(endpoint));
       const result = await response.json();
 
       if (result.success) {
@@ -145,7 +146,7 @@ export default function ResourcesPage() {
 
     try {
       const endpoint = `/api/v1/${activeTab}/${id}?companyId=${companyId}`;
-      const response = await fetch(endpoint, { method: 'DELETE' });
+      const response = await fetch(getApiUrl(endpoint), { method: 'DELETE' });
       const result = await response.json();
 
       if (result.success) {
@@ -603,7 +604,7 @@ function ResourceModal({
 
       const payload = { ...formData, companyId };
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(getApiUrl(endpoint), {
         method: mode === 'add' ? 'POST' : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -909,7 +910,7 @@ function RouteForm({ formData, setFormData, companyId }: { formData: any; setFor
 
   useEffect(() => {
     if (!companyId) return;
-    fetch(`/api/v1/clients?companyId=${companyId}`)
+    fetch(getApiUrl(`/api/v1/clients?companyId=${companyId}`))
       .then(res => res.json())
       .then(data => {
         if (data.success) setClients(data.data);
