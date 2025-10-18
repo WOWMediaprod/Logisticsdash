@@ -14,23 +14,28 @@ const API_BASE_URL = (() => {
 const shouldRelaxTLS = API_BASE_URL.startsWith('https://') && /(localhost|127\.0\.0\.1|192\.168\.|\.local|ngrok-free\.app)/.test(API_BASE_URL);
 const tlsAgent = shouldRelaxTLS ? new Agent({ connect: { rejectUnauthorized: false } }) : undefined;
 
-export async function GET(request: NextRequest, { params }: { params: { proxy: string[] } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
+  const params = await context.params;
   return handleRequest(request, params.proxy, 'GET');
 }
 
-export async function POST(request: NextRequest, { params }: { params: { proxy: string[] } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
+  const params = await context.params;
   return handleRequest(request, params.proxy, 'POST');
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { proxy: string[] } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
+  const params = await context.params;
   return handleRequest(request, params.proxy, 'PUT');
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { proxy: string[] } }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
+  const params = await context.params;
   return handleRequest(request, params.proxy, 'PATCH');
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { proxy: string[] } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
+  const params = await context.params;
   return handleRequest(request, params.proxy, 'DELETE');
 }
 
