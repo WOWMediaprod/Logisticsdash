@@ -1,4 +1,3 @@
-import { Agent } from 'undici';
 import { NextRequest, NextResponse } from 'next/server';
 
 const trimTrailingSlash = (value?: string) => value?.replace(/\/$/, '');
@@ -10,9 +9,6 @@ const API_BASE_URL = (() => {
 
   return envInternal || envHttps || envDefault || 'http://localhost:3004';
 })();
-
-const shouldRelaxTLS = API_BASE_URL.startsWith('https://') && /(localhost|127\.0\.0\.1|192\.168\.|\.local|ngrok-free\.app)/.test(API_BASE_URL);
-const tlsAgent = shouldRelaxTLS ? new Agent({ connect: { rejectUnauthorized: false } }) : undefined;
 
 export async function GET(request: NextRequest, context: { params: Promise<{ proxy: string[] }> }) {
   const params = await context.params;
@@ -71,7 +67,7 @@ async function handleRequest(request: NextRequest, pathSegments: string[], metho
       }
     }
 
-    const response = await fetch(url, tlsAgent ? { ...requestOptions, dispatcher: tlsAgent } : requestOptions);
+    const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
       console.error('Proxy request failed', { url, status: response.status, statusText: response.statusText });
