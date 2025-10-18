@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useClientAuth } from '../../contexts/ClientAuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
+import { getApiUrl } from '../../lib/api-config';
 
 export default function ClientPortalPage() {
   const { isAuthenticated } = useClientAuth();
@@ -46,7 +47,7 @@ function ClientLogin() {
 
     try {
       // Fetch all clients for this company and find matching client code
-      const response = await fetch(`/api/v1/clients?companyId=${companyId}`);
+      const response = await fetch(getApiUrl(`/api/v1/clients?companyId=${companyId}`));
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -175,7 +176,7 @@ function ClientDashboard() {
 
     const fetchActiveJobs = async () => {
       try {
-        const response = await fetch(`/api/v1/jobs?companyId=${companyId}&clientId=${clientId}&limit=10`);
+        const response = await fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&clientId=${clientId}&limit=10`));
         const result = await response.json();
 
         if (result.success && result.data) {
