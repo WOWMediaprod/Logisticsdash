@@ -17,6 +17,7 @@ const API_CORS_ORIGINS = [
   'https://localhost:3000',
   'https://localhost:3001',
   'https://localhost:3002',
+  'https://logisticsdash-inv2t5vjf-wowmedias-projects.vercel.app',
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL?.replace('http://', 'https://'),
   process.env.FRONTEND_URL_HTTPS,
