@@ -19,7 +19,7 @@ const VERCEL_ORIGIN_REGEX = /^https:\/\/logisticsdash-.*\.vercel\.app$/;
 const SOCKET_INTERNAL_ORIGIN = process.env.API_INTERNAL_URL;
 const SOCKET_INTERNAL_WS = process.env.API_INTERNAL_WS_URL;
 const SOCKET_CORS_ORIGINS = [
-
+  'https://logisticsdash.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
