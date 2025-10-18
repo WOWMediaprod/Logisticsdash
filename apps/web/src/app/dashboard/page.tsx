@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Briefcase, Clock, CheckCircle, Trophy } from "lucide-react";
 import { useCompany } from "../../contexts/CompanyContext";
+import { getApiUrl } from "../../lib/api-config";
 
 interface JobStats {
   summary: {
@@ -150,12 +151,11 @@ export default function DashboardPage() {
 
       try {
         const statusParam = selectedStatus === "ALL" ? "" : `&status=${selectedStatus}`;
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
         const [statsResponse, jobsResponse] = await Promise.all([
-          fetch(`${backendUrl}/api/v1/jobs/stats?companyId=${companyId}`, {
+          fetch(getApiUrl(`/api/v1/jobs/stats?companyId=${companyId}`), {
             headers: { 'Accept': 'application/json' }
           }),
-          fetch(`${backendUrl}/api/v1/jobs?companyId=${companyId}&limit=20${statusParam}`, {
+          fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&limit=20${statusParam}`), {
             headers: { 'Accept': 'application/json' }
           }),
         ]);
