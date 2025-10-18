@@ -180,7 +180,7 @@ export default function DriverTracking() {
     addDebugLog('Starting permission check...');
 
     // Add timeout to prevent infinite checking
-    const timeoutPromise = new Promise<void>((_, reject) => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Permission check timeout')), 5000);
     });
 
