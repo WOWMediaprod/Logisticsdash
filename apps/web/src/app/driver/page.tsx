@@ -12,6 +12,7 @@ import {
   Calendar,
   TrendingUp
 } from "lucide-react";
+import { getApiUrl } from "../../lib/api-config";
 
 interface DriverStats {
   monthlyCompleted: number;
@@ -88,11 +89,10 @@ export default function DriverPortal() {
   useEffect(() => {
     const fetchDriverData = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
         const companyId = 'company-123'; // Would come from auth context
 
         // Fetch current active job for driver
-        const jobsResponse = await fetch(`${backendUrl}/api/v1/jobs?companyId=${companyId}&limit=10&status=ASSIGNED`);
+        const jobsResponse = await fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&limit=10&status=ASSIGNED`));
         const jobsData = await jobsResponse.json();
 
         if (jobsData.success && jobsData.data.length > 0) {
@@ -104,7 +104,7 @@ export default function DriverPortal() {
         }
 
         // Fetch completed jobs
-        const completedResponse = await fetch(`${backendUrl}/api/v1/jobs?companyId=${companyId}&limit=5&status=COMPLETED`);
+        const completedResponse = await fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&limit=5&status=COMPLETED`));
         const completedData = await completedResponse.json();
 
         if (completedData.success) {

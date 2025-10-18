@@ -14,6 +14,7 @@ import {
   X,
   File,
 } from 'lucide-react';
+import { getApiUrl } from '../../../lib/api-config';
 
 type DocumentType =
   | 'BOL'
@@ -114,7 +115,7 @@ export default function DriverUploadPage() {
         formDataToSend.append('metadata', JSON.stringify({ notes: formData.notes }));
       }
 
-      const response = await fetch('/api/v1/documents/upload', {
+      const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
         method: 'POST',
         body: formDataToSend,
       });

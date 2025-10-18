@@ -15,6 +15,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { useCompany } from "../../../contexts/CompanyContext";
+import { getApiUrl } from "../../../lib/api-config";
 
 type Job = {
   id: string;
@@ -61,12 +62,11 @@ export default function DriverJobPage() {
 
     const fetchJob = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
         const fallbackCompanyId = 'company-123'; // Use hardcoded company ID for now
         const actualCompanyId = companyId || fallbackCompanyId;
 
         console.log('Fetching job:', jobId, 'for company:', actualCompanyId);
-        const response = await fetch(`${backendUrl}/api/v1/jobs/${jobId}?companyId=${actualCompanyId}`);
+        const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}?companyId=${actualCompanyId}`));
         const data = await response.json();
 
         console.log('Job fetch response:', data);
@@ -108,8 +108,7 @@ export default function DriverJobPage() {
     if (!job?.driver?.id) return;
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
-      await fetch(`${backendUrl}/api/v1/tracking/location`, {
+      await fetch(getApiUrl('/api/v1/tracking/location'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -133,9 +132,8 @@ export default function DriverJobPage() {
     if (!job) return;
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
       const actualCompanyId = companyId || 'company-123';
-      const response = await fetch(`${backendUrl}/api/v1/jobs/${jobId}/status`, {
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}/status`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
