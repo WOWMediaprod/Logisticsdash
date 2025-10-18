@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { MapPin, Navigation, Power, Smartphone, Clock, User, ArrowLeft, Zap, AlertTriangle, Settings, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSocket } from "../../../contexts/SocketContext";
+import { getApiUrl } from "../../../lib/api-config";
 
 type LocationData = {
   lat: number;
@@ -16,6 +17,7 @@ type LocationData = {
 };
 
 type DriverInfo = {
+  id: string;
   name: string;
   phone: string;
   vehicleRegNo: string;
@@ -29,6 +31,7 @@ export default function DriverTracking() {
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   const [jobId, setJobId] = useState<string>("");
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+  const [realDriverId, setRealDriverId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
@@ -419,6 +422,32 @@ export default function DriverTracking() {
     const deviceInfo = detectDeviceAndBrowser();
     addDebugLog(`Starting tracking on ${deviceInfo.device} with job: ${jobId.trim()}`);
 
+    // Fetch job details to get real driver ID
+    try {
+      addDebugLog("Fetching job details to get driver ID...");
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId.trim()}?companyId=cmfmbojit0000vj0ch078cnbu`));
+      const jobData = await response.json();
+
+      if (jobData.success && jobData.data?.driver?.id) {
+        setRealDriverId(jobData.data.driver.id);
+        setDriverInfo({
+          id: jobData.data.driver.id,
+          name: jobData.data.driver.name,
+          phone: jobData.data.driver.phone,
+          vehicleRegNo: jobData.data.vehicle?.regNo || 'N/A'
+        });
+        addDebugLog(`✅ Found driver: ${jobData.data.driver.name} (ID: ${jobData.data.driver.id})`);
+      } else {
+        setError("Could not find driver information for this job");
+        addErrorLog("Job has no driver assigned");
+        return;
+      }
+    } catch (error) {
+      addErrorLog(`Failed to fetch job details: ${error}`);
+      setError("Failed to load job information. Please check the Job ID.");
+      return;
+    }
+
     // Check and request permission first
     if (locationPermission !== 'granted') {
       addDebugLog("Permission not granted, requesting...");
@@ -462,14 +491,14 @@ export default function DriverTracking() {
       addDebugLog(`Location updated: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)} (±${Math.round(position.coords.accuracy)}m)`);
 
       // Send location to server via WebSocket
-      if (socket && isConnected && jobId) {
+      if (socket && isConnected && jobId && realDriverId) {
         const payload = {
           jobId: jobId.trim(),
-          driverId: "driver-" + Date.now(), // Temporary driver ID
+          driverId: realDriverId, // Use REAL driver ID from job
           ...location,
         };
 
-        addDebugLog(`Sending location via WebSocket to server`);
+        addDebugLog(`Sending location via WebSocket (Driver ID: ${realDriverId})`);
         socket.emit("location-update", payload);
 
         // Mark as transmitted in history
@@ -483,6 +512,7 @@ export default function DriverTracking() {
       } else {
         const issue = !socket ? 'No socket instance' :
                      !isConnected ? 'Socket disconnected' :
+                     !realDriverId ? 'No driver ID (fetch job first)' :
                      'No job ID provided';
         addErrorLog(`Cannot send location: ${issue}`);
       }
@@ -559,10 +589,10 @@ export default function DriverTracking() {
     addDebugLog(`Manual location set: ${lat}, ${lng}`);
 
     // Send to server if connected
-    if (socket && isConnected && jobId.trim()) {
+    if (socket && isConnected && jobId.trim() && realDriverId) {
       const payload = {
         jobId: jobId.trim(),
-        driverId: "driver-manual-" + Date.now(),
+        driverId: realDriverId, // Use REAL driver ID
         ...manualLocation,
         isManual: true,
         source: 'MANUAL_ENTRY'
