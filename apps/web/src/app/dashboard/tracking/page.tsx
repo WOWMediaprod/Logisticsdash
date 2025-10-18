@@ -381,7 +381,9 @@ export default function TrackingPage() {
         return;
       }
 
-      const { lat, lng } = job.lastLocation;
+      // Parse lat/lng as numbers (API returns them as strings)
+      const lat = Number(job.lastLocation.lat);
+      const lng = Number(job.lastLocation.lng);
       if (Number.isNaN(lat) || Number.isNaN(lng)) {
         return;
       }
@@ -423,7 +425,9 @@ export default function TrackingPage() {
     });
 
     liveDrivers.forEach((driver) => {
-      const { lat, lng } = driver;
+      // Parse lat/lng as numbers (API may return them as strings)
+      const lat = Number(driver.lat);
+      const lng = Number(driver.lng);
       if (Number.isNaN(lat) || Number.isNaN(lng)) {
         return;
       }
