@@ -8,17 +8,22 @@ export class ClientsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createClientDto: CreateClientDto) {
-    const client = await this.prisma.client.create({
-      data: {
-        companyId: createClientDto.companyId,
-        name: createClientDto.name,
-        code: createClientDto.code,
-        terms: createClientDto.terms,
-        isActive: createClientDto.isActive !== undefined ? createClientDto.isActive : true,
-      },
-    });
+    try {
+      const client = await this.prisma.client.create({
+        data: {
+          companyId: createClientDto.companyId,
+          name: createClientDto.name,
+          code: createClientDto.code,
+          terms: createClientDto.terms,
+          isActive: createClientDto.isActive !== undefined ? createClientDto.isActive : true,
+        },
+      });
 
-    return { success: true, data: client };
+      return { success: true, data: client };
+    } catch (error) {
+      console.error('Error creating client:', error);
+      throw error;
+    }
   }
 
   async findAll(companyId: string) {
