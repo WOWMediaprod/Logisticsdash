@@ -7,6 +7,7 @@ import * as path from 'path';
 
 const LAN_ORIGIN_REGEX = /^https?:\/\/192\.168\.\d+\.\d+(?::\d+)?$/;
 const NGROK_ORIGIN_REGEX = /^https:\/\/.*\.ngrok.*\.app$/;
+const VERCEL_ORIGIN_REGEX = /^https:\/\/logisticsdash-.*\.vercel\.app$/;
 const API_INTERNAL_ORIGIN = process.env.API_INTERNAL_URL;
 const API_INTERNAL_WS = process.env.API_INTERNAL_WS_URL;
 const API_CORS_ORIGINS = [
@@ -17,7 +18,6 @@ const API_CORS_ORIGINS = [
   'https://localhost:3000',
   'https://localhost:3001',
   'https://localhost:3002',
-  'https://logisticsdash-inv2t5vjf-wowmedias-projects.vercel.app',
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL?.replace('http://', 'https://'),
   process.env.FRONTEND_URL_HTTPS,
@@ -26,6 +26,7 @@ const API_CORS_ORIGINS = [
   API_INTERNAL_WS,
   LAN_ORIGIN_REGEX,
   NGROK_ORIGIN_REGEX,
+  VERCEL_ORIGIN_REGEX,
 ].filter(Boolean);
 
 async function bootstrap() {

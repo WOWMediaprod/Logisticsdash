@@ -14,6 +14,7 @@ import { TrackingService } from './tracking.service';
 
 const LAN_ORIGIN_REGEX = /^https?:\/\/192\.168\.\d+\.\d+(?::\d+)?$/;
 const NGROK_ORIGIN_REGEX = /^https:\/\/.*\.ngrok.*\.app$/;
+const VERCEL_ORIGIN_REGEX = /^https:\/\/logisticsdash-.*\.vercel\.app$/;
 
 const SOCKET_INTERNAL_ORIGIN = process.env.API_INTERNAL_URL;
 const SOCKET_INTERNAL_WS = process.env.API_INTERNAL_WS_URL;
@@ -33,6 +34,7 @@ const SOCKET_CORS_ORIGINS = [
   SOCKET_INTERNAL_WS,
   LAN_ORIGIN_REGEX,
   NGROK_ORIGIN_REGEX,
+  VERCEL_ORIGIN_REGEX,
 ].filter(Boolean);
 
 interface LocationUpdate {
