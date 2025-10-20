@@ -51,6 +51,7 @@ export default function DriverTracking() {
   const [manualLng, setManualLng] = useState<string>("");
   const watchId = useRef<number | null>(null);
   const lastUpdateTime = useRef<Date>(new Date());
+  const driverIdRef = useRef<string | null>(null); // Use ref to avoid closure issues
 
   // Device and browser detection with iOS Safari specifics
   const detectDeviceAndBrowser = () => {
@@ -423,6 +424,7 @@ export default function DriverTracking() {
     addDebugLog(`Starting tracking on ${deviceInfo.device} with job: ${jobId.trim()}`);
 
     // Fetch job details to get real driver ID
+    let fetchedDriverId: string | null = null;
     try {
       addDebugLog("Fetching job details to get driver ID...");
       const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId.trim()}?companyId=cmfmbojit0000vj0ch078cnbu`), {
@@ -451,14 +453,16 @@ export default function DriverTracking() {
       }
 
       if (jobData.success && jobData.data?.driver?.id) {
-        setRealDriverId(jobData.data.driver.id);
+        fetchedDriverId = jobData.data.driver.id;
+        driverIdRef.current = fetchedDriverId; // Store in ref for closure access
+        setRealDriverId(fetchedDriverId);
         setDriverInfo({
           id: jobData.data.driver.id,
           name: jobData.data.driver.name,
           phone: jobData.data.driver.phone,
           vehicleRegNo: jobData.data.vehicle?.regNo || 'N/A'
         });
-        addDebugLog(`✅ Found driver: ${jobData.data.driver.name} (ID: ${jobData.data.driver.id})`);
+        addDebugLog(`✅ Found driver: ${jobData.data.driver.name} (ID: ${fetchedDriverId})`);
       } else {
         setError("Could not find driver information for this job");
         addErrorLog(`Job has no driver assigned. Response: ${JSON.stringify(jobData).substring(0, 200)}`);
@@ -469,6 +473,15 @@ export default function DriverTracking() {
       setError("Failed to load job information. Please check the Job ID.");
       return;
     }
+
+    // Safety check: Ensure we have a driver ID before proceeding
+    if (!fetchedDriverId || !driverIdRef.current) {
+      addErrorLog("CRITICAL: Driver ID was not set after successful job fetch");
+      setError("Failed to get driver information. Please try again.");
+      return;
+    }
+
+    addDebugLog(`🔑 Driver ID confirmed before starting watch: ${driverIdRef.current}`);
 
     // Check and request permission first
     if (locationPermission !== 'granted') {
@@ -512,15 +525,19 @@ export default function DriverTracking() {
 
       addDebugLog(`Location updated: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)} (±${Math.round(position.coords.accuracy)}m)`);
 
-      // Send location to server via WebSocket
-      if (socket && isConnected && jobId && realDriverId) {
+      // Debug: Log the value of driverId from ref in callback
+      addDebugLog(`🔍 Callback check - driverIdRef.current: ${driverIdRef.current || 'UNDEFINED/NULL'}`);
+      addDebugLog(`🔍 Callback check - jobId: ${jobId || 'UNDEFINED/NULL'}, socket: ${socket ? 'EXISTS' : 'NULL'}, connected: ${isConnected}`);
+
+      // Send location to server via WebSocket - use ref value
+      if (socket && isConnected && jobId && driverIdRef.current) {
         const payload = {
           jobId: jobId.trim(),
-          driverId: realDriverId, // Use REAL driver ID from job
+          driverId: driverIdRef.current, // Use ref to avoid closure issues
           ...location,
         };
 
-        addDebugLog(`Sending location via WebSocket (Driver ID: ${realDriverId})`);
+        addDebugLog(`✅ Sending location via WebSocket (Driver ID: ${driverIdRef.current})`);
         socket.emit("location-update", payload);
 
         // Mark as transmitted in history
@@ -534,7 +551,7 @@ export default function DriverTracking() {
       } else {
         const issue = !socket ? 'No socket instance' :
                      !isConnected ? 'Socket disconnected' :
-                     !realDriverId ? 'No driver ID (fetch job first)' :
+                     !driverIdRef.current ? 'No driver ID (fetch job first)' :
                      'No job ID provided';
         addErrorLog(`Cannot send location: ${issue}`);
       }
@@ -611,10 +628,10 @@ export default function DriverTracking() {
     addDebugLog(`Manual location set: ${lat}, ${lng}`);
 
     // Send to server if connected
-    if (socket && isConnected && jobId.trim() && realDriverId) {
+    if (socket && isConnected && jobId.trim() && driverIdRef.current) {
       const payload = {
         jobId: jobId.trim(),
-        driverId: realDriverId, // Use REAL driver ID
+        driverId: driverIdRef.current, // Use driver ID from ref
         ...manualLocation,
         isManual: true,
         source: 'MANUAL_ENTRY'
