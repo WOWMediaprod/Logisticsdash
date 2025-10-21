@@ -57,34 +57,45 @@ export class DriverStatsService {
     const totalAmount = baseAmount + distanceBonus + nightShiftBonus + timeBonus;
 
     // Create or update earnings record
-    const earnings = await this.prisma.driverEarning.upsert({
+    // First check if earning record exists
+    const existingEarning = await this.prisma.driverEarning.findFirst({
       where: {
-        driverId_jobId: {
-          driverId,
-          jobId,
-        },
-      },
-      create: {
         driverId,
         jobId,
-        companyId: job.companyId,
-        baseAmount: new Decimal(baseAmount),
-        distanceBonus: new Decimal(distanceBonus),
-        timeBonus: new Decimal(timeBonus),
-        nightShiftBonus: new Decimal(nightShiftBonus),
-        totalAmount: new Decimal(totalAmount),
-        currency: 'LKR',
-        status: 'PENDING',
-        earnedAt: new Date(),
-      },
-      update: {
-        baseAmount: new Decimal(baseAmount),
-        distanceBonus: new Decimal(distanceBonus),
-        timeBonus: new Decimal(timeBonus),
-        nightShiftBonus: new Decimal(nightShiftBonus),
-        totalAmount: new Decimal(totalAmount),
       },
     });
+
+    let earnings;
+    if (existingEarning) {
+      // Update existing record
+      earnings = await this.prisma.driverEarning.update({
+        where: { id: existingEarning.id },
+        data: {
+          baseAmount: new Decimal(baseAmount),
+          distanceBonus: new Decimal(distanceBonus),
+          timeBonus: new Decimal(timeBonus),
+          nightShiftBonus: new Decimal(nightShiftBonus),
+          totalAmount: new Decimal(totalAmount),
+        },
+      });
+    } else {
+      // Create new record
+      earnings = await this.prisma.driverEarning.create({
+        data: {
+          driverId,
+          jobId,
+          companyId: job.companyId,
+          baseAmount: new Decimal(baseAmount),
+          distanceBonus: new Decimal(distanceBonus),
+          timeBonus: new Decimal(timeBonus),
+          nightShiftBonus: new Decimal(nightShiftBonus),
+          totalAmount: new Decimal(totalAmount),
+          currency: 'LKR',
+          status: 'PENDING',
+          earnedAt: new Date(),
+        },
+      });
+    }
 
     // Update driver total earnings
     await this.updateDriverTotalEarnings(driverId);
