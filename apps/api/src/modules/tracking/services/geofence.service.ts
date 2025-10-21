@@ -80,9 +80,9 @@ export class GeofenceService {
       return this.isPointInCircle(
         lat,
         lng,
-        Number(geofence.centerLat),
-        Number(geofence.centerLng),
-        Number(geofence.radius)
+        Number(geofence.lat), // Changed from centerLat
+        Number(geofence.lng), // Changed from centerLng
+        Number(geofence.radiusM) // Changed from radius
       );
     } else if (geofence.type === 'POLYGON' && geofence.polygon) {
       return this.isPointInPolygon(lat, lng, geofence.polygon.coordinates);
@@ -178,9 +178,9 @@ export class GeofenceService {
           name: geofenceData.name,
           // description: geofenceData.description, // Commented out - field doesn't exist in current schema
           type: geofenceData.type,
-          centerLat: geofenceData.centerLat,
-          centerLng: geofenceData.centerLng,
-          radius: geofenceData.radius || 100,
+          lat: geofenceData.centerLat || 0, // Changed from centerLat
+          lng: geofenceData.centerLng || 0, // Changed from centerLng
+          radiusM: geofenceData.radius || 100, // Changed from radius
           polygon: geofenceData.polygon,
           isActive: true
         }

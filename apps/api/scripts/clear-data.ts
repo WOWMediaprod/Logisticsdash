@@ -10,8 +10,8 @@ async function clearData() {
     console.log('Deleting notifications...');
     await prisma.notification.deleteMany({});
 
-    console.log('Deleting audit logs...');
-    await prisma.auditLog.deleteMany({});
+    // console.log('Deleting audit logs...'); // AuditLog model doesn't exist in schema
+    // await prisma.auditLog.deleteMany({});
 
     console.log('Deleting job updates...');
     await prisma.jobUpdate.deleteMany({});

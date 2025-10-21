@@ -343,9 +343,9 @@ async function createTestData() {
         name: 'Mumbai Port Pickup Zone',
         // description: 'Main pickup zone at Mumbai Port', // Field doesn't exist in schema
         type: 'CIRCLE',
-        centerLat: 19.0760,
-        centerLng: 72.8777,
-        radius: 500, // 500 meters
+        lat: 19.0760, // Changed from centerLat
+        lng: 72.8777, // Changed from centerLng
+        radiusM: 500, // Changed from radius - 500 meters
         isActive: true,
         metadata: {
           operatingHours: '06:00-22:00',
@@ -363,9 +363,9 @@ async function createTestData() {
         name: 'Delhi Warehouse Delivery Zone',
         // description: 'Main delivery zone at Delhi Warehouse', // Field doesn't exist in schema
         type: 'CIRCLE',
-        centerLat: 28.6139,
-        centerLng: 77.2090,
-        radius: 300, // 300 meters
+        lat: 28.6139, // Changed from centerLat
+        lng: 77.2090, // Changed from centerLng
+        radiusM: 300, // Changed from radius - 300 meters
         isActive: true,
         metadata: {
           operatingHours: '08:00-20:00',

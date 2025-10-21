@@ -22,18 +22,18 @@ export class JobRequestsService {
         requestedPickupTs: createJobRequestDto.requestedPickupTs
           ? new Date(createJobRequestDto.requestedPickupTs)
           : null,
-        requestedDropTs: createJobRequestDto.requestedDropTs
+        requestedDeliveryTs: createJobRequestDto.requestedDropTs // Changed from requestedDropTs
           ? new Date(createJobRequestDto.requestedDropTs)
           : null,
-        pickupAddress: createJobRequestDto.pickupAddress,
-        deliveryAddress: createJobRequestDto.deliveryAddress,
-        pickupLat: createJobRequestDto.pickupLat,
-        pickupLng: createJobRequestDto.pickupLng,
-        deliveryLat: createJobRequestDto.deliveryLat,
-        deliveryLng: createJobRequestDto.deliveryLng,
-        containerType: createJobRequestDto.containerType,
-        specialRequirements: createJobRequestDto.specialRequirements,
-        estimatedValue: createJobRequestDto.estimatedValue,
+        // pickupAddress: createJobRequestDto.pickupAddress, // Field doesn't exist
+        // deliveryAddress: createJobRequestDto.deliveryAddress, // Field doesn't exist
+        // pickupLat: createJobRequestDto.pickupLat, // Field doesn't exist
+        // pickupLng: createJobRequestDto.pickupLng, // Field doesn't exist
+        // deliveryLat: createJobRequestDto.deliveryLat, // Field doesn't exist
+        // deliveryLng: createJobRequestDto.deliveryLng, // Field doesn't exist
+        containerSize: createJobRequestDto.containerType, // Changed from containerType
+        specialInstructions: createJobRequestDto.specialRequirements, // Changed from specialRequirements
+        // estimatedValue: createJobRequestDto.estimatedValue, // Field doesn't exist
       },
       include: {
         client: true,
@@ -132,18 +132,18 @@ export class JobRequestsService {
         requestedPickupTs: updateJobRequestDto.requestedPickupTs
           ? new Date(updateJobRequestDto.requestedPickupTs)
           : undefined,
-        requestedDropTs: updateJobRequestDto.requestedDropTs
+        requestedDeliveryTs: updateJobRequestDto.requestedDropTs // Changed from requestedDropTs
           ? new Date(updateJobRequestDto.requestedDropTs)
           : undefined,
-        pickupAddress: updateJobRequestDto.pickupAddress,
-        deliveryAddress: updateJobRequestDto.deliveryAddress,
-        pickupLat: updateJobRequestDto.pickupLat,
-        pickupLng: updateJobRequestDto.pickupLng,
-        deliveryLat: updateJobRequestDto.deliveryLat,
-        deliveryLng: updateJobRequestDto.deliveryLng,
-        containerType: updateJobRequestDto.containerType,
-        specialRequirements: updateJobRequestDto.specialRequirements,
-        estimatedValue: updateJobRequestDto.estimatedValue,
+        // pickupAddress: updateJobRequestDto.pickupAddress, // Field doesn't exist
+        // deliveryAddress: updateJobRequestDto.deliveryAddress, // Field doesn't exist
+        // pickupLat: updateJobRequestDto.pickupLat, // Field doesn't exist
+        // pickupLng: updateJobRequestDto.pickupLng, // Field doesn't exist
+        // deliveryLat: updateJobRequestDto.deliveryLat, // Field doesn't exist
+        // deliveryLng: updateJobRequestDto.deliveryLng, // Field doesn't exist
+        containerSize: updateJobRequestDto.containerType, // Changed from containerType
+        specialInstructions: updateJobRequestDto.specialRequirements, // Changed from specialRequirements
+        // estimatedValue: updateJobRequestDto.estimatedValue, // Field doesn't exist
       },
       include: {
         client: true,
@@ -234,8 +234,8 @@ export class JobRequestsService {
         jobType: jobRequest.jobType, // Use the jobType from the request
         priority: jobRequest.priority,
         pickupTs: jobRequest.requestedPickupTs,
-        etaTs: jobRequest.requestedDropTs,
-        specialNotes: jobRequest.specialRequirements || jobRequest.description,
+        etaTs: jobRequest.requestedDeliveryTs, // Changed from requestedDropTs
+        specialNotes: jobRequest.specialInstructions || jobRequest.description, // Changed from specialRequirements
       },
       include: {
         client: true,
@@ -251,7 +251,7 @@ export class JobRequestsService {
         reviewedBy: null, // TODO: Use actual user ID from auth context
         reviewedAt: new Date(),
         reviewNotes,
-        jobId: job.id,
+        convertedToJobId: job.id, // Changed from jobId
       },
       include: {
         client: true,

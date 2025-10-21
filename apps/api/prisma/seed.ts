@@ -7,11 +7,12 @@ async function main() {
 
   // Create demo company
   const company = await prisma.company.upsert({
-    where: { subdomain: 'demo-logistics' },
+    where: { id: 'demo-company-001' },
     update: {},
     create: {
+      id: 'demo-company-001',
       name: 'Demo Logistics Company',
-      subdomain: 'demo-logistics',
+      // subdomain: 'demo-logistics', // Field doesn't exist in schema
       settings: {
         currency: 'INR',
         timezone: 'Asia/Kolkata',
@@ -28,7 +29,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@demo.com',
-      password: 'hashed_password', // In real app, use proper hashing
+      // password: 'hashed_password', // Field doesn't exist in schema - use external auth
       role: Role.ADMIN,
       firstName: 'John',
       lastName: 'Admin',
@@ -41,7 +42,7 @@ async function main() {
     update: {},
     create: {
       email: 'dispatcher@demo.com',
-      password: 'hashed_password',
+      // password: 'hashed_password', // Field doesn't exist in schema - use external auth
       role: Role.DISPATCHER,
       firstName: 'Sarah',
       lastName: 'Dispatcher',

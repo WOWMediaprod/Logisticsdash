@@ -27,21 +27,23 @@ export class BillsService {
       throw new BadRequestException('A bill already exists for this job');
     }
 
-    // Generate unique bill number
-    const billNumber = await this.generateBillNumber(companyId);
+    // Generate unique invoice number
+    const invoiceNo = await this.generateBillNumber(companyId);
 
     const bill = await this.prisma.bill.create({
       data: {
         companyId,
         jobId: createBillDto.jobId,
-        billNumber,
+        invoiceNo, // Changed from billNumber
         amount: createBillDto.amount,
-        currency: createBillDto.currency || 'INR',
+        tax: 0, // Required field in schema
+        total: createBillDto.amount, // Required field in schema
+        // currency: createBillDto.currency || 'INR', // Field doesn't exist in schema
         status: createBillDto.status || BillStatus.DRAFT,
-        issuedDate: createBillDto.issuedDate ? new Date(createBillDto.issuedDate) : null,
+        // issuedDate: createBillDto.issuedDate ? new Date(createBillDto.issuedDate) : null, // Field doesn't exist
         dueDate: createBillDto.dueDate ? new Date(createBillDto.dueDate) : null,
-        attachedDocumentIds: createBillDto.attachedDocumentIds,
-        notes: createBillDto.notes,
+        // attachedDocumentIds: createBillDto.attachedDocumentIds, // Field doesn't exist
+        // notes: createBillDto.notes, // Field doesn't exist
       },
       include: {
         job: {
@@ -147,7 +149,7 @@ export class BillsService {
       updateData.dueDate = updateBillDto.dueDate ? new Date(updateBillDto.dueDate) : null;
     }
     if (updateBillDto.paidDate !== undefined) {
-      updateData.paidDate = updateBillDto.paidDate ? new Date(updateBillDto.paidDate) : null;
+      updateData.paidAt = updateBillDto.paidDate ? new Date(updateBillDto.paidDate) : null; // Changed from paidDate to paidAt
     }
 
     const updatedBill = await this.prisma.bill.update({
@@ -175,8 +177,8 @@ export class BillsService {
       where: { id },
       data: {
         status: BillStatus.SENT,
-        sentToClient: true,
-        sentAt: new Date(),
+        // sentToClient: true, // Field doesn't exist in schema
+        // sentAt: new Date(), // Field doesn't exist in schema
       },
       include: {
         job: {
@@ -200,7 +202,7 @@ export class BillsService {
       where: { id },
       data: {
         status: BillStatus.PAID,
-        paidDate: paidDate ? new Date(paidDate) : new Date(),
+        paidAt: paidDate ? new Date(paidDate) : new Date(), // Changed from paidDate to paidAt
       },
       include: {
         job: {
@@ -278,6 +280,6 @@ export class BillsService {
     });
 
     const sequence = String(count + 1).padStart(4, '0');
-    return `BILL-${year}${month}-${sequence}`;
+    return `INV-${year}${month}-${sequence}`; // Generate invoice number format
   }
 }
