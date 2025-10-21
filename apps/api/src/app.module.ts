@@ -14,6 +14,9 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { BillsModule } from './modules/bills/bills.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { JobRequestsModule } from './modules/job-requests/job-requests.module';
+import { DriverAuthModule } from './modules/driver-auth/driver-auth.module';
+import { TrackingV2Module } from './modules/tracking-v2/tracking-v2.module';
+import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
 
 @Module({
   imports: [
@@ -43,6 +46,11 @@ import { JobRequestsModule } from './modules/job-requests/job-requests.module';
     DocumentsModule,
     BillsModule,
     TrackingModule,
+
+    // New V2 modules
+    DriverAuthModule,
+    TrackingV2Module,
+    DriverStatsModule,
     // AuthModule,
     // EconomicsModule,
     // MaintenanceModule,
