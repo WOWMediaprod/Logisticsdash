@@ -346,11 +346,11 @@ async function createTestData() {
         lat: 19.0760, // Changed from centerLat
         lng: 72.8777, // Changed from centerLng
         radiusM: 500, // Changed from radius - 500 meters
-        isActive: true,
-        metadata: {
-          operatingHours: '06:00-22:00',
-          geofenceType: 'PICKUP'
-        }
+        isActive: true
+        // metadata: { // Field doesn't exist in Geofence schema
+        //   operatingHours: '06:00-22:00',
+        //   geofenceType: 'PICKUP'
+        // }
       }
     });
 
@@ -366,11 +366,11 @@ async function createTestData() {
         lat: 28.6139, // Changed from centerLat
         lng: 77.2090, // Changed from centerLng
         radiusM: 300, // Changed from radius - 300 meters
-        isActive: true,
-        metadata: {
-          operatingHours: '08:00-20:00',
-          geofenceType: 'DELIVERY'
-        }
+        isActive: true
+        // metadata: { // Field doesn't exist in Geofence schema
+        //   operatingHours: '08:00-20:00',
+        //   geofenceType: 'DELIVERY'
+        // }
       }
     });
 

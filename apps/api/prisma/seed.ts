@@ -1,4 +1,5 @@
-import { PrismaClient, Role, JobStatus, JobType, Priority } from '@prisma/client';
+import { PrismaClient, JobStatus, JobType, Priority } from '@prisma/client';
+// Note: Role enum doesn't exist in schema - using string literals instead
 
 const prisma = new PrismaClient();
 
@@ -30,7 +31,7 @@ async function main() {
     create: {
       email: 'admin@demo.com',
       // password: 'hashed_password', // Field doesn't exist in schema - use external auth
-      role: Role.ADMIN,
+      role: 'ADMIN', // Using string literal - Role enum doesn't exist
       firstName: 'John',
       lastName: 'Admin',
       companyId: company.id,
@@ -43,7 +44,7 @@ async function main() {
     create: {
       email: 'dispatcher@demo.com',
       // password: 'hashed_password', // Field doesn't exist in schema - use external auth
-      role: Role.DISPATCHER,
+      role: 'DISPATCHER', // Using string literal - Role enum doesn't exist
       firstName: 'Sarah',
       lastName: 'Dispatcher',
       companyId: company.id,
