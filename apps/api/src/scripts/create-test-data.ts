@@ -13,7 +13,7 @@ async function createTestData() {
       create: {
         id: 'cmfmbojit0000vj0ch078cnbu',
         name: 'Test Logistics Co',
-        subdomain: 'testlogistics',
+        // subdomain: 'testlogistics', // Field doesn't exist in schema
         settings: {
           registrationNo: 'TLC001',
           email: 'test@testlogistics.com',
@@ -341,7 +341,7 @@ async function createTestData() {
         id: 'geofence-mumbai-port',
         companyId: company.id,
         name: 'Mumbai Port Pickup Zone',
-        description: 'Main pickup zone at Mumbai Port',
+        // description: 'Main pickup zone at Mumbai Port', // Field doesn't exist in schema
         type: 'CIRCLE',
         centerLat: 19.0760,
         centerLng: 72.8777,
@@ -361,7 +361,7 @@ async function createTestData() {
         id: 'geofence-delhi-warehouse',
         companyId: company.id,
         name: 'Delhi Warehouse Delivery Zone',
-        description: 'Main delivery zone at Delhi Warehouse',
+        // description: 'Main delivery zone at Delhi Warehouse', // Field doesn't exist in schema
         type: 'CIRCLE',
         centerLat: 28.6139,
         centerLng: 77.2090,

@@ -176,7 +176,7 @@ export class GeofenceService {
         data: {
           companyId,
           name: geofenceData.name,
-          description: geofenceData.description,
+          // description: geofenceData.description, // Commented out - field doesn't exist in current schema
           type: geofenceData.type,
           centerLat: geofenceData.centerLat,
           centerLng: geofenceData.centerLng,
