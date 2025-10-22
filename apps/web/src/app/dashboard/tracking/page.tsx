@@ -127,6 +127,7 @@ export default function TrackingPage() {
   const [liveDrivers, setLiveDrivers] = useState<LiveDriver[]>([]);
   const [driverSummary, setDriverSummary] = useState<LiveDriverResponse["summary"] | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [hasAutoCentered, setHasAutoCentered] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -467,7 +468,9 @@ export default function TrackingPage() {
     });
 
     const allMarkers = [...markersRef.current, ...driverMarkersRef.current];
-    if (allMarkers.length > 0) {
+
+    // Only auto-center once on initial load, then let user control the map
+    if (allMarkers.length > 0 && !hasAutoCentered) {
       // Find the most recent fresh location (not stale)
       const freshJobs = trackingData.filter(job => job.lastLocation && !job.lastLocation.isStale);
 
@@ -482,17 +485,19 @@ export default function TrackingPage() {
 
         if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
           mapInstanceRef.current!.setCenter({ lat, lng });
-          mapInstanceRef.current!.setZoom(13); // Good zoom level for tracking
+          mapInstanceRef.current!.setZoom(15); // Closer zoom level for tracking
           console.log(`🎯 Auto-centered on ${newestJob.driver.name} at (${lat}, ${lng})`);
+          setHasAutoCentered(true); // Mark as centered, won't auto-center again
         }
       } else {
         // Fallback: fit all markers if no fresh data
         const bounds = new google.maps.LatLngBounds();
         allMarkers.forEach((marker) => bounds.extend(marker.getPosition()!));
         mapInstanceRef.current!.fitBounds(bounds);
+        setHasAutoCentered(true);
       }
     }
-  }, [trackingData, liveDrivers, mapLoaded]);
+  }, [trackingData, liveDrivers, mapLoaded, hasAutoCentered]);
 
   const trackingSummary = useMemo(() => {
     const totalJobs = summary?.totalJobs || 0;
