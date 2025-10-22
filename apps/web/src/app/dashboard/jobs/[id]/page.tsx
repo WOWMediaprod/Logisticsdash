@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { getApiUrl } from "../../../../lib/api-config";
+import WaypointManagement from "../../../../components/WaypointManagement";
 
 type RelatedEntity = {
   id: string;
@@ -62,6 +63,7 @@ type JobDetail = {
   dropTs?: string;
   createdAt: string;
   updatedAt: string;
+  routeId?: string;
   client?: RelatedEntity;
   route?: RouteInfo;
   container?: ContainerInfo;
@@ -444,6 +446,12 @@ export default function JobDetailPage() {
                 )}
               </div>
             </motion.div>
+
+            {job.routeId && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
+                <WaypointManagement jobId={job.id} routeId={job.routeId} />
+              </motion.div>
+            )}
           </div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl space-y-6">
