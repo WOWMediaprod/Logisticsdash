@@ -603,8 +603,9 @@ function ResourceModal({
         : `/api/v1/${type}/${item.id}`;
 
       // Remove readonly fields before sending to API
-      const { id, createdAt, updatedAt, ...cleanData } = formData;
-      const payload = { ...cleanData, companyId };
+      const { id, createdAt, updatedAt, companyId: _, ...cleanData } = formData;
+      // Only add companyId for CREATE, not for EDIT (it's immutable)
+      const payload = mode === 'add' ? { ...cleanData, companyId } : cleanData;
 
       const response = await fetch(getApiUrl(endpoint), {
         method: mode === 'add' ? 'POST' : 'PATCH',
