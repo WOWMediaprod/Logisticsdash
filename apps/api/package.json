@@ -6,9 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "prisma generate",
+    "prebuild": "prisma generate && prisma db push --accept-data-loss --skip-generate || echo 'Schema sync skipped'",
     "build": "nest build",
-    "postinstall": "prisma generate && prisma db push --accept-data-loss --skip-generate || true",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "dev": "nest start --watch",
