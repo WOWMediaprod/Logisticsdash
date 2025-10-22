@@ -602,7 +602,9 @@ function ResourceModal({
         ? `/api/v1/${type}`
         : `/api/v1/${type}/${item.id}`;
 
-      const payload = { ...formData, companyId };
+      // Remove readonly fields before sending to API
+      const { id, createdAt, updatedAt, ...cleanData } = formData;
+      const payload = { ...cleanData, companyId };
 
       const response = await fetch(getApiUrl(endpoint), {
         method: mode === 'add' ? 'POST' : 'PATCH',
