@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Calendar,
   Filter,
+  ArrowLeft,
 } from 'lucide-react';
 
 type BillStatus = 'DRAFT' | 'ISSUED' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
@@ -205,6 +206,13 @@ export default function BillingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-medium">Back to Dashboard</span>
+          </Link>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Billing & Invoices</h1>
