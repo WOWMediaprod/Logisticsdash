@@ -119,13 +119,10 @@ export default function TrackingPage() {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
-  const driverMarkersRef = useRef<any[]>([]);
 
   const [trackingData, setTrackingData] = useState<TrackingJob[]>([]);
   const [summary, setSummary] = useState<TrackingResponse["summary"] | null>(null);
   const [selectedJob, setSelectedJob] = useState<TrackingJob | null>(null);
-  const [liveDrivers, setLiveDrivers] = useState<LiveDriver[]>([]);
-  const [driverSummary, setDriverSummary] = useState<LiveDriverResponse["summary"] | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [hasAutoCentered, setHasAutoCentered] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -139,9 +136,7 @@ export default function TrackingPage() {
       // Cleanup map instance and markers on unmount
       if (mapInstanceRef.current) {
         markersRef.current.forEach((marker) => marker.setMap(null));
-        driverMarkersRef.current.forEach((marker) => marker.setMap(null));
         markersRef.current = [];
-        driverMarkersRef.current = [];
         mapInstanceRef.current = null;
       }
       setMapLoaded(false);
@@ -184,40 +179,6 @@ export default function TrackingPage() {
 
     fetchData();
     const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [companyId]);
-
-  useEffect(() => {
-    if (!companyId) {
-      setLiveDrivers([]);
-      setDriverSummary(null);
-      return;
-    }
-
-    const fetchLiveDrivers = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(getApiUrl(`/api/v1/tracking/live-drivers/${companyId}`), { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        const data: LiveDriverResponse = await response.json();
-        if (data.success) {
-          setLiveDrivers(data.data);
-          setDriverSummary(data.summary);
-        } else {
-          setLiveDrivers([]);
-          setDriverSummary(null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch live drivers data", err);
-        setLiveDrivers([]);
-        setDriverSummary(null);
-      }
-    };
-
-    fetchLiveDrivers();
-    const interval = setInterval(fetchLiveDrivers, 10000);
     return () => clearInterval(interval);
   }, [companyId]);
 
@@ -374,8 +335,6 @@ export default function TrackingPage() {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
-    driverMarkersRef.current.forEach((marker) => marker.setMap(null));
-    driverMarkersRef.current = [];
 
     trackingData.forEach((job) => {
       if (!job.lastLocation) {
@@ -425,49 +384,7 @@ export default function TrackingPage() {
       markersRef.current.push(marker);
     });
 
-    liveDrivers.forEach((driver) => {
-      // Parse lat/lng as numbers (API may return them as strings)
-      const lat = Number(driver.lat);
-      const lng = Number(driver.lng);
-      if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        return;
-      }
-
-      const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map: mapInstanceRef.current!,
-        title: `Live: ${driver.name}`,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: driver.isStale ? "#f59e0b" : "#dc2626",
-          fillOpacity: 0.8,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
-        },
-      });
-
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="font-family: sans-serif; font-size: 12px;">
-            <strong>${driver.name}</strong><br />
-            <em>Live driver</em><br />
-            Speed: ${driver.speed ? Math.round(driver.speed * 3.6) : 0} km/h<br />
-            Accuracy: ${driver.accuracy ? Math.round(driver.accuracy) : "N/A"} meters<br />
-            Updated: ${driver.timeSinceUpdate} min ago<br />
-            ${driver.isStale ? '<span style="color: orange;">Stale</span>' : '<span style="color: green;">Active</span>'}
-          </div>
-        `,
-      });
-
-      marker.addListener("click", () => {
-        infoWindow.open(mapInstanceRef.current!, marker);
-      });
-
-      driverMarkersRef.current.push(marker);
-    });
-
-    const allMarkers = [...markersRef.current, ...driverMarkersRef.current];
+    const allMarkers = markersRef.current;
 
     // Only auto-center once on initial load, then let user control the map
     if (allMarkers.length > 0 && !hasAutoCentered) {
@@ -497,25 +414,19 @@ export default function TrackingPage() {
         setHasAutoCentered(true);
       }
     }
-  }, [trackingData, liveDrivers, mapLoaded, hasAutoCentered]);
+  }, [trackingData, mapLoaded, hasAutoCentered]);
 
   const trackingSummary = useMemo(() => {
     const totalJobs = summary?.totalJobs || 0;
     const withLocation = summary?.withLocation || 0;
     const staleLocations = summary?.staleLocations || 0;
-    const totalTrackers = driverSummary?.totalTrackers || 0;
-    const activeTrackers = driverSummary?.activeTrackers || 0;
-    const staleTrackers = driverSummary?.staleTrackers || 0;
 
     return {
       totalJobs,
       withLocation,
       staleLocations,
-      totalTrackers,
-      activeTrackers,
-      staleTrackers,
     };
-  }, [summary, driverSummary]);
+  }, [summary]);
 
   if (!companyId) {
     return (
@@ -562,12 +473,10 @@ export default function TrackingPage() {
       </div>
 
       <div className="container mx-auto px-6 py-8 space-y-8">
-        <div className="grid md:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           <SummaryCard title="Active jobs" value={trackingSummary.totalJobs} accent="bg-blue-50" />
           <SummaryCard title="With location" value={trackingSummary.withLocation} accent="bg-green-50" />
           <SummaryCard title="Stale jobs" value={trackingSummary.staleLocations} accent="bg-orange-50" />
-          <SummaryCard title="Live drivers" value={trackingSummary.totalTrackers} accent="bg-red-50" />
-          <SummaryCard title="Active drivers" value={trackingSummary.activeTrackers} accent="bg-emerald-50" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -643,28 +552,6 @@ export default function TrackingPage() {
                       </div>
                     )}
                   </motion.button>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass rounded-2xl p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Live drivers</h2>
-              <div className="space-y-3 max-h-72 overflow-y-auto">
-                {liveDrivers.length === 0 && (
-                  <p className="text-sm text-gray-500">No live driver telemetry yet.</p>
-                )}
-                {liveDrivers.map((driver) => (
-                  <div key={driver.trackerId} className="border border-gray-200 rounded-xl p-3 bg-white">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-gray-900">{driver.name}</p>
-                      <span className={`text-xs font-medium ${driver.isStale ? "text-orange-600" : "text-green-600"}`}>
-                        {driver.isStale ? "Stale" : "Active"}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Updated {driver.timeSinceUpdate} min ago � Speed {driver.speed ? Math.round(driver.speed * 3.6) : 0} km/h
-                    </div>
-                  </div>
                 ))}
               </div>
             </div>
