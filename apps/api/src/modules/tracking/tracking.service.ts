@@ -208,18 +208,23 @@ export class TrackingService {
 
   async getActiveTracking(companyId: string) {
     try {
-      // Get all active jobs with recent location data
+      // Get all LIVE active jobs with recent location data
+      // Only show jobs that are truly active (not just ASSIGNED)
       const activeJobs = await this.prisma.job.findMany({
         where: {
           companyId,
           status: {
-            in: ['ASSIGNED', 'IN_TRANSIT', 'AT_PICKUP', 'LOADED', 'AT_DELIVERY']
+            in: ['IN_TRANSIT', 'AT_PICKUP', 'LOADED', 'AT_DELIVERY'] // Removed ASSIGNED - only truly active jobs
+          },
+          // Only include jobs where driver is online
+          driver: {
+            isOnline: true
           }
         },
         include: {
           client: { select: { name: true, code: true } },
           route: { select: { origin: true, destination: true, kmEstimate: true } },
-          driver: { select: { name: true, phone: true } },
+          driver: { select: { name: true, phone: true, isOnline: true } },
           vehicle: { select: { regNo: true, make: true, model: true } },
           locationTracks: {
             orderBy: { timestamp: 'desc' },
@@ -228,29 +233,40 @@ export class TrackingService {
         }
       });
 
-      const trackingData = activeJobs.map(job => {
-        const lastLocation = job.locationTracks[0];
-        const timeSinceUpdate = lastLocation
-          ? Date.now() - lastLocation.timestamp.getTime()
-          : null;
+      // Filter and map tracking data
+      const trackingData = activeJobs
+        .map(job => {
+          const lastLocation = job.locationTracks[0];
+          const timeSinceUpdate = lastLocation
+            ? Date.now() - lastLocation.timestamp.getTime()
+            : null;
 
-        return {
-          jobId: job.id,
-          status: job.status,
-          client: job.client,
-          route: job.route,
-          driver: job.driver,
-          vehicle: job.vehicle,
-          lastLocation: lastLocation ? {
-            lat: lastLocation.lat,
-            lng: lastLocation.lng,
-            timestamp: lastLocation.timestamp,
-            speed: lastLocation.speed,
-            timeSinceUpdate: timeSinceUpdate ? Math.floor(timeSinceUpdate / (1000 * 60)) : null,
-            isStale: timeSinceUpdate ? timeSinceUpdate > (30 * 60 * 1000) : true
-          } : null
-        };
-      });
+          return {
+            jobId: job.id,
+            status: job.status,
+            client: job.client,
+            route: job.route,
+            driver: job.driver,
+            vehicle: job.vehicle,
+            lastLocation: lastLocation ? {
+              lat: lastLocation.lat,
+              lng: lastLocation.lng,
+              timestamp: lastLocation.timestamp,
+              speed: lastLocation.speed,
+              timeSinceUpdate: timeSinceUpdate ? Math.floor(timeSinceUpdate / (1000 * 60)) : null,
+              isStale: timeSinceUpdate ? timeSinceUpdate > (5 * 60 * 1000) : true // 5 minutes instead of 30
+            } : null,
+            timeSinceUpdateMs: timeSinceUpdate
+          };
+        })
+        // Only show jobs with GPS data received in the last 5 minutes
+        .filter(job => {
+          if (!job.lastLocation) return false;
+          if (!job.timeSinceUpdateMs) return false;
+          return job.timeSinceUpdateMs <= (5 * 60 * 1000); // 5 minutes in milliseconds
+        })
+        // Remove the temporary timeSinceUpdateMs field
+        .map(({ timeSinceUpdateMs, ...job }) => job);
 
       return {
         success: true,
