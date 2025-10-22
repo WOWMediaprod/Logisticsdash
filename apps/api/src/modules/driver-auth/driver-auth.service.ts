@@ -302,4 +302,62 @@ export class DriverAuthService {
       },
     });
   }
+
+  async loginByJob(jobId: string, pin: string): Promise<{ success: boolean; token?: string; driverId?: string; message?: string }> {
+    try {
+      // Find the job
+      const job = await this.prisma.job.findUnique({
+        where: { id: jobId },
+        include: {
+          driver: true,
+          company: true,
+        },
+      });
+
+      if (!job) {
+        return { success: false, message: 'Job not found' };
+      }
+
+      if (!job.driver) {
+        return { success: false, message: 'No driver assigned to this job' };
+      }
+
+      // Verify PIN
+      if (job.driver.pin !== pin) {
+        return { success: false, message: 'Invalid PIN' };
+      }
+
+      // Update driver status
+      await this.prisma.driver.update({
+        where: { id: job.driver.id },
+        data: {
+          lastLoginAt: new Date(),
+          isOnline: true,
+        },
+      });
+
+      // Create JWT token
+      const payload = {
+        sub: job.driver.id,
+        driverId: job.driver.id,
+        companyId: job.driver.companyId,
+        name: job.driver.name,
+        licenseNo: job.driver.licenseNo,
+        type: 'driver',
+      };
+
+      const token = this.jwtService.sign(payload);
+
+      this.logger.log(`Driver ${job.driver.name} logged in via job ${jobId}`);
+
+      return {
+        success: true,
+        token,
+        driverId: job.driver.id,
+      };
+    } catch (error) {
+      this.logger.error(`Job-based login error: ${error.message}`);
+      return { success: false, message: 'Login failed' };
+    }
+  }
 }

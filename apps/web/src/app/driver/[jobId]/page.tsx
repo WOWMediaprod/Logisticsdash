@@ -55,7 +55,7 @@ export default function DriverJobPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/driver/login`, {
+      const response = await fetch(`${API_URL}/driver-auth/login-by-job`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId, pin })

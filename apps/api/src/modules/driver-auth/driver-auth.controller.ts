@@ -24,6 +24,17 @@ export class DriverAuthController {
     return this.driverAuthService.login(loginDto, ipAddress, userAgent);
   }
 
+  @Post('login-by-job')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Simple driver login using job ID and PIN (for testing)' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async loginByJob(
+    @Body() body: { jobId: string; pin: string }
+  ): Promise<{ success: boolean; token?: string; driverId?: string; message?: string }> {
+    return this.driverAuthService.loginByJob(body.jobId, body.pin);
+  }
+
   @Post('logout')
   @UseGuards(DriverAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
