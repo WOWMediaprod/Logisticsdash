@@ -17,6 +17,7 @@ import { JobRequestsModule } from './modules/job-requests/job-requests.module';
 import { DriverAuthModule } from './modules/driver-auth/driver-auth.module';
 import { TrackingV2Module } from './modules/tracking-v2/tracking-v2.module';
 import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
+import { WaypointsModule } from './modules/waypoints/waypoints.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
     DriverAuthModule,
     TrackingV2Module,
     DriverStatsModule,
+    WaypointsModule,
     // AuthModule,
     // EconomicsModule,
     // MaintenanceModule,
