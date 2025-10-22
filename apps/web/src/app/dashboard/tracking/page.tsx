@@ -468,9 +468,29 @@ export default function TrackingPage() {
 
     const allMarkers = [...markersRef.current, ...driverMarkersRef.current];
     if (allMarkers.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      allMarkers.forEach((marker) => bounds.extend(marker.getPosition()!));
-      mapInstanceRef.current!.fitBounds(bounds);
+      // Find the most recent fresh location (not stale)
+      const freshJobs = trackingData.filter(job => job.lastLocation && !job.lastLocation.isStale);
+
+      if (freshJobs.length > 0) {
+        // Sort by most recent update
+        freshJobs.sort((a, b) => a.lastLocation!.timeSinceUpdate - b.lastLocation!.timeSinceUpdate);
+        const newestJob = freshJobs[0];
+
+        // Center on the freshest GPS location
+        const lat = Number(newestJob.lastLocation!.lat);
+        const lng = Number(newestJob.lastLocation!.lng);
+
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          mapInstanceRef.current!.setCenter({ lat, lng });
+          mapInstanceRef.current!.setZoom(13); // Good zoom level for tracking
+          console.log(`🎯 Auto-centered on ${newestJob.driver.name} at (${lat}, ${lng})`);
+        }
+      } else {
+        // Fallback: fit all markers if no fresh data
+        const bounds = new google.maps.LatLngBounds();
+        allMarkers.forEach((marker) => bounds.extend(marker.getPosition()!));
+        mapInstanceRef.current!.fitBounds(bounds);
+      }
     }
   }, [trackingData, liveDrivers, mapLoaded]);
 
@@ -585,7 +605,18 @@ export default function TrackingPage() {
                     type="button"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => setSelectedJob(job)}
+                    onClick={() => {
+                      setSelectedJob(job);
+                      // Center map on this job's location
+                      if (job.lastLocation && mapInstanceRef.current) {
+                        const lat = Number(job.lastLocation.lat);
+                        const lng = Number(job.lastLocation.lng);
+                        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                          mapInstanceRef.current.setCenter({ lat, lng });
+                          mapInstanceRef.current.setZoom(14);
+                        }
+                      }
+                    }}
                     className={`w-full text-left p-4 rounded-xl border transition shadow-sm ${selectedJob?.jobId === job.jobId ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}
                   >
                     <div className="flex items-center justify-between">
