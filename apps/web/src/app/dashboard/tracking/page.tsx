@@ -293,38 +293,12 @@ export default function TrackingPage() {
       setTrackingData((prev) => prev.map((job) => (job.jobId === payload.data.jobId ? { ...job, status: payload.data.status } : job)));
     };
 
-    const handleLiveDriverUpdate = (payload: { data: LiveDriver }) => {
-      setLiveDrivers((prev) => {
-        const exists = prev.find((driver) => driver.trackerId === payload.data.trackerId);
-        if (exists) {
-          return prev.map((driver) =>
-            driver.trackerId === payload.data.trackerId
-              ? {
-                  ...driver,
-                  lat: payload.data.lat,
-                  lng: payload.data.lng,
-                  speed: payload.data.speed,
-                  heading: payload.data.heading,
-                  accuracy: payload.data.accuracy,
-                  timestamp: payload.data.timestamp,
-                  timeSinceUpdate: 0,
-                  isStale: false,
-                }
-              : driver
-          );
-        }
-        return [...prev, { ...payload.data, timeSinceUpdate: 0, isStale: false }];
-      });
-    };
-
     socket.on("location-update", handleLocationUpdate);
     socket.on("job-status-update", handleStatusUpdate);
-    socket.on("live-driver-update", handleLiveDriverUpdate);
 
     return () => {
       socket.off("location-update", handleLocationUpdate);
       socket.off("job-status-update", handleStatusUpdate);
-      socket.off("live-driver-update", handleLiveDriverUpdate);
     };
   }, [socket, isConnected, companyId, joinTracking]);
 
