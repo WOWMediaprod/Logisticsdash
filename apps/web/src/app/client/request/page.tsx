@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { useClientAuth } from '../../../contexts/ClientAuthContext';
 import { getApiUrl } from '../../../lib/api-config';
+import GooglePlacesAutocomplete from '../../../components/GooglePlacesAutocomplete';
 import {
   ArrowLeft,
   MapPin,
@@ -26,7 +27,11 @@ interface JobRequestForm {
   jobType: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP' | 'EXPORT' | 'IMPORT';
   priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
   pickupAddress: string;
+  pickupLat: number;
+  pickupLng: number;
   deliveryAddress: string;
+  deliveryLat: number;
+  deliveryLng: number;
   requestedPickupDate: string;
   requestedPickupTime: string;
   requestedDropDate: string;
@@ -67,7 +72,11 @@ export default function JobRequestPage() {
     jobType: 'ONE_WAY',
     priority: 'NORMAL',
     pickupAddress: '',
+    pickupLat: 0,
+    pickupLng: 0,
     deliveryAddress: '',
+    deliveryLat: 0,
+    deliveryLng: 0,
     requestedPickupDate: '',
     requestedPickupTime: '',
     requestedDropDate: '',
@@ -137,7 +146,11 @@ export default function JobRequestPage() {
         priority: formData.priority,
         jobType: formData.jobType,
         pickupAddress: formData.pickupAddress,
+        pickupLat: formData.pickupLat || undefined,
+        pickupLng: formData.pickupLng || undefined,
         deliveryAddress: formData.deliveryAddress,
+        deliveryLat: formData.deliveryLat || undefined,
+        deliveryLng: formData.deliveryLng || undefined,
         requestedPickupTs,
         requestedDropTs,
         containerType: formData.containerType || undefined,
@@ -452,35 +465,31 @@ function LocationTimeStep({
       className="space-y-6"
     >
       <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <MapPin className="inline w-4 h-4 mr-1" />
-            Pickup Address *
-          </label>
-          <textarea
-            value={formData.pickupAddress}
-            onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
-            rows={3}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Full pickup address including GPS coordinates if available"
-            required
-          />
-        </div>
+        <GooglePlacesAutocomplete
+          label="Pickup Address"
+          value={formData.pickupAddress}
+          onChange={(result) => setFormData({
+            ...formData,
+            pickupAddress: result.address,
+            pickupLat: result.lat,
+            pickupLng: result.lng,
+          })}
+          placeholder="Search for pickup address in Sri Lanka"
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <MapPin className="inline w-4 h-4 mr-1" />
-            Delivery Address *
-          </label>
-          <textarea
-            value={formData.deliveryAddress}
-            onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-            rows={3}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Full delivery address including GPS coordinates if available"
-            required
-          />
-        </div>
+        <GooglePlacesAutocomplete
+          label="Delivery Address"
+          value={formData.deliveryAddress}
+          onChange={(result) => setFormData({
+            ...formData,
+            deliveryAddress: result.address,
+            deliveryLat: result.lat,
+            deliveryLng: result.lng,
+          })}
+          placeholder="Search for delivery address in Sri Lanka"
+          required
+        />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
