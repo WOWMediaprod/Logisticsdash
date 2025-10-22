@@ -12,7 +12,7 @@ export enum BillStatus {
 
 export class CreateBillDto {
   @ApiProperty({ description: 'Job ID associated with this bill' })
-  @IsUUID()
+  @IsString()
   jobId: string;
 
   @ApiProperty({ description: 'Bill amount' })
