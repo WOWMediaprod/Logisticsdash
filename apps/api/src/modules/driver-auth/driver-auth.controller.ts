@@ -7,7 +7,7 @@ import { ChangePinDto } from './dto/change-pin.dto';
 import { DriverSessionDto } from './dto/driver-session.dto';
 
 @ApiTags('Driver Authentication')
-@Controller('api/v1/driver-auth')
+@Controller('driver-auth')
 export class DriverAuthController {
   constructor(private readonly driverAuthService: DriverAuthService) {}
 
