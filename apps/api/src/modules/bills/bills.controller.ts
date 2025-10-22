@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  ParseUUIDPipe,
   Patch,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -58,7 +57,7 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Bill retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Bill not found' })
   async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
     return this.billsService.findOne(id, companyId);
@@ -69,7 +68,7 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Bill updated successfully' })
   @ApiResponse({ status: 404, description: 'Bill not found' })
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateBillDto: UpdateBillDto,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
@@ -81,7 +80,7 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Bill marked as sent successfully' })
   @ApiResponse({ status: 404, description: 'Bill not found' })
   async markAsSent(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
     return this.billsService.markAsSent(id, companyId);
@@ -92,7 +91,7 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Bill marked as paid successfully' })
   @ApiResponse({ status: 404, description: 'Bill not found' })
   async markAsPaid(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() body: { paidDate?: string },
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
@@ -104,7 +103,7 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Bill deleted successfully' })
   @ApiResponse({ status: 404, description: 'Bill not found' })
   async remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
     return this.billsService.remove(id, companyId);
