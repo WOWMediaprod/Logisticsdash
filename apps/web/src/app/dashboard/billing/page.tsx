@@ -94,8 +94,8 @@ export default function BillingPage() {
 
       try {
         const [billsRes, statsRes] = await Promise.all([
-          fetch(getApiUrl(`/api/v1/bills?companyId=${companyId}&limit=50`)),
-          fetch(getApiUrl(`/api/v1/bills/stats?companyId=${companyId}`)),
+          fetch(getApiUrl(`/api/v1/bills?limit=50`)),
+          fetch(getApiUrl(`/api/v1/bills/stats`)),
         ]);
 
         const [billsData, statsData] = await Promise.all([
@@ -125,8 +125,8 @@ export default function BillingPage() {
     filterStatus === 'all' || bill.status === filterStatus
   );
 
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = (amount: number, currency: string = 'LKR') => {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 2,
@@ -135,7 +135,7 @@ export default function BillingPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

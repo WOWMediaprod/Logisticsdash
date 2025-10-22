@@ -117,7 +117,7 @@ export default function DocumentsPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

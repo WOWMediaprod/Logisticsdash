@@ -77,7 +77,7 @@ const priorityColors: Record<string, string> = {
 
 const formatDateTime = (value?: string) => {
   if (!value) return "-";
-  return new Date(value).toLocaleString("en-IN", {
+  return new Date(value).toLocaleString("en-LK", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",

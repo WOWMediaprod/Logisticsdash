@@ -125,7 +125,7 @@ export default function ClientDashboardPage() {
 
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',

@@ -19,10 +19,10 @@ export class CreateBillDto {
   @IsNumber()
   amount: number;
 
-  @ApiPropertyOptional({ description: 'Currency code', default: 'INR' })
+  @ApiPropertyOptional({ description: 'Currency code', default: 'LKR' })
   @IsOptional()
   @IsString()
-  currency?: string = 'INR';
+  currency?: string = 'LKR';
 
   @ApiPropertyOptional({ description: 'Bill status', enum: BillStatus, default: BillStatus.DRAFT })
   @IsOptional()

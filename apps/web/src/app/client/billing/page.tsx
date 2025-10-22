@@ -158,8 +158,8 @@ export default function ClientBillingPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = (amount: number, currency: string = 'LKR') => {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
       currency: currency
     }).format(amount);
@@ -167,7 +167,7 @@ export default function ClientBillingPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -456,8 +456,8 @@ function BillCard({
     }
   };
 
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = (amount: number, currency: string = 'LKR') => {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
       currency: currency
     }).format(amount);
@@ -465,7 +465,7 @@ function BillCard({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -568,8 +568,8 @@ function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
     }
   };
 
-  const formatCurrency = (amount: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = (amount: number, currency: string = 'LKR') => {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
       currency: currency
     }).format(amount);
@@ -577,7 +577,7 @@ function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Not set';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr).toLocaleDateString('en-LK', {
       day: '2-digit',
       month: 'long',
       year: 'numeric'
@@ -586,7 +586,7 @@ function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
 
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return 'Not set';
-    return new Date(dateStr).toLocaleString('en-IN', {
+    return new Date(dateStr).toLocaleString('en-LK', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
