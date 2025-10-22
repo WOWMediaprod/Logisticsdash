@@ -79,39 +79,45 @@ export class JobsService {
   }
 
   async findAll(query: JobQueryDto) {
-    const { companyId, clientId, status, page = 1, limit = 10 } = query;
-    const skip = (page - 1) * limit;
+    try {
+      const { companyId, clientId, status, page = 1, limit = 10 } = query;
+      const skip = (page - 1) * limit;
 
-    const where = {
-      companyId,
-      ...(clientId && { clientId }),
-      ...(status && { status }),
-    };
+      const where = {
+        companyId,
+        ...(clientId && { clientId }),
+        ...(status && { status }),
+      };
 
-    const [jobs, total] = await Promise.all([
-      this.prisma.job.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          ...this.defaultJobInclude(),
-          statusEvents: { orderBy: { timestamp: "desc" }, take: 1 },
+      const [jobs, total] = await Promise.all([
+        this.prisma.job.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          include: {
+            ...this.defaultJobInclude(),
+            statusEvents: { orderBy: { timestamp: "desc" }, take: 1 },
+          },
+        }),
+        this.prisma.job.count({ where }),
+      ]);
+
+      return {
+        success: true,
+        data: jobs,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
         },
-      }),
-      this.prisma.job.count({ where }),
-    ]);
-
-    return {
-      success: true,
-      data: jobs,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+      };
+    } catch (error) {
+      console.error('❌ [JobsService.findAll] Error:', error);
+      console.error('❌ Query params:', JSON.stringify(query, null, 2));
+      throw error;
+    }
   }
 
   async getStats(companyId: string) {
