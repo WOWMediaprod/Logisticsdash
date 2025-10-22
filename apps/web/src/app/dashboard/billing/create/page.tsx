@@ -12,8 +12,6 @@ import {
   Loader2,
 } from 'lucide-react';
 
-type BillStatus = 'DRAFT' | 'ISSUED' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
-
 interface Job {
   id: string;
   status: string;
@@ -53,7 +51,6 @@ export default function CreateBillPage() {
     jobId: '',
     amount: 0,
     currency: 'LKR',
-    status: 'DRAFT' as BillStatus,
     issuedDate: '',
     dueDate: '',
     notes: '',
@@ -128,9 +125,8 @@ export default function CreateBillPage() {
     try {
       const payload: any = {
         jobId: formData.jobId,
-        amount: formData.amount,
+        amount: Number(formData.amount),
         currency: formData.currency,
-        status: formData.status,
       };
 
       if (formData.issuedDate) {
@@ -144,6 +140,8 @@ export default function CreateBillPage() {
       if (formData.notes) {
         payload.notes = formData.notes;
       }
+
+      console.log('Creating bill with payload:', payload);
 
       const response = await fetch(getApiUrl(`/api/v1/bills`), {
         method: 'POST',
@@ -297,22 +295,6 @@ export default function CreateBillPage() {
                   <option value="LKR">Sri Lankan Rupee (LKR)</option>
                   <option value="USD">US Dollar (USD)</option>
                   <option value="INR">Indian Rupee (INR)</option>
-                </select>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as BillStatus })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="ISSUED">Issued</option>
-                  <option value="SENT">Sent</option>
                 </select>
               </div>
 
