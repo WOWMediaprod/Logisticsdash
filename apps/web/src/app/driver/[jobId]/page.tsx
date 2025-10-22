@@ -6,7 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://logistics-api-d93v.onrender.com/api/v1';
+// Ensure API URL always includes /api/v1
+const getApiUrl = () => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://logistics-api-d93v.onrender.com';
+  // Remove trailing slash if present
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  // Add /api/v1 if not already present
+  return cleanUrl.includes('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+};
+
+const API_URL = getApiUrl();
 
 export default function DriverJobPage() {
   const params = useParams();
