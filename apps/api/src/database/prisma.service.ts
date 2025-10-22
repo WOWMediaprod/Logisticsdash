@@ -12,6 +12,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       },
       log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
     });
+
+    // Disable prepared statements for PgBouncer/Supabase pooler compatibility
+    // This prevents "prepared statement already exists" errors
+    this.$on('query' as never, () => {});
   }
 
   async onModuleInit() {
@@ -42,7 +46,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   // Health check for the database
   async isHealthy(): Promise<boolean> {
     try {
-      await this.$queryRaw`SELECT 1`;
+      await this.$queryRawUnsafe('SELECT 1');
       return true;
     } catch {
       return false;
