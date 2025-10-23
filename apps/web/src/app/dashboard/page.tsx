@@ -135,56 +135,80 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [retryCount, setRetryCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch wrapper with timeout and retry logic for handling Render cold starts
+  const fetchWithRetry = async (url: string, options: RequestInit = {}, attempt: number = 0): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (err) {
+      clearTimeout(timeoutId);
+
+      // Retry logic with exponential backoff
+      if (attempt < 3) {
+        setRetryCount(attempt + 1);
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.log(`Retry attempt ${attempt + 1} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(url, options, attempt + 1);
+      }
+
+      throw err;
+    }
+  };
+
+  const loadData = async () => {
+    if (!companyId) {
+      setStats(null);
+      setJobs([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setRetryCount(0);
+
+    try {
+      const statusParam = selectedStatus === "ALL" ? "" : `&status=${selectedStatus}`;
+      const [statsResponse, jobsResponse] = await Promise.all([
+        fetchWithRetry(getApiUrl(`/api/v1/jobs/stats?companyId=${companyId}`), {
+          headers: { 'Accept': 'application/json' }
+        }),
+        fetchWithRetry(getApiUrl(`/api/v1/jobs?companyId=${companyId}&limit=20${statusParam}`), {
+          headers: { 'Accept': 'application/json' }
+        }),
+      ]);
+
+      const statsJson = await statsResponse.json();
+      const jobsJson = await jobsResponse.json();
+
+      setStats(statsJson.success ? statsJson.data : null);
+      setJobs(jobsJson.success ? jobsJson.data : []);
+      setError(null);
+    } catch (error) {
+      console.error("Failed to load dashboard data", error);
+      setStats(null);
+      setJobs([]);
+      setError("Failed to connect to server. The server might be waking up from sleep mode.");
+    } finally {
+      setLoading(false);
+      setRetryCount(0);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadData = async () => {
-      if (!companyId) {
-        setStats(null);
-        setJobs([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        const statusParam = selectedStatus === "ALL" ? "" : `&status=${selectedStatus}`;
-        const [statsResponse, jobsResponse] = await Promise.all([
-          fetch(getApiUrl(`/api/v1/jobs/stats?companyId=${companyId}`), {
-            headers: { 'Accept': 'application/json' }
-          }),
-          fetch(getApiUrl(`/api/v1/jobs?companyId=${companyId}&limit=20${statusParam}`), {
-            headers: { 'Accept': 'application/json' }
-          }),
-        ]);
-
-        if (!cancelled) {
-          const statsJson = await statsResponse.json();
-          const jobsJson = await jobsResponse.json();
-
-          setStats(statsJson.success ? statsJson.data : null);
-          setJobs(jobsJson.success ? jobsJson.data : []);
-        }
-      } catch (error) {
-        console.error("Failed to load dashboard data", error);
-        if (!cancelled) {
-          setStats(null);
-          setJobs([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadData();
-
-    return () => {
-      cancelled = true;
-    };
   }, [companyId, selectedStatus]);
 
   const summaryItems = useMemo<SummaryCardProps[]>(() => {
@@ -215,11 +239,24 @@ export default function DashboardPage() {
   }
 
   if (loading && jobs.length === 0) {
+    const loadingMessage = retryCount === 0
+      ? "Loading dashboard..."
+      : retryCount === 1
+        ? "Connecting to server..."
+        : "Server is waking up, please wait...";
+
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-lg font-semibold text-gray-700">Loading dashboard...</span>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-lg font-semibold text-gray-700">{loadingMessage}</span>
+          </div>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500">
+              This may take up to a minute if the server was sleeping...
+            </p>
+          )}
         </div>
       </main>
     );
@@ -387,7 +424,23 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        {jobs.length === 0 && !loading && (
+        {error && (
+          <div className="text-center py-16">
+            <div className="glass max-w-xl mx-auto p-8 rounded-2xl">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Connection Error</h3>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button
+                onClick={() => loadData()}
+                className="inline-flex h-11 items-center justify-center rounded-full bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {jobs.length === 0 && !loading && !error && (
           <div className="text-center py-16">
             <div className="text-4xl mb-4">No jobs yet</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No jobs found</h3>
