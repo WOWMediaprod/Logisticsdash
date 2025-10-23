@@ -112,4 +112,87 @@ export class DriversService {
       message: 'Driver deleted successfully',
     };
   }
+
+  async getDriverJobs(driverId: string, companyId: string, status?: string) {
+    // Verify driver exists and belongs to company
+    const driver = await this.prisma.driver.findFirst({
+      where: { id: driverId, companyId },
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
+
+    const where: any = {
+      driverId,
+      companyId,
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    const jobs = await this.prisma.job.findMany({
+      where,
+      include: {
+        client: {
+          select: { id: true, name: true, code: true },
+        },
+        route: {
+          select: { id: true, code: true, origin: true, destination: true, kmEstimate: true },
+        },
+        vehicle: {
+          select: { id: true, regNo: true, class: true },
+        },
+        container: {
+          select: { id: true, iso: true, size: true },
+        },
+        documents: {
+          select: { id: true, fileName: true, fileUrl: true, type: true, createdAt: true },
+        },
+        waypoints: {
+          select: { id: true, name: true, type: true, sequence: true, isCompleted: true, completedAt: true, address: true },
+          orderBy: { sequence: 'asc' },
+        },
+        earnings: {
+          where: { driverId },
+          select: {
+            id: true,
+            baseAmount: true,
+            distanceBonus: true,
+            timeBonus: true,
+            nightShiftBonus: true,
+            totalAmount: true,
+            currency: true,
+            status: true,
+            paidAt: true,
+          },
+        },
+        pod: {
+          select: {
+            id: true,
+            recipientName: true,
+            signatureUrl: true,
+            photoUrls: true,
+            deliveryNotes: true,
+            deliveredAt: true,
+          },
+        },
+      },
+      orderBy: [
+        { status: 'asc' }, // Active jobs first
+        { createdAt: 'desc' },
+      ],
+    });
+
+    return {
+      success: true,
+      data: jobs,
+      meta: {
+        total: jobs.length,
+        active: jobs.filter(j => ['ASSIGNED', 'IN_TRANSIT', 'AT_PICKUP', 'LOADED', 'AT_DELIVERY'].includes(j.status)).length,
+        completed: jobs.filter(j => j.status === 'COMPLETED').length,
+      },
+    };
+  }
 }

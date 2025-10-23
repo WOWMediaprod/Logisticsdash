@@ -57,4 +57,15 @@ export class DriversController {
   ) {
     return this.driversService.remove(id, companyId);
   }
+
+  @Get(':id/jobs')
+  @ApiOperation({ summary: 'Get all jobs assigned to a driver' })
+  @ApiResponse({ status: 200, description: 'Jobs retrieved successfully' })
+  async getDriverJobs(
+    @Param('id') id: string,
+    @Query('companyId') companyId: string,
+    @Query('status') status?: string,
+  ) {
+    return this.driversService.getDriverJobs(id, companyId, status);
+  }
 }
