@@ -5,6 +5,16 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  MapPin,
+  CheckCircle,
+  Clock,
+  Navigation,
+  Package,
+  FileText,
+  AlertTriangle,
+  ChevronRight
+} from 'lucide-react';
 
 // Ensure API URL always includes /api/v1
 const getApiUrl = () => {
@@ -16,6 +26,45 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
+
+type WaypointType =
+  | 'PICKUP'
+  | 'CONTAINER_PICKUP'
+  | 'DOCUMENT_PICKUP'
+  | 'CHECKPOINT'
+  | 'DELIVERY'
+  | 'DOCUMENT_DROPOFF'
+  | 'RETURN';
+
+interface Waypoint {
+  id: string;
+  jobId: string;
+  routeId: string;
+  name: string;
+  type: WaypointType;
+  lat: number;
+  lng: number;
+  sequence: number;
+  estimatedArrival?: string;
+  isCompleted: boolean;
+  actualArrival?: string;
+  metadata?: {
+    address?: string;
+    instructions?: string;
+    requiredDocuments?: string[];
+  };
+  createdAt: string;
+}
+
+const waypointTypeConfig: Record<WaypointType, { label: string; icon: React.ReactNode; color: string }> = {
+  PICKUP: { label: 'Initial Pickup', icon: <MapPin className="w-4 h-4" />, color: 'bg-blue-500' },
+  CONTAINER_PICKUP: { label: 'Container Pickup', icon: <Package className="w-4 h-4" />, color: 'bg-purple-500' },
+  DOCUMENT_PICKUP: { label: 'Document Pickup', icon: <FileText className="w-4 h-4" />, color: 'bg-cyan-500' },
+  CHECKPOINT: { label: 'Checkpoint', icon: <AlertTriangle className="w-4 h-4" />, color: 'bg-yellow-500' },
+  DELIVERY: { label: 'Final Delivery', icon: <CheckCircle className="w-4 h-4" />, color: 'bg-green-500' },
+  DOCUMENT_DROPOFF: { label: 'Document Drop-off', icon: <FileText className="w-4 h-4" />, color: 'bg-indigo-500' },
+  RETURN: { label: 'Return/Empty Return', icon: <Navigation className="w-4 h-4" />, color: 'bg-gray-500' },
+};
 
 export default function DriverJobPage() {
   const params = useParams();
@@ -30,6 +79,8 @@ export default function DriverJobPage() {
   const [tracking, setTracking] = useState(false);
   const [lastLocation, setLastLocation] = useState<string>('');
   const [locationCount, setLocationCount] = useState(0);
+  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [checkingIn, setCheckingIn] = useState<string | null>(null);
 
   // Check if already authenticated
   useEffect(() => {
@@ -52,9 +103,49 @@ export default function DriverJobPage() {
       if (response.ok) {
         const data = await response.json();
         setJob(data);
+        // Fetch waypoints after getting job details
+        fetchWaypoints();
       }
     } catch (err) {
       console.error('Failed to fetch job details:', err);
+    }
+  };
+
+  const fetchWaypoints = async () => {
+    try {
+      const response = await fetch(`${API_URL}/waypoints?jobId=${jobId}`);
+      const result = await response.json();
+      if (result.success) {
+        setWaypoints(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch waypoints:', err);
+    }
+  };
+
+  const handleCheckIn = async (waypointId: string) => {
+    setCheckingIn(waypointId);
+    try {
+      const response = await fetch(`${API_URL}/waypoints/${waypointId}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem(`driver_token_${jobId}`)}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Refresh waypoints
+        fetchWaypoints();
+      } else {
+        setError(result.message || 'Failed to check in at waypoint');
+      }
+    } catch (err) {
+      console.error('Failed to check in:', err);
+      setError('Failed to check in at waypoint');
+    } finally {
+      setCheckingIn(null);
     }
   };
 
@@ -293,6 +384,119 @@ export default function DriverJobPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Waypoints / Route Stops */}
+        {waypoints.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Route Waypoints</CardTitle>
+              <CardDescription>
+                {waypoints.filter(w => w.isCompleted).length} of {waypoints.length} completed
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {waypoints.map((waypoint, index) => {
+                const nextIncomplete = waypoints.find(w => !w.isCompleted);
+                const isCurrent = nextIncomplete?.id === waypoint.id;
+
+                return (
+                  <div
+                    key={waypoint.id}
+                    className={`relative rounded-lg border-2 transition-all ${
+                      waypoint.isCompleted
+                        ? 'bg-green-50 border-green-200'
+                        : isCurrent
+                        ? 'bg-blue-50 border-blue-400 shadow-md'
+                        : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    {/* Connection Line */}
+                    {index < waypoints.length - 1 && (
+                      <div className="absolute left-6 top-full h-3 w-0.5 bg-gray-300 z-0" />
+                    )}
+
+                    <div className="p-4 relative z-10">
+                      <div className="flex items-start gap-3">
+                        {/* Sequence Number */}
+                        <div
+                          className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border-2 font-bold text-lg ${
+                            waypoint.isCompleted
+                              ? 'bg-green-500 border-green-600 text-white'
+                              : isCurrent
+                              ? 'bg-blue-500 border-blue-600 text-white animate-pulse'
+                              : 'bg-white border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {waypoint.isCompleted ? (
+                            <CheckCircle className="w-6 h-6" />
+                          ) : (
+                            waypoint.sequence
+                          )}
+                        </div>
+
+                        {/* Waypoint Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="font-bold text-gray-900">{waypoint.name}</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {waypoint.metadata?.address}
+                              </p>
+                            </div>
+                            <div className={`px-2 py-1 rounded-md text-xs font-medium text-white ${waypointTypeConfig[waypoint.type].color} flex items-center gap-1`}>
+                              {waypointTypeConfig[waypoint.type].icon}
+                              <span className="hidden sm:inline">{waypointTypeConfig[waypoint.type].label}</span>
+                            </div>
+                          </div>
+
+                          {waypoint.metadata?.instructions && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                              <strong>Instructions:</strong> {waypoint.metadata.instructions}
+                            </div>
+                          )}
+
+                          {waypoint.isCompleted && waypoint.actualArrival && (
+                            <div className="mt-2 flex items-center gap-1 text-sm text-green-700">
+                              <CheckCircle className="w-4 h-4" />
+                              Completed: {new Date(waypoint.actualArrival).toLocaleString('en-LK')}
+                            </div>
+                          )}
+
+                          {isCurrent && !waypoint.isCompleted && (
+                            <div className="mt-3">
+                              <Button
+                                onClick={() => handleCheckIn(waypoint.id)}
+                                disabled={checkingIn === waypoint.id}
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                size="lg"
+                              >
+                                {checkingIn === waypoint.id ? (
+                                  'Checking In...'
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-5 h-5 mr-2" />
+                                    Check In at This Location
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
+
+                          {!isCurrent && !waypoint.isCompleted && (
+                            <div className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              Complete previous waypoints first
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
