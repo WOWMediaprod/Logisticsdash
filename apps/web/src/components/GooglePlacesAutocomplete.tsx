@@ -18,14 +18,6 @@ interface GooglePlacesAutocompleteProps {
   label?: string;
 }
 
-// Declare google as a global variable
-declare global {
-  interface Window {
-    google: any;
-    initGoogleMaps: () => void;
-  }
-}
-
 export default function GooglePlacesAutocomplete({
   value,
   onChange,
