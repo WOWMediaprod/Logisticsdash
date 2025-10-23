@@ -3,7 +3,6 @@
 /// <reference types="google.maps" />
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { Loader2, MapPin } from 'lucide-react';
 
 interface PlaceResult {
@@ -43,25 +42,37 @@ export default function GooglePlacesAutocomplete({
       return;
     }
 
-    const loader = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: ['places'],
-    });
-
-    loader
-      .load()
-      .then(async () => {
+    const initAutocomplete = async () => {
+      try {
         if (!containerRef.current) return;
+
+        // Load the Google Maps script dynamically
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=Function.prototype`;
+        script.async = true;
+        script.defer = true;
+
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+          if (!document.querySelector(`script[src^="https://maps.googleapis.com/maps/api/js"]`)) {
+            document.head.appendChild(script);
+          } else {
+            resolve(null);
+          }
+        });
+
+        // Wait for google object to be available
+        if (typeof google === 'undefined') {
+          throw new Error('Google Maps not loaded');
+        }
 
         // Use the NEW PlaceAutocompleteElement (required for new customers as of March 2025)
         const { PlaceAutocompleteElement } = await google.maps.importLibrary('places') as any;
 
-        // Create the autocomplete widget
+        // Create the autocomplete widget with options
         const autocomplete = new PlaceAutocompleteElement({
-          componentRestrictions: { country: 'lk' }, // Restrict to Sri Lanka
-          fields: ['formatted_address', 'geometry', 'name'],
-          types: ['geocode', 'establishment'],
+          componentRestrictions: { country: ['lk'] }, // Restrict to Sri Lanka
         });
 
         autocompleteWidgetRef.current = autocomplete;
@@ -73,14 +84,19 @@ export default function GooglePlacesAutocomplete({
         autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
           const place = event.place;
 
-          if (!place.geometry || !place.geometry.location) {
+          // Fetch additional place details
+          await place.fetchFields({
+            fields: ['displayName', 'formattedAddress', 'location'],
+          });
+
+          if (!place.location) {
             setError('Please select a valid address from the dropdown');
             return;
           }
 
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          const address = place.formatted_address || place.name || '';
+          const lat = place.location.lat();
+          const lng = place.location.lng();
+          const address = place.formattedAddress || place.displayName || '';
 
           // Call onChange with the full place result
           onChange({
@@ -93,12 +109,14 @@ export default function GooglePlacesAutocomplete({
         });
 
         setIsLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Failed to load Google Maps:', err);
         setError('Failed to load address autocomplete');
         setIsLoading(false);
-      });
+      }
+    };
+
+    initAutocomplete();
 
     // Cleanup
     return () => {
