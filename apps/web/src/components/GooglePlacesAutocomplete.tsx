@@ -1,5 +1,7 @@
 'use client';
 
+/// <reference types="google.maps" />
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Loader2, MapPin } from 'lucide-react';
