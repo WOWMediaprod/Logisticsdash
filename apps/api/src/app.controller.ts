@@ -8,9 +8,9 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get('health')
-  @ApiOperation({ summary: 'Health check endpoint' })
+  @ApiOperation({ summary: 'Health check endpoint - also keeps database active' })
   @ApiResponse({ status: 200, description: 'Service is healthy' })
-  getHealth(): { status: string; timestamp: string; version: string } {
+  async getHealth(): Promise<{ status: string; timestamp: string; version: string; database?: string }> {
     return this.appService.getHealth();
   }
 

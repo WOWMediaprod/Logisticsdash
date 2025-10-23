@@ -26,14 +26,29 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       try {
         await this.$connect();
         console.log('✅ Database connected successfully');
+
+        // Warmup query to ensure database is fully active (helps with Neon auto-resume)
+        await this.$queryRawUnsafe('SELECT 1');
+        console.log('✅ Database warmup complete');
         return;
       } catch (error) {
         lastError = error as Error;
-        console.error(`❌ Database connection attempt ${attempt}/${maxRetries} failed:`, error.message);
+        const errorMsg = error.message || String(error);
+
+        // Check if it's a Neon suspension/cold start error
+        const isNeonWakeUp = errorMsg.includes('timeout') ||
+                            errorMsg.includes('ECONNREFUSED') ||
+                            errorMsg.includes('Connection terminated');
+
+        if (isNeonWakeUp) {
+          console.log(`🔄 Database is waking up from suspension (attempt ${attempt}/${maxRetries})...`);
+        } else {
+          console.error(`❌ Database connection attempt ${attempt}/${maxRetries} failed:`, errorMsg);
+        }
 
         if (attempt < maxRetries) {
-          // Exponential backoff: wait 1s, 2s, 4s, 8s, 16s
-          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 16000);
+          // Longer initial wait for Neon wake-up, then exponential backoff
+          const waitTime = attempt === 1 ? 3000 : Math.min(1000 * Math.pow(2, attempt - 1), 16000);
           console.log(`⏳ Retrying in ${waitTime}ms...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
