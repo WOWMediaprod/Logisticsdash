@@ -2,6 +2,7 @@ import { Controller, Get, Query, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GeocodingService } from './geocoding.service';
 import { AutocompleteQueryDto, PlaceDetailsDto } from './dto/autocomplete-query.dto';
+import { AutocompleteSuggestion, PlaceDetails } from './interfaces/geocoding.interface';
 
 @ApiTags('Geocoding')
 @Controller('geocoding')

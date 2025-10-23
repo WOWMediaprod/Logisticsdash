@@ -1,21 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-
-interface AutocompleteSuggestion {
-  placeId: string;
-  name: string;
-  address: string;
-  distance?: string;
-}
-
-interface PlaceDetails {
-  placeId: string;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-}
+import { AutocompleteSuggestion, PlaceDetails } from './interfaces/geocoding.interface';
 
 @Injectable()
 export class GeocodingService {

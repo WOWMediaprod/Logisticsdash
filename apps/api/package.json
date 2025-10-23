@@ -44,6 +44,7 @@
     "@types/aws-sdk": "^2.7.4",
     "@types/tesseract.js": "^2.0.0",
     "aws-sdk": "^2.1692.0",
+    "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "bull": "^4.12.2",
     "class-transformer": "^0.5.1",
