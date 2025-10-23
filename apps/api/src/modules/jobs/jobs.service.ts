@@ -176,6 +176,10 @@ export class JobsService {
         tripPack: true,
         pod: true,
         economics: true,
+        locationTracks: {
+          orderBy: { timestamp: 'desc' },
+          take: 1
+        }
       },
     });
 
@@ -183,7 +187,20 @@ export class JobsService {
       throw new NotFoundException("Job not found");
     }
 
-    return { success: true, data: job };
+    // Map location tracking data to lastLocation field (same format as tracking API)
+    const jobWithLocation = {
+      ...job,
+      lastLocation: job.locationTracks && job.locationTracks.length > 0 ? {
+        lat: job.locationTracks[0].lat,
+        lng: job.locationTracks[0].lng,
+        timestamp: job.locationTracks[0].timestamp,
+        speed: job.locationTracks[0].speed,
+        heading: job.locationTracks[0].heading,
+        accuracy: job.locationTracks[0].accuracy,
+      } : null
+    };
+
+    return { success: true, data: jobWithLocation };
   }
 
   async update(id: string, companyId: string, updateJobDto: UpdateJobDto) {
