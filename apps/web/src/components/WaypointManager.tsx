@@ -196,19 +196,32 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
     const [draggedWaypoint] = newWaypoints.splice(draggedIndex, 1);
     newWaypoints.splice(dropIndex, 0, draggedWaypoint);
 
+    // Ensure PICKUP is first and DELIVERY is last
+    const sortedWaypoints = newWaypoints.sort((a, b) => {
+      // PICKUP always first
+      if (a.type === 'PICKUP') return -1;
+      if (b.type === 'PICKUP') return 1;
+
+      // DELIVERY always last
+      if (a.type === 'DELIVERY') return 1;
+      if (b.type === 'DELIVERY') return -1;
+
+      // Keep relative order for intermediate waypoints
+      return newWaypoints.indexOf(a) - newWaypoints.indexOf(b);
+    });
+
     // Update sequences
-    const reorderedWaypoints = newWaypoints.map((wp, idx) => ({
+    const reorderedWaypoints = sortedWaypoints.map((wp, idx) => ({
       id: wp.id,
       sequence: idx + 1,
     }));
 
     try {
-      // Call reorder API
-      const response = await fetch(getApiUrl('/api/v1/waypoints/reorder'), {
+      // Call reorder API with jobId as query parameter
+      const response = await fetch(getApiUrl(`/api/v1/waypoints/reorder?jobId=${jobId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jobId,
           waypoints: reorderedWaypoints,
         }),
       });
