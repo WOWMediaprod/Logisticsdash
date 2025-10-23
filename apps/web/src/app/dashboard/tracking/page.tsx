@@ -119,8 +119,7 @@ function LeafletMap({ trackingData, selectedJob, onJobSelect }: {
   useEffect(() => {
     setMounted(true);
 
-    // Import Leaflet CSS and library
-    import("leaflet/dist/leaflet.css");
+    // Import Leaflet library and fix default icon
     import("leaflet").then((leaflet) => {
       setL(leaflet.default);
 
@@ -132,6 +131,16 @@ function LeafletMap({ trackingData, selectedJob, onJobSelect }: {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
     });
+
+    // Load Leaflet CSS
+    if (typeof window !== 'undefined') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+    }
   }, []);
 
   useEffect(() => {
