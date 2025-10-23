@@ -4,13 +4,31 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Loader } from "@googlemaps/js-api-loader";
+import dynamic from "next/dynamic";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
 import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink, X } from "lucide-react";
 import WaypointManager from "../../../../components/WaypointManager";
 import RouteProgressTimeline from "../../../../components/RouteProgressTimeline";
 import { getApiUrl } from "../../../../lib/api-config";
+
+// Dynamically import Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 type JobDetail = {
   id: string;
@@ -117,28 +135,37 @@ export default function ClientJobDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [waypoints, setWaypoints] = useState<any[]>([]);
 
-  const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const mapRef = useRef<any>(null);
+  const [L, setL] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
-    return () => {
-      // Cleanup map instance and markers on unmount
-      if (mapInstanceRef.current) {
-        if (markerRef.current) {
-          markerRef.current.setMap(null);
-        }
-        mapInstanceRef.current = null;
-      }
-      setMapLoaded(false);
-      setMapError(null);
-    };
+    // Load Leaflet library and CSS
+    import("leaflet").then((leaflet) => {
+      setL(leaflet.default);
+
+      // Fix default icon issue in Leaflet
+      delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
+      leaflet.default.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+    });
+
+    // Load Leaflet CSS
+    if (typeof window !== 'undefined') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+    }
   }, []);
 
   useEffect(() => {
@@ -193,135 +220,16 @@ export default function ClientJobDetailPage() {
     fetchJob();
   }, [companyId, clientId, jobId]);
 
-  // Load Google Maps
+  // Auto-center map ONCE when location data arrives (don't reset zoom on updates)
   useEffect(() => {
-    if (!mounted) {
-      return;
-    }
-
-    // Reset map state on fresh mount
-    if (mapLoaded && !mapInstanceRef.current) {
-      setMapLoaded(false);
-      setMapError(null);
-    }
-
-    if (mapLoaded && mapInstanceRef.current) {
-      return;
-    }
-
-    let cancelled = false;
-    let rafId: number | null = null;
-
-    const loadMap = async () => {
-      if (mapLoaded || cancelled) {
-        return;
-      }
-
-      if (!mapRef.current) {
-        rafId = requestAnimationFrame(loadMap);
-        return;
-      }
-
-      try {
-        const rawApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        const trimmedApiKey = rawApiKey?.trim();
-
-        if (!trimmedApiKey) {
-          setMapError("Map tracking unavailable - API key missing");
-          setMapLoaded(true);
-          return;
-        }
-
-        const apiKey = trimmedApiKey.replace(/\+/g, "%2B");
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-        });
-
-        console.log('🗺️ Loading Google Maps for client...');
-        await loader.load();
-
-        if (!mapRef.current || cancelled) {
-          return;
-        }
-
-        console.log('🗺️ Creating map instance...');
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat: 6.9271, lng: 79.8612 }, // Colombo, Sri Lanka
-          zoom: 10,
-          styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
-        });
-
-        mapInstanceRef.current = map;
-        setMapLoaded(true);
-        setMapError(null);
-        console.log('✅ Google Maps loaded successfully');
-      } catch (err) {
-        console.error("❌ Failed to load Google Maps", err);
-        setMapError("Unable to load map. Check your connection.");
-        setMapLoaded(true);
-      }
-    };
-
-    // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(loadMap, 100);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [mounted, mapLoaded]);
-
-  // Update marker when job location changes
-  useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || !job?.lastLocation) return;
-
-    // Clear existing marker
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
+    if (!L || !mapRef.current || hasAutoZoomed || !job?.lastLocation) return;
 
     const { lat, lng } = job.lastLocation;
-    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-
-    // Create new marker
-    const marker = new google.maps.Marker({
-      position: { lat, lng },
-      map: mapInstanceRef.current,
-      title: job.vehicle?.regNo || "Vehicle location",
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: "#3B82F6",
-        fillOpacity: 0.9,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
-      },
-    });
-
-    const infoWindow = new google.maps.InfoWindow({
-      content: `
-        <div style="font-family: sans-serif; font-size: 12px;">
-          <strong>${job.vehicle?.regNo || "Vehicle"}</strong><br />
-          Speed: ${job.lastLocation.speed} km/h<br />
-          ${job.route ? `Route: ${job.route.origin} → ${job.route.destination}` : ""}
-        </div>
-      `,
-    });
-
-    marker.addListener("click", () => {
-      infoWindow.open(mapInstanceRef.current!, marker);
-    });
-
-    markerRef.current = marker;
-
-    // Center map on marker
-    mapInstanceRef.current.setCenter({ lat, lng });
-    mapInstanceRef.current.setZoom(12);
-  }, [mapLoaded, job]);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && mapRef.current) {
+      mapRef.current.setView([lat, lng], 13);
+      setHasAutoZoomed(true);
+    }
+  }, [L, job, hasAutoZoomed]);
 
   if (!companyId || !clientId) {
     return (
@@ -456,22 +364,21 @@ export default function ClientJobDetailPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-blue-600" />
                 Live Tracking
+                <span className="text-xs text-gray-500 ml-auto">Using OpenStreetMap</span>
               </h2>
               <div className="relative bg-gray-100 rounded-xl overflow-hidden" style={{ height: '400px' }}>
-                <div ref={mapRef} className="w-full h-full" />
-                {!mapLoaded && !mapError && (
+                {!mounted || !L ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                     <div className="text-center">
                       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                       <p className="text-sm text-gray-600">Loading map...</p>
                     </div>
                   </div>
-                )}
-                {mapError && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                    <div className="text-center p-4">
+                ) : !job.lastLocation ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+                    <div className="text-center">
                       <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">{mapError}</p>
+                      <p className="text-sm text-gray-600">Waiting for location update...</p>
                       {job.route && (
                         <p className="text-xs text-gray-400 mt-1">
                           {job.route.origin} → {job.route.destination}
@@ -479,16 +386,34 @@ export default function ClientJobDetailPage() {
                       )}
                     </div>
                   </div>
-                )}
-                {mapLoaded && !mapError && !job.lastLocation && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm pointer-events-none">
-                    <div className="text-center">
-                      <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Waiting for location update...</p>
-                    </div>
-                  </div>
+                ) : (
+                  <MapContainer
+                    center={[Number(job.lastLocation.lat), Number(job.lastLocation.lng)]}
+                    zoom={13}
+                    style={{ height: '100%', width: '100%' }}
+                    ref={mapRef}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={[Number(job.lastLocation.lat), Number(job.lastLocation.lng)]}>
+                      <Popup>
+                        <div style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+                          <strong>{job.vehicle?.regNo || "Vehicle"}</strong><br />
+                          Speed: {job.lastLocation.speed} km/h<br />
+                          {job.route && `Route: ${job.route.origin} → ${job.route.destination}`}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
                 )}
               </div>
+              {job.lastLocation && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Last location: {new Date(job.lastLocation.timestamp).toLocaleString()}
+                </p>
+              )}
             </motion.div>
 
             {/* Timeline/Status Events */}

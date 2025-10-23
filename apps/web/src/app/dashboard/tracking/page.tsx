@@ -143,10 +143,13 @@ function LeafletMap({ trackingData, selectedJob, onJobSelect }: {
     }
   }, []);
 
-  useEffect(() => {
-    if (!L || !mapRef.current) return;
+  // Auto-center only once when first data arrives
+  const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
 
-    // Auto-center on fresh location
+  useEffect(() => {
+    if (!L || !mapRef.current || hasAutoZoomed) return;
+
+    // Auto-center on fresh location ONLY ONCE
     const freshJobs = trackingData.filter(job => job.lastLocation && !job.lastLocation.isStale);
     if (freshJobs.length > 0 && mapRef.current) {
       freshJobs.sort((a, b) => a.lastLocation!.timeSinceUpdate - b.lastLocation!.timeSinceUpdate);
@@ -156,9 +159,10 @@ function LeafletMap({ trackingData, selectedJob, onJobSelect }: {
 
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
         mapRef.current.setView([lat, lng], 13);
+        setHasAutoZoomed(true); // Mark as zoomed, won't auto-center again
       }
     }
-  }, [trackingData, L]);
+  }, [trackingData, L, hasAutoZoomed]);
 
   if (!mounted || !L) {
     return (
