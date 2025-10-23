@@ -966,7 +966,7 @@ function RequestDetailView({
             {/* Waypoint Management - Only show if job has been created */}
             {request.jobId && (
               <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
-                <WaypointManager jobId={request.jobId} />
+                <WaypointManager jobId={request.jobId} isJobAssigned={jobHasDriver} />
               </div>
             )}
 

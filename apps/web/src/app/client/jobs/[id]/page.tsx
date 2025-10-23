@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
-import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink, X } from "lucide-react";
 import WaypointManager from "../../../../components/WaypointManager";
 import RouteProgressTimeline from "../../../../components/RouteProgressTimeline";
 import { getApiUrl } from "../../../../lib/api-config";
@@ -64,6 +64,17 @@ type JobDetail = {
     fileType: string;
     uploadedAt: string;
   }>;
+  bill?: {
+    id: string;
+    invoiceNo: string;
+    amount: number;
+    tax: number;
+    total: number;
+    status: string;
+    dueDate?: string;
+    paidAt?: string;
+    createdAt: string;
+  };
 };
 
 const statusColors: Record<string, string> = {
@@ -112,6 +123,7 @@ export default function ClientJobDetailPage() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -581,13 +593,141 @@ export default function ClientJobDetailPage() {
 
             {/* View Invoice Button */}
             <div>
-              <button className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
-                <Receipt className="w-5 h-5" />
-                View Invoice
-              </button>
+              {job.bill ? (
+                <button
+                  onClick={() => setShowInvoiceModal(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  <Receipt className="w-5 h-5" />
+                  View Invoice
+                </button>
+              ) : (
+                <div className="w-full flex items-center justify-center gap-2 bg-gray-300 text-gray-500 px-4 py-3 rounded-lg font-semibold cursor-not-allowed">
+                  <Receipt className="w-5 h-5" />
+                  Invoice Not Generated
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
+
+        {/* Invoice Modal */}
+        {showInvoiceModal && job.bill && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowInvoiceModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Invoice Details</h2>
+                <button
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Invoice Number */}
+                <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                  <span className="text-sm text-gray-600">Invoice Number:</span>
+                  <span className="font-semibold text-gray-900">{job.bill.invoiceNo}</span>
+                </div>
+
+                {/* Status */}
+                <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    job.bill.status === 'PAID'
+                      ? 'bg-green-100 text-green-800'
+                      : job.bill.status === 'OVERDUE'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {job.bill.status}
+                  </span>
+                </div>
+
+                {/* Amount */}
+                <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                  <span className="text-sm text-gray-600">Amount:</span>
+                  <span className="font-semibold text-gray-900">LKR {Number(job.bill.amount).toLocaleString()}</span>
+                </div>
+
+                {/* Tax */}
+                <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                  <span className="text-sm text-gray-600">Tax:</span>
+                  <span className="font-semibold text-gray-900">LKR {Number(job.bill.tax).toLocaleString()}</span>
+                </div>
+
+                {/* Total */}
+                <div className="flex justify-between items-center py-3 bg-green-50 rounded-lg px-4">
+                  <span className="text-base font-semibold text-green-900">Total:</span>
+                  <span className="text-xl font-bold text-green-900">LKR {Number(job.bill.total).toLocaleString()}</span>
+                </div>
+
+                {/* Due Date */}
+                {job.bill.dueDate && (
+                  <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span className="text-sm text-gray-600">Due Date:</span>
+                    <span className="font-semibold text-gray-900">
+                      {new Date(job.bill.dueDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Paid Date */}
+                {job.bill.paidAt && (
+                  <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span className="text-sm text-gray-600">Paid On:</span>
+                    <span className="font-semibold text-gray-900">
+                      {new Date(job.bill.paidAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Created Date */}
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-sm text-gray-600">Created:</span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(job.bill.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Print
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </main>
   );

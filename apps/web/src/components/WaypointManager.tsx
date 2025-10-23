@@ -24,6 +24,7 @@ interface Waypoint {
 interface WaypointManagerProps {
   jobId: string;
   readOnly?: boolean;
+  isJobAssigned?: boolean;
   onWaypointsChange?: (waypoints: Waypoint[]) => void;
 }
 
@@ -45,7 +46,7 @@ const WAYPOINT_TYPE_COLORS = {
   PORT: 'bg-purple-100 text-purple-800 border-purple-200',
 };
 
-export default function WaypointManager({ jobId, readOnly = false, onWaypointsChange }: WaypointManagerProps) {
+export default function WaypointManager({ jobId, readOnly = false, isJobAssigned = false, onWaypointsChange }: WaypointManagerProps) {
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -264,8 +265,14 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
         <h3 className="text-lg font-semibold text-gray-900">Route Waypoints</h3>
         {!readOnly && (
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            onClick={() => !isJobAssigned && setShowAddForm(!showAddForm)}
+            disabled={isJobAssigned}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+              isJobAssigned
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            title={isJobAssigned ? 'Cannot add waypoints after job is assigned to driver' : 'Add a new waypoint'}
           >
             <Plus className="w-4 h-4" />
             Add Waypoint
