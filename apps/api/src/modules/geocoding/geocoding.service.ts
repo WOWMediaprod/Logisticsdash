@@ -27,42 +27,55 @@ export class GeocodingService {
     }
 
     try {
-      const params: any = {
+      // Using NEW Places API endpoint (POST request)
+      const requestBody: any = {
         input: query,
-        key: this.apiKey,
-        components: `country:${country}`,
+        includedRegionCodes: [country.toUpperCase()],
+        languageCode: 'en',
       };
 
       // Add location bias if coordinates provided
       if (latitude && longitude) {
-        params.location = `${latitude},${longitude}`;
-        params.radius = 50000; // 50km radius
+        requestBody.locationBias = {
+          circle: {
+            center: {
+              latitude,
+              longitude,
+            },
+            radius: 50000, // 50km radius
+          },
+        };
       }
 
-      const response = await axios.get(
-        `${this.baseUrl}/place/autocomplete/json`,
-        { params }
+      const response = await axios.post(
+        `https://places.googleapis.com/v1/places:autocomplete`,
+        requestBody,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': this.apiKey,
+            'X-Goog-FieldMask': 'suggestions.placePrediction.place,suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+          },
+        }
       );
 
-      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-        console.error('Google Places API error:', response.data);
-        throw new BadRequestException(`Google Places API error: ${response.data.status}`);
-      }
-
-      if (response.data.status === 'ZERO_RESULTS') {
+      if (!response.data.suggestions) {
         return [];
       }
 
-      return response.data.predictions.map((prediction: any) => ({
-        placeId: prediction.place_id,
-        name: prediction.structured_formatting?.main_text || prediction.description,
-        address: prediction.description,
-        distance: prediction.distance_meters
-          ? `${(prediction.distance_meters / 1000).toFixed(1)} km`
-          : undefined,
-      }));
+      return response.data.suggestions
+        .filter((suggestion: any) => suggestion.placePrediction)
+        .map((suggestion: any) => {
+          const prediction = suggestion.placePrediction;
+          return {
+            placeId: prediction.placeId || prediction.place,
+            name: prediction.structuredFormat?.mainText?.text || prediction.text?.text || '',
+            address: prediction.text?.text || '',
+            distance: undefined, // New API doesn't provide distance in autocomplete
+          };
+        });
     } catch (error) {
-      console.error('Autocomplete error:', error.message);
+      console.error('Autocomplete error:', error.response?.data || error.message);
       throw new BadRequestException('Failed to fetch autocomplete suggestions');
     }
   }
@@ -73,33 +86,32 @@ export class GeocodingService {
     }
 
     try {
+      // Using NEW Places API endpoint for place details
       const response = await axios.get(
-        `${this.baseUrl}/place/details/json`,
+        `https://places.googleapis.com/v1/${placeId}`,
         {
-          params: {
-            place_id: placeId,
-            fields: 'place_id,name,formatted_address,geometry',
-            key: this.apiKey,
+          headers: {
+            'X-Goog-Api-Key': this.apiKey,
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
           },
         }
       );
 
-      if (response.data.status !== 'OK') {
-        console.error('Google Place Details API error:', response.data);
-        throw new BadRequestException(`Google Place Details API error: ${response.data.status}`);
+      if (!response.data) {
+        throw new BadRequestException('Place not found');
       }
 
-      const result = response.data.result;
+      const place = response.data;
 
       return {
-        placeId: result.place_id,
-        name: result.name,
-        address: result.formatted_address,
-        lat: result.geometry.location.lat,
-        lng: result.geometry.location.lng,
+        placeId: place.id || placeId,
+        name: place.displayName?.text || '',
+        address: place.formattedAddress || '',
+        lat: place.location?.latitude || 0,
+        lng: place.location?.longitude || 0,
       };
     } catch (error) {
-      console.error('Place details error:', error.message);
+      console.error('Place details error:', error.response?.data || error.message);
       throw new BadRequestException('Failed to fetch place details');
     }
   }
