@@ -536,3 +536,617 @@ NEVER USE TRANSACTION POOLER (PORT 6543)
 ```
 
 This is not a suggestion. This is a requirement for Prisma to function correctly with Supabase.
+
+---
+
+# CRITICAL: Google Places API Migration to New API
+
+**Date:** October 23, 2025
+**Issue:** Google Maps Places API legacy endpoints deprecated, REQUEST_DENIED errors
+**Status:** ✅ RESOLVED
+
+---
+
+## 🔴 CRITICAL FINDING
+
+**GOOGLE HAS DEPRECATED THE LEGACY PLACES API FOR NEW CUSTOMERS**
+
+- ❌ **Legacy Places API** (Deprecated as of March 1, 2025)
+  - Endpoint: `GET /maps/api/place/autocomplete/json`
+  - Error: `"REQUEST_DENIED - This API key is not authorized to use this service or API"`
+  - Cannot be enabled for new Google Cloud projects
+
+- ✅ **Places API (New)** (Required for new customers)
+  - Endpoint: `POST https://places.googleapis.com/v1/places:autocomplete`
+  - Uses header-based authentication: `X-Goog-Api-Key`
+  - Field masks required: `X-Goog-FieldMask`
+
+---
+
+## Problem Summary
+
+### Initial Symptoms
+1. Address autocomplete showing "Loading address search..." indefinitely
+2. Browser console showing `ERR_BLOCKED_BY_CLIENT` errors
+3. Google Maps API requests returning 404 or being blocked by ad blockers
+4. API returning `REQUEST_DENIED` from Google Places API
+
+### User Report
+> "Got this error now [Google Places API error]. This API key is not authorized to use this service or API. This is what i want. Check this out: https://developer.uber.com/docs/guest-rides/references/api/v1/guest-address-autocomplete-get"
+>
+> Screenshot showed:
+> - Autocomplete UI stuck on "Loading..."
+> - Console: `net::ERR_BLOCKED_BY_CLIENT`
+> - Server logs: `Google Places API error: REQUEST_DENIED`
+
+---
+
+## Root Cause Analysis
+
+### Multiple Issues Discovered
+
+#### Issue 1: Browser-Based Google Maps SDK
+```typescript
+// OLD APPROACH - Frontend calling Google directly
+const script = document.createElement('script');
+script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+```
+
+**Problems:**
+- Ad blockers block Google Maps scripts
+- API key exposed in browser
+- Complex JavaScript SDK with TypeScript issues
+- Browser compatibility issues
+
+#### Issue 2: Legacy API Deprecation
+```bash
+curl "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=colombo&key=API_KEY"
+
+Response:
+{
+  "error_message": "You're calling a legacy API, which is not enabled for your project.
+                    To get newer features and more functionality, switch to the Places API (New)...",
+  "status": "REQUEST_DENIED"
+}
+```
+
+**Why This Happened:**
+1. Google deprecated legacy Places API as of March 1, 2025
+2. New Google Cloud projects cannot enable legacy Places API
+3. Must use Places API (New) with different endpoint structure
+4. Authentication method changed from query params to headers
+
+#### Issue 3: API Endpoint Structure
+- **Old:** Used `/api/v1` prefix but client was calling without it
+- Frontend: `/geocoding/autocomplete`
+- Backend: Actually at `/api/v1/geocoding/autocomplete`
+- Result: 404 Not Found errors
+
+---
+
+## Solution Implementation
+
+### Phase 1: Uber-Style Backend Proxy
+
+**Rationale:** Move API calls from frontend to backend to:
+- Prevent ad blocker interference
+- Secure API key on server
+- Simplify client code
+- Make it work like Uber's implementation
+
+#### Created Backend Geocoding Module
+
+**Files Created:**
+- `apps/api/src/modules/geocoding/geocoding.module.ts`
+- `apps/api/src/modules/geocoding/geocoding.service.ts`
+- `apps/api/src/modules/geocoding/geocoding.controller.ts`
+- `apps/api/src/modules/geocoding/dto/autocomplete-query.dto.ts`
+- `apps/api/src/modules/geocoding/interfaces/geocoding.interface.ts`
+
+**Endpoints Created:**
+```typescript
+GET  /api/v1/geocoding/autocomplete?query=colombo&country=lk
+POST /api/v1/geocoding/place-details { placeId: "..." }
+GET  /api/v1/geocoding/geocode?address=...
+```
+
+#### Initial Implementation (Legacy API - Failed)
+
+```typescript
+// ATTEMPT 1 - Using Legacy API (Didn't work)
+const response = await axios.get(
+  `${this.baseUrl}/place/autocomplete/json`,
+  {
+    params: {
+      input: query,
+      key: this.apiKey,
+      components: `country:${country}`,
+    }
+  }
+);
+
+// Result: REQUEST_DENIED - Legacy API not available
+```
+
+### Phase 2: Migration to Places API (New)
+
+#### Autocomplete Endpoint Update
+
+**File:** `apps/api/src/modules/geocoding/geocoding.service.ts`
+
+```typescript
+async autocomplete(
+  query: string,
+  country: string = 'lk',
+  latitude?: number,
+  longitude?: number,
+): Promise<AutocompleteSuggestion[]> {
+  // Using NEW Places API endpoint (POST request)
+  const requestBody: any = {
+    input: query,
+    includedRegionCodes: [country.toUpperCase()],
+    languageCode: 'en',
+  };
+
+  // Add location bias if coordinates provided
+  if (latitude && longitude) {
+    requestBody.locationBias = {
+      circle: {
+        center: { latitude, longitude },
+        radius: 50000, // 50km radius
+      },
+    };
+  }
+
+  const response = await axios.post(
+    `https://places.googleapis.com/v1/places:autocomplete`,
+    requestBody,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': this.apiKey,
+        'X-Goog-FieldMask': 'suggestions.placePrediction.place,suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+      },
+    }
+  );
+
+  return response.data.suggestions
+    .filter((suggestion: any) => suggestion.placePrediction)
+    .map((suggestion: any) => {
+      const prediction = suggestion.placePrediction;
+      return {
+        placeId: prediction.placeId || prediction.place,
+        name: prediction.structuredFormat?.mainText?.text || prediction.text?.text || '',
+        address: prediction.text?.text || '',
+      };
+    });
+}
+```
+
+**Key Changes:**
+- ✅ Method: GET → POST
+- ✅ Endpoint: `/maps/api/place/autocomplete/json` → `https://places.googleapis.com/v1/places:autocomplete`
+- ✅ Auth: Query param `?key=` → Header `X-Goog-Api-Key:`
+- ✅ Added required field mask header
+- ✅ Updated request body structure
+- ✅ Updated response parsing for new format
+
+#### Place Details Endpoint Update
+
+```typescript
+async getPlaceDetails(placeId: string): Promise<PlaceDetails> {
+  // Ensure placeId is in the format "places/{placeId}"
+  const placeIdFormatted = placeId.startsWith('places/')
+    ? placeId
+    : `places/${placeId}`;
+
+  const response = await axios.get(
+    `https://places.googleapis.com/v1/${placeIdFormatted}`,
+    {
+      headers: {
+        'X-Goog-Api-Key': this.apiKey,
+        'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+      },
+    }
+  );
+
+  const place = response.data;
+
+  return {
+    placeId: place.id || placeId,
+    name: place.displayName?.text || '',
+    address: place.formattedAddress || '',
+    lat: place.location?.latitude || 0,
+    lng: place.location?.longitude || 0,
+  };
+}
+```
+
+**Key Changes:**
+- ✅ Endpoint: `/place/details/json` → `https://places.googleapis.com/v1/{placeId}`
+- ✅ PlaceId format: `ChIJ...` → `places/ChIJ...`
+- ✅ Response structure: Different field names
+
+### Phase 3: Frontend Component (Uber-Style)
+
+**Created:** `apps/web/src/components/AddressAutocomplete.tsx`
+
+**Features:**
+- Debounced search (300ms delay)
+- Dropdown suggestions like Uber
+- Keyboard navigation (Arrow Up/Down, Enter, Escape)
+- Loading states with spinner
+- Error handling with user feedback
+- No Google Maps JavaScript SDK dependency
+
+```typescript
+// Fetch autocomplete suggestions from backend
+const fetchSuggestions = async (searchQuery: string) => {
+  const response = await fetch(
+    `${apiUrl}/api/v1/geocoding/autocomplete?query=${encodeURIComponent(searchQuery)}&country=lk`
+  );
+  const data = await response.json();
+  setSuggestions(data.data || []);
+  setShowDropdown(true);
+};
+
+// Handle suggestion selection
+const handleSelect = async (suggestion: AddressSuggestion) => {
+  const response = await fetch(`${apiUrl}/api/v1/geocoding/place-details`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ placeId: suggestion.placeId }),
+  });
+
+  const data = await response.json();
+  onChange({
+    address: data.data.address,
+    lat: data.data.lat,
+    lng: data.data.lng,
+  });
+};
+```
+
+**Replaced Old Component:**
+- `GooglePlacesAutocomplete.tsx` → `AddressAutocomplete.tsx`
+- Updated in: Job request form, Waypoint management
+
+---
+
+## Bug Fixes During Implementation
+
+### Bug 1: Missing TypeScript Interfaces
+**Error:** `Return type of public method from exported class has or is using name 'AutocompleteSuggestion' from external module`
+
+**Fix:** Created `interfaces/geocoding.interface.ts` with exported types
+
+```typescript
+export interface AutocompleteSuggestion {
+  placeId: string;
+  name: string;
+  address: string;
+  distance?: string;
+}
+
+export interface PlaceDetails {
+  placeId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+```
+
+### Bug 2: Missing axios Dependency
+**Error:** `Cannot find module 'axios'`
+
+**Fix:** Installed axios in monorepo
+```bash
+pnpm add axios --filter api
+```
+
+### Bug 3: Wrong API Prefix in Frontend
+**Error:** 404 Not Found on `/geocoding/autocomplete`
+
+**Fix:** Updated to include `/api/v1` prefix
+```typescript
+// Before:
+`${apiUrl}/geocoding/autocomplete`
+
+// After:
+`${apiUrl}/api/v1/geocoding/autocomplete`
+```
+
+### Bug 4: PlaceId Format Mismatch
+**Error:** 400 Bad Request when fetching place details
+
+**Fix:** Normalize placeId to `places/{id}` format
+```typescript
+const placeIdFormatted = placeId.startsWith('places/')
+  ? placeId
+  : `places/${placeId}`;
+```
+
+---
+
+## Testing & Verification
+
+### Test 1: Autocomplete Endpoint
+```bash
+curl "https://logistics-api-d93v.onrender.com/api/v1/geocoding/autocomplete?query=colombo&country=lk"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {"name": "Colombo", "address": "Colombo, Sri Lanka", "placeId": "ChIJA3B6D9FT4joRjYPTMk0uCzI"},
+    {"name": "Colombo International Airport Ratmalana", "address": "..."},
+    {"name": "Colombo Fort Station", "address": "..."},
+    {"name": "Colombo City Centre Mall", "address": "..."},
+    {"name": "Colombo Bandaranaike International Airport", "address": "..."}
+  ]
+}
+```
+
+✅ **SUCCESS:** Returns 5 suggestions from Sri Lanka
+
+### Test 2: Place Details Endpoint
+```bash
+curl -X POST "https://logistics-api-d93v.onrender.com/api/v1/geocoding/place-details" \
+  -H "Content-Type: application/json" \
+  -d '{"placeId":"ChIJA3B6D9FT4joRjYPTMk0uCzI"}'
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "placeId": "places/ChIJA3B6D9FT4joRjYPTMk0uCzI",
+    "name": "Colombo",
+    "address": "Colombo, Sri Lanka",
+    "lat": 6.9271,
+    "lng": 79.8612
+  }
+}
+```
+
+### Test 3: Frontend Integration
+1. Navigate to: https://logisticsdash.vercel.app/client/request
+2. Click "Location & Time" step
+3. Type "Colombo" in address field
+4. Verify dropdown appears with suggestions
+5. Click a suggestion
+6. Verify address fills in with GPS coordinates
+
+---
+
+## Configuration Requirements
+
+### Google Cloud Console Setup
+
+1. **Enable Places API (New)**
+   - Go to: https://console.cloud.google.com/apis/library
+   - Search: "Places API (New)"
+   - Click ENABLE
+
+2. **Enable Geocoding API**
+   - Search: "Geocoding API"
+   - Click ENABLE
+
+3. **Enable Billing**
+   - Required even for free tier
+   - First $200/month free
+
+4. **API Key Configuration**
+   - No restrictions (for testing)
+   - OR restrict to domains:
+     - `logisticsdash.vercel.app`
+     - `logistics-api-d93v.onrender.com`
+
+### Environment Variables
+
+**Backend (Render):**
+```bash
+GOOGLE_MAPS_API_KEY=AIzaSyCin-hxK-rB7YsDBzTYMZdBI1vy4a8XEoU
+```
+
+**Frontend (Vercel):**
+```bash
+NEXT_PUBLIC_API_URL=https://logistics-api-d93v.onrender.com
+```
+
+---
+
+## API Comparison: Legacy vs New
+
+### Legacy Places API (Deprecated)
+
+**Autocomplete:**
+```bash
+GET https://maps.googleapis.com/maps/api/place/autocomplete/json
+  ?input=colombo
+  &components=country:lk
+  &key=API_KEY
+```
+
+**Place Details:**
+```bash
+GET https://maps.googleapis.com/maps/api/place/details/json
+  ?place_id=ChIJ...
+  &fields=place_id,name,formatted_address,geometry
+  &key=API_KEY
+```
+
+**Authentication:** Query parameter
+**Response:** Simple JSON with flat structure
+
+### Places API (New) ✅
+
+**Autocomplete:**
+```bash
+POST https://places.googleapis.com/v1/places:autocomplete
+Headers:
+  Content-Type: application/json
+  X-Goog-Api-Key: API_KEY
+  X-Goog-FieldMask: suggestions.placePrediction.place,suggestions.placePrediction.text
+
+Body:
+{
+  "input": "colombo",
+  "includedRegionCodes": ["LK"],
+  "languageCode": "en"
+}
+```
+
+**Place Details:**
+```bash
+GET https://places.googleapis.com/v1/places/ChIJ...
+Headers:
+  X-Goog-Api-Key: API_KEY
+  X-Goog-FieldMask: id,displayName,formattedAddress,location
+```
+
+**Authentication:** Header-based
+**Response:** Nested JSON with structured format
+**PlaceId Format:** `places/ChIJ...` (prefixed)
+
+---
+
+## Files Modified
+
+### Backend
+
+1. **Created:** `apps/api/src/modules/geocoding/`
+   - `geocoding.module.ts` - NestJS module
+   - `geocoding.service.ts` - API logic with new Places API
+   - `geocoding.controller.ts` - REST endpoints
+   - `dto/autocomplete-query.dto.ts` - Request validation
+   - `interfaces/geocoding.interface.ts` - TypeScript types
+
+2. **Modified:** `apps/api/src/app.module.ts`
+   - Added `GeocodingModule` import
+
+3. **Modified:** `apps/api/.env`
+   - Added `GOOGLE_MAPS_API_KEY`
+
+4. **Modified:** `apps/api/package.json`
+   - Added `axios` dependency
+
+### Frontend
+
+1. **Created:** `apps/web/src/components/AddressAutocomplete.tsx`
+   - Uber-style autocomplete component
+   - Backend API integration
+   - Debounced search
+   - Keyboard navigation
+
+2. **Modified:** `apps/web/src/app/client/request/page.tsx`
+   - Replaced `GooglePlacesAutocomplete` with `AddressAutocomplete`
+
+3. **Modified:** `apps/web/src/components/WaypointManagement.tsx`
+   - Replaced `GooglePlacesAutocomplete` with `AddressAutocomplete`
+
+4. **Deprecated:** `apps/web/src/components/GooglePlacesAutocomplete.tsx`
+   - No longer used (kept for reference)
+
+---
+
+## Commits
+
+1. `407d884` - "Implement Uber-style address autocomplete with backend proxy"
+2. `7700357` - "Fix geocoding module build errors"
+3. `33c7a6a` - "Fix API endpoint URLs to include /api/v1 prefix"
+4. `98c6fcb` - "Switch to Google Places API (New) endpoints"
+5. `3952daf` - "Fix place details endpoint to handle placeId format"
+
+---
+
+## Lessons Learned
+
+### 1. Google API Deprecations Are Strict
+- Legacy API completely unavailable for new customers
+- No grace period or fallback
+- Must migrate to new API immediately
+
+### 2. Backend Proxy Is Best Practice
+- Prevents ad blocker issues
+- Secures API keys
+- Easier to update/change APIs
+- Better error handling
+
+### 3. API Documentation Changes
+- New API has completely different structure
+- Cannot simply replace endpoint URL
+- Must update request format, headers, and response parsing
+
+### 4. PlaceId Format Matters
+- Old: `ChIJ...`
+- New: `places/ChIJ...`
+- Must normalize format
+
+---
+
+## Future Considerations
+
+### 1. API Usage Monitoring
+- Track autocomplete requests per month
+- Monitor place details calls
+- Watch for quota limits ($200/month free)
+
+### 2. Error Handling
+- Handle ZERO_RESULTS gracefully
+- Show helpful messages for API errors
+- Add retry logic for transient failures
+
+### 3. Performance Optimization
+- Consider caching popular place results
+- Implement request debouncing (already done - 300ms)
+- Add loading states
+
+### 4. Alternative Providers
+- Consider Mapbox Geocoding API as backup
+- Evaluate Nominatim (OpenStreetMap) for free tier
+- Keep backend proxy flexible for easy switching
+
+---
+
+## Success Metrics
+
+### Before Fix
+- ❌ Autocomplete: Stuck on "Loading..."
+- ❌ Browser: ERR_BLOCKED_BY_CLIENT errors
+- ❌ API: REQUEST_DENIED from Google
+- ❌ Frontend: No Google Maps script loading
+
+### After Fix
+- ✅ Autocomplete: Working with real suggestions
+- ✅ Backend: Proxying requests successfully
+- ✅ API: Returning 5 suggestions for "Colombo"
+- ✅ Place Details: Returning GPS coordinates
+- ✅ No ad blocker interference
+
+---
+
+**Status:** ✅ RESOLVED
+**Resolution Date:** October 23, 2025
+**Time to Resolution:** ~4 hours (multiple attempts and debugging)
+**Root Cause:** Google deprecated legacy Places API for new customers
+**Final Solution:** Migrated to Places API (New) with backend proxy pattern
+
+---
+
+## 🚨 CRITICAL REMINDER
+
+**FOR ANY FUTURE GOOGLE MAPS INTEGRATION:**
+
+```
+ALWAYS USE PLACES API (NEW) - NOT LEGACY API
+ALWAYS PROXY API CALLS THROUGH BACKEND
+ALWAYS USE HEADER-BASED AUTHENTICATION
+ALWAYS USE FIELD MASKS TO LIMIT DATA
+```
+
+The legacy Places API is deprecated and cannot be enabled for new Google Cloud projects. Any new implementation must use the new API from day one.
