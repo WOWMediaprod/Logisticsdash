@@ -415,6 +415,7 @@ function DriversTable({
     <table className="w-full">
       <thead>
         <tr className="border-b border-gray-200">
+          <th className="text-left py-3 px-4">Driver ID</th>
           <th className="text-left py-3 px-4">Name</th>
           <th className="text-left py-3 px-4">License No</th>
           <th className="text-left py-3 px-4">Phone</th>
@@ -426,6 +427,11 @@ function DriversTable({
       <tbody>
         {drivers.map((driver) => (
           <tr key={driver.id} className="border-b border-gray-100 hover:bg-gray-50">
+            <td className="py-3 px-4">
+              <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono">
+                {driver.id}
+              </code>
+            </td>
             <td className="py-3 px-4 font-medium">{driver.name}</td>
             <td className="py-3 px-4">{driver.licenseNo || '-'}</td>
             <td className="py-3 px-4">{driver.phone || '-'}</td>
