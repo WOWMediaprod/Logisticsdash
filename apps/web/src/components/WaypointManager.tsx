@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MapPin, Plus, Trash2, GripVertical, CheckCircle, Circle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import AddressAutocomplete from './AddressAutocomplete';
 import { getApiUrl } from '../lib/api-config';
 
@@ -49,6 +50,7 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [newWaypoint, setNewWaypoint] = useState({
     name: '',
     type: 'CHECKPOINT' as Waypoint['type'],
@@ -174,6 +176,7 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
     if (waypoint.type === 'PICKUP' || waypoint.type === 'DELIVERY') {
       return;
     }
+    setHoveredIndex(index);
   };
 
   const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
@@ -239,6 +242,12 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
     }
 
     setDraggedIndex(null);
+    setHoveredIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setHoveredIndex(null);
   };
 
   if (loading) {
@@ -337,20 +346,36 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
         </div>
       ) : (
         <div className="space-y-3">
-          {waypoints.map((waypoint, index) => {
-            const isDraggable = !readOnly && waypoint.type !== 'PICKUP' && waypoint.type !== 'DELIVERY';
+          <AnimatePresence mode="popLayout">
+            {waypoints.map((waypoint, index) => {
+              const isDraggable = !readOnly && waypoint.type !== 'PICKUP' && waypoint.type !== 'DELIVERY';
+              const isHovered = hoveredIndex === index;
 
-            return (
-              <div
-                key={waypoint.id}
-                draggable={isDraggable}
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={(e) => handleDrop(e, index)}
-                className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow ${
-                  isDraggable ? 'cursor-move' : ''
-                } ${draggedIndex === index ? 'opacity-50' : ''}`}
-              >
+              return (
+                <motion.div
+                  key={waypoint.id}
+                  layout
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{
+                    opacity: draggedIndex === index ? 0.5 : 1,
+                    y: 0,
+                    scale: isHovered && draggedIndex !== null && draggedIndex !== index ? 0.95 : 1,
+                  }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{
+                    layout: { duration: 0.3, ease: 'easeInOut' },
+                    opacity: { duration: 0.2 },
+                    scale: { duration: 0.2 },
+                  }}
+                  draggable={isDraggable}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`bg-white border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                    isDraggable ? 'cursor-move' : ''
+                  } ${isHovered && draggedIndex !== null && draggedIndex !== index ? 'border-blue-400 border-2' : 'border-gray-200'}`}
+                >
                 <div className="flex items-start gap-4">
                   {/* Drag Handle Icon */}
                   {isDraggable && (
@@ -417,9 +442,10 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
                   )}
                 </div>
               </div>
-            </div>
-            );
-          })}
+            </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
     </div>

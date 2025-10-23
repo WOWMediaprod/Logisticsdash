@@ -55,6 +55,12 @@ interface JobRequest {
   reviewedAt?: string;
   reviewNotes?: string;
   jobId?: string;
+  convertedToJobId?: string;
+  convertedToJob?: {
+    id: string;
+    driverId: string | null;
+    status: string;
+  };
   createdAt: string;
   updatedAt: string;
   client: {
@@ -254,8 +260,13 @@ export default function RequestsPage() {
   }, [companyId]);
 
   const filteredRequests = requests.filter(request => {
-    // Hide accepted requests that have been converted to jobs (have a jobId)
-    if (request.status === 'ACCEPTED' && request.jobId) {
+    // Hide accepted requests that have been converted to jobs (have a jobId or convertedToJobId)
+    if (request.status === 'ACCEPTED' && (request.jobId || request.convertedToJobId)) {
+      return false;
+    }
+
+    // Hide job requests where the associated job has been assigned to a driver
+    if (request.convertedToJob && request.convertedToJob.driverId) {
       return false;
     }
 
@@ -598,6 +609,7 @@ function RequestDetailView({
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignProgress, setAssignProgress] = useState(0);
   const [jobHasDriver, setJobHasDriver] = useState(false);
+  const [showAssignConfirmation, setShowAssignConfirmation] = useState(false);
 
   const handleAccept = async () => {
     if (!companyId) {
@@ -958,7 +970,13 @@ function RequestDetailView({
               </div>
             )}
 
-            {/* Driver Assignment Panel - Show after job is created and driver not yet assigned */}
+            {/* Documents */}
+            <DocumentsSection
+              request={request}
+              onUpdate={(updatedRequest) => onUpdate(updatedRequest)}
+            />
+
+            {/* Driver Assignment Panel - Show after documents, after job is created and driver not yet assigned */}
             {request.jobId && !jobHasDriver && (
               <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Assign to Driver</h2>
@@ -1069,7 +1087,7 @@ function RequestDetailView({
                     </div>
 
                     <motion.button
-                      onClick={handleAssignmentUpdate}
+                      onClick={() => setShowAssignConfirmation(true)}
                       whileHover={{ scale: !assignmentData.driverId ? 1 : 1.02 }}
                       whileTap={{ scale: !assignmentData.driverId ? 1 : 0.98 }}
                       disabled={!assignmentData.driverId}
@@ -1085,12 +1103,6 @@ function RequestDetailView({
                 )}
               </div>
             )}
-
-            {/* Documents */}
-            <DocumentsSection
-              request={request}
-              onUpdate={(updatedRequest) => onUpdate(updatedRequest)}
-            />
           </div>
 
           {/* Sidebar */}
@@ -1227,6 +1239,68 @@ function RequestDetailView({
                   ) : (
                     actionType === 'accept' ? 'Accept & Create Job' : 'Decline Request'
                   )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Assignment Confirmation Dialog */}
+        {showAssignConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-start mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mr-4">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Confirm Driver Assignment</h3>
+                  <p className="text-sm text-gray-600">
+                    You are about to assign this job to a driver. Please confirm that everything is ready:
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-900 mb-2">Assignment Details:</h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  {assignmentData.vehicleId && vehicles.find(v => v.id === assignmentData.vehicleId) && (
+                    <p>• Vehicle: {vehicles.find(v => v.id === assignmentData.vehicleId)?.label}</p>
+                  )}
+                  {assignmentData.driverId && drivers.find(d => d.id === assignmentData.driverId) && (
+                    <p>• Driver: {drivers.find(d => d.id === assignmentData.driverId)?.label}</p>
+                  )}
+                  {assignmentData.containerId && containers.find(c => c.id === assignmentData.containerId) && (
+                    <p>• Container: {containers.find(c => c.id === assignmentData.containerId)?.label}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Once assigned, the driver will receive all trip details and the job will be visible to the client.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowAssignConfirmation(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAssignConfirmation(false);
+                    handleAssignmentUpdate();
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                >
+                  Yes, Assign Job
                 </button>
               </div>
             </motion.div>

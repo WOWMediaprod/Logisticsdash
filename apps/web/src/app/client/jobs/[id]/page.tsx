@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
-import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink } from "lucide-react";
 import WaypointManager from "../../../../components/WaypointManager";
 import RouteProgressTimeline from "../../../../components/RouteProgressTimeline";
 import { getApiUrl } from "../../../../lib/api-config";
@@ -57,6 +57,13 @@ type JobDetail = {
     timestamp: string;
     speed: number;
   };
+  documents?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    uploadedAt: string;
+  }>;
 };
 
 const statusColors: Record<string, string> = {
@@ -534,58 +541,39 @@ export default function ClientJobDetailPage() {
                 Documents
               </h2>
               <div className="space-y-2">
-                <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Trip Sheet</p>
-                        <p className="text-xs text-gray-500">Auto-generated</p>
-                      </div>
-                    </div>
-                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                      View
-                    </button>
-                  </div>
-                </div>
-
-                {job.route && (
-                  <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Route Details</p>
-                          <p className="text-xs text-gray-500">{job.route.code}</p>
+                {job.documents && job.documents.length > 0 ? (
+                  job.documents.map((doc) => (
+                    <div key={doc.id} className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(doc.uploadedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
                         </div>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium flex-shrink-0 ml-2"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View
+                        </a>
                       </div>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        View
-                      </button>
                     </div>
-                  </div>
-                )}
-
-                {job.container && (
-                  <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Container Info</p>
-                          <p className="text-xs text-gray-500">{job.container.iso}</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        View
-                      </button>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm">No documents available yet</p>
                   </div>
                 )}
               </div>

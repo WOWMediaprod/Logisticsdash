@@ -73,6 +73,9 @@ export class JobRequestsService {
             select: { id: true, name: true, code: true },
           },
           documents: true,
+          convertedToJob: {
+            select: { id: true, driverId: true, status: true },
+          },
         },
       }),
       this.prisma.jobRequest.count({ where }),
