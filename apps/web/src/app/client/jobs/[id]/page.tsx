@@ -9,6 +9,8 @@ import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
 import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt } from "lucide-react";
 import WaypointManager from "../../../../components/WaypointManager";
+import RouteProgressTimeline from "../../../../components/RouteProgressTimeline";
+import { getApiUrl } from "../../../../lib/api-config";
 
 type JobDetail = {
   id: string;
@@ -95,6 +97,7 @@ export default function ClientJobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [waypoints, setWaypoints] = useState<any[]>([]);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -140,6 +143,8 @@ export default function ClientJobDetailPage() {
           // Verify this job belongs to the client
           if (data.data.clientId === clientId) {
             setJob(data.data);
+            // Fetch waypoints after job is loaded
+            fetchWaypoints(data.data.id);
           } else {
             setError("You don't have access to this job");
           }
@@ -151,6 +156,18 @@ export default function ClientJobDetailPage() {
         setError("Unable to load job");
       } finally {
         setLoading(false);
+      }
+    };
+
+    const fetchWaypoints = async (jobId: string) => {
+      try {
+        const response = await fetch(getApiUrl(`/api/v1/waypoints?jobId=${jobId}`));
+        const data = await response.json();
+        if (data.success) {
+          setWaypoints(data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch waypoints", err);
       }
     };
 
@@ -336,6 +353,15 @@ export default function ClientJobDetailPage() {
             <p className="text-gray-600">Track your shipment progress and details</p>
           </div>
         </div>
+
+        {/* Route Progress Timeline - Animated Truck Progress */}
+        {waypoints.length > 0 && (
+          <RouteProgressTimeline
+            waypoints={waypoints}
+            currentLocation={job.lastLocation}
+            jobStatus={job.status}
+          />
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main content */}
