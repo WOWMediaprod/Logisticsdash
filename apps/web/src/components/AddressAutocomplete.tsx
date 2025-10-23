@@ -66,7 +66,7 @@ export default function AddressAutocomplete({
 
     try {
       const response = await fetch(
-        `${apiUrl}/geocoding/autocomplete?query=${encodeURIComponent(searchQuery)}&country=lk`
+        `${apiUrl}/api/v1/geocoding/autocomplete?query=${encodeURIComponent(searchQuery)}&country=lk`
       );
 
       if (!response.ok) {
@@ -112,7 +112,7 @@ export default function AddressAutocomplete({
 
     try {
       // Fetch detailed place information with GPS coordinates
-      const response = await fetch(`${apiUrl}/geocoding/place-details`, {
+      const response = await fetch(`${apiUrl}/api/v1/geocoding/place-details`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
