@@ -529,7 +529,7 @@ function RequestCard({
           <div className="text-sm">
             <p className="font-medium text-gray-900">Route</p>
             <p className="text-gray-600 truncate">
-              {request.pickupAddress.split(',')[0]} → {request.deliveryAddress.split(',')[0]}
+              {request.pickupAddress?.split(',')[0] || 'Not specified'} → {request.deliveryAddress?.split(',')[0] || 'Not specified'}
             </p>
           </div>
         </div>
