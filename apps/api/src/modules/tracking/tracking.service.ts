@@ -209,16 +209,16 @@ export class TrackingService {
   async getActiveTracking(companyId: string) {
     try {
       // Get all LIVE active jobs with recent location data
-      // Only show jobs that are truly active (not just ASSIGNED)
+      // Include ASSIGNED so jobs show up as soon as GPS tracking starts
       const activeJobs = await this.prisma.job.findMany({
         where: {
           companyId,
           status: {
-            in: ['IN_TRANSIT', 'AT_PICKUP', 'LOADED', 'AT_DELIVERY'] // Removed ASSIGNED - only truly active jobs
+            in: ['ASSIGNED', 'IN_TRANSIT', 'AT_PICKUP', 'LOADED', 'AT_DELIVERY']
           },
-          // Only include jobs where driver is online
+          // Include jobs with assigned drivers (isOnline not required since GPS tracking proves they're active)
           driver: {
-            isOnline: true
+            isNot: null
           }
         },
         include: {
