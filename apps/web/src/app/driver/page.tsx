@@ -83,7 +83,7 @@ export default function DriverLoginPage() {
             <Truck className="w-10 h-10 text-blue-600" />
           </motion.div>
           <h1 className="text-4xl font-bold text-white mb-2">Driver Portal</h1>
-          <p className="text-blue-100 text-lg">Welcome Back!</p>
+          <p className="text-white text-xl font-semibold">Welcome Back!</p>
         </div>
 
         {/* Login Card */}

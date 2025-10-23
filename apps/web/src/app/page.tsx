@@ -61,20 +61,24 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="http://localhost:3002/api/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass px-8 py-3 rounded-xl font-semibold text-gray-900 hover:scale-105 transition-all inline-block"
-            >
-              View API docs
-            </a>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/dashboard"
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 hover:scale-105 transition-all inline-block"
+              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 hover:scale-105 transition-all inline-block shadow-lg"
             >
-              View jobs dashboard
+              Admin Dashboard
+            </Link>
+            <Link
+              href="/driver"
+              className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 hover:scale-105 transition-all inline-block shadow-lg"
+            >
+              Driver Dashboard
+            </Link>
+            <Link
+              href="/client"
+              className="bg-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-purple-700 hover:scale-105 transition-all inline-block shadow-lg"
+            >
+              Client Dashboard
             </Link>
           </div>
         </div>
