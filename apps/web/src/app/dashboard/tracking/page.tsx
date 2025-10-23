@@ -1,12 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useCompany } from "../../../contexts/CompanyContext";
 import { useSocket } from "../../../contexts/SocketContext";
 import { getApiUrl } from "../../../lib/api-config";
+
+// Dynamically import Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 type TrackingJob = {
   jobId: string;
@@ -51,35 +69,12 @@ type TrackingResponse = {
   };
 };
 
-type LiveDriver = {
-  trackerId: string;
-  name: string;
-  lat: number;
-  lng: number;
-  speed?: number;
-  heading?: number;
-  accuracy?: number;
-  timestamp: string;
-  timeSinceUpdate: number;
-  isStale: boolean;
-};
-
-type LiveDriverResponse = {
-  success: boolean;
-  data: LiveDriver[];
-  summary: {
-    totalTrackers: number;
-    activeTrackers: number;
-    staleTrackers: number;
-  };
-};
-
 const statusColors: Record<string, string> = {
-  ASSIGNED: "bg-blue-500",
-  IN_TRANSIT: "bg-green-500",
-  AT_PICKUP: "bg-yellow-500",
-  LOADED: "bg-purple-500",
-  AT_DELIVERY: "bg-orange-500",
+  ASSIGNED: "#3b82f6",
+  IN_TRANSIT: "#22c55e",
+  AT_PICKUP: "#eab308",
+  LOADED: "#a855f7",
+  AT_DELIVERY: "#f97316",
 };
 
 const mapStatusColor = (status: string) => statusColors[status] || "#6B7280";
@@ -112,37 +107,138 @@ const SummaryCard = ({ title, value, accent }: { title: string; value: number; a
   </div>
 );
 
-export default function TrackingPage() {
-  const { companyId } = useCompany();
-  const { socket, isConnected, joinTracking } = useSocket();
-
-  const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-
-  const [trackingData, setTrackingData] = useState<TrackingJob[]>([]);
-  const [summary, setSummary] = useState<TrackingResponse["summary"] | null>(null);
-  const [selectedJob, setSelectedJob] = useState<TrackingJob | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [hasAutoCentered, setHasAutoCentered] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+function LeafletMap({ trackingData, selectedJob, onJobSelect }: {
+  trackingData: TrackingJob[];
+  selectedJob: TrackingJob | null;
+  onJobSelect: (job: TrackingJob) => void;
+}) {
+  const mapRef = useRef<any>(null);
+  const [L, setL] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
-    return () => {
-      // Cleanup map instance and markers on unmount
-      if (mapInstanceRef.current) {
-        markersRef.current.forEach((marker) => marker.setMap(null));
-        markersRef.current = [];
-        mapInstanceRef.current = null;
-      }
-      setMapLoaded(false);
-      setMapError(null);
-    };
+    // Import Leaflet CSS and library
+    import("leaflet/dist/leaflet.css");
+    import("leaflet").then((leaflet) => {
+      setL(leaflet.default);
+
+      // Fix default icon issue in Leaflet
+      delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
+      leaflet.default.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+    });
   }, []);
+
+  useEffect(() => {
+    if (!L || !mapRef.current) return;
+
+    // Auto-center on fresh location
+    const freshJobs = trackingData.filter(job => job.lastLocation && !job.lastLocation.isStale);
+    if (freshJobs.length > 0 && mapRef.current) {
+      freshJobs.sort((a, b) => a.lastLocation!.timeSinceUpdate - b.lastLocation!.timeSinceUpdate);
+      const newestJob = freshJobs[0];
+      const lat = Number(newestJob.lastLocation!.lat);
+      const lng = Number(newestJob.lastLocation!.lng);
+
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        mapRef.current.setView([lat, lng], 13);
+      }
+    }
+  }, [trackingData, L]);
+
+  if (!mounted || !L) {
+    return (
+      <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Find center point - default to first location or Mumbai
+  let centerLat = 19.076;
+  let centerLng = 72.8777;
+
+  const firstJobWithLocation = trackingData.find(job => job.lastLocation);
+  if (firstJobWithLocation) {
+    centerLat = Number(firstJobWithLocation.lastLocation!.lat);
+    centerLng = Number(firstJobWithLocation.lastLocation!.lng);
+  }
+
+  // Custom icon function
+  const createCustomIcon = (color: string) => {
+    if (!L) return undefined;
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+  };
+
+  return (
+    <MapContainer
+      center={[centerLat, centerLng]}
+      zoom={10}
+      style={{ height: '400px', width: '100%' }}
+      ref={mapRef}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+
+      {trackingData.map((job) => {
+        if (!job.lastLocation) return null;
+
+        const lat = Number(job.lastLocation.lat);
+        const lng = Number(job.lastLocation.lng);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+
+        const etaText = formatEta(job.etaTs, job.estimatedTimeMinutes);
+        const icon = createCustomIcon(mapStatusColor(job.status));
+
+        return (
+          <Marker
+            key={job.jobId}
+            position={[lat, lng]}
+            icon={icon}
+            eventHandlers={{
+              click: () => onJobSelect(job),
+            }}
+          >
+            <Popup>
+              <div style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+                <strong>{job.driver.name}</strong><br />
+                {job.vehicle.regNo}<br />
+                {job.client.name}<br />
+                Speed: {job.lastLocation.speed} km/h<br />
+                Updated: {job.lastLocation.timeSinceUpdate} min ago<br />
+                {etaText && `ETA: ${etaText}`}
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
+  );
+}
+
+export default function TrackingPage() {
+  const { companyId } = useCompany();
+  const { socket, isConnected, joinTracking } = useSocket();
+
+  const [trackingData, setTrackingData] = useState<TrackingJob[]>([]);
+  const [summary, setSummary] = useState<TrackingResponse["summary"] | null>(null);
+  const [selectedJob, setSelectedJob] = useState<TrackingJob | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!companyId) {
@@ -181,86 +277,6 @@ export default function TrackingPage() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [companyId]);
-
-  useEffect(() => {
-    if (!mounted) {
-      return;
-    }
-
-    // Reset map state on fresh mount
-    if (mapLoaded && !mapInstanceRef.current) {
-      setMapLoaded(false);
-      setMapError(null);
-    }
-
-    if (mapLoaded && mapInstanceRef.current) {
-      return;
-    }
-
-    let cancelled = false;
-    let rafId: number | null = null;
-
-    const loadMap = async () => {
-      if (mapLoaded || cancelled) {
-        return;
-      }
-
-      if (!mapRef.current) {
-        rafId = requestAnimationFrame(loadMap);
-        return;
-      }
-
-      try {
-        const rawApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        const trimmedApiKey = rawApiKey?.trim();
-        if (!trimmedApiKey) {
-          setMapError("Google Maps API key is not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your environment.");
-          setMapLoaded(true);
-          return;
-        }
-
-        const apiKey = trimmedApiKey.replace(/\+/g, "%2B");
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-        });
-
-        console.log('🗺️ Loading Google Maps...');
-        await loader.load();
-
-        if (!mapRef.current || cancelled) {
-          return;
-        }
-
-        console.log('🗺️ Creating map instance...');
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat: 19.076, lng: 72.8777 },
-          zoom: 10,
-          styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
-        });
-
-        mapInstanceRef.current = map;
-        setMapLoaded(true);
-        setMapError(null);
-        console.log('✅ Google Maps loaded successfully');
-      } catch (err) {
-        console.error("❌ Failed to load Google Maps", err);
-        setMapError("Unable to load Google Maps. Check your API key or network connection.");
-        setMapLoaded(true);
-      }
-    };
-
-    // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(loadMap, 100);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [mounted, mapLoaded]);
 
   useEffect(() => {
     if (!socket || !isConnected || !companyId) {
@@ -302,94 +318,6 @@ export default function TrackingPage() {
     };
   }, [socket, isConnected, companyId, joinTracking]);
 
-  useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current) {
-      return;
-    }
-
-    markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = [];
-
-    trackingData.forEach((job) => {
-      if (!job.lastLocation) {
-        return;
-      }
-
-      // Parse lat/lng as numbers (API returns them as strings)
-      const lat = Number(job.lastLocation.lat);
-      const lng = Number(job.lastLocation.lng);
-      if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        return;
-      }
-
-      const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map: mapInstanceRef.current!,
-        title: `${job.driver.name} - ${job.vehicle.regNo}`,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: mapStatusColor(job.status),
-          fillOpacity: 0.85,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
-        },
-      });
-
-      const etaText = formatEta(job.etaTs, job.estimatedTimeMinutes);
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="font-family: sans-serif; font-size: 12px;">
-            <strong>${job.driver.name}</strong><br />
-            ${job.vehicle.regNo}<br />
-            ${job.client.name}<br />
-            Speed: ${job.lastLocation.speed} km/h<br />
-            Updated: ${job.lastLocation.timeSinceUpdate} min ago<br />
-            ${etaText ? `ETA: ${etaText}` : ""}
-          </div>
-        `,
-      });
-
-      marker.addListener("click", () => {
-        infoWindow.open(mapInstanceRef.current!, marker);
-        setSelectedJob(job);
-      });
-
-      markersRef.current.push(marker);
-    });
-
-    const allMarkers = markersRef.current;
-
-    // Only auto-center once on initial load, then let user control the map
-    if (allMarkers.length > 0 && !hasAutoCentered) {
-      // Find the most recent fresh location (not stale)
-      const freshJobs = trackingData.filter(job => job.lastLocation && !job.lastLocation.isStale);
-
-      if (freshJobs.length > 0) {
-        // Sort by most recent update
-        freshJobs.sort((a, b) => a.lastLocation!.timeSinceUpdate - b.lastLocation!.timeSinceUpdate);
-        const newestJob = freshJobs[0];
-
-        // Center on the freshest GPS location
-        const lat = Number(newestJob.lastLocation!.lat);
-        const lng = Number(newestJob.lastLocation!.lng);
-
-        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-          mapInstanceRef.current!.setCenter({ lat, lng });
-          mapInstanceRef.current!.setZoom(15); // Closer zoom level for tracking
-          console.log(`🎯 Auto-centered on ${newestJob.driver.name} at (${lat}, ${lng})`);
-          setHasAutoCentered(true); // Mark as centered, won't auto-center again
-        }
-      } else {
-        // Fallback: fit all markers if no fresh data
-        const bounds = new google.maps.LatLngBounds();
-        allMarkers.forEach((marker) => bounds.extend(marker.getPosition()!));
-        mapInstanceRef.current!.fitBounds(bounds);
-        setHasAutoCentered(true);
-      }
-    }
-  }, [trackingData, mapLoaded, hasAutoCentered]);
-
   const trackingSummary = useMemo(() => {
     const totalJobs = summary?.totalJobs || 0;
     const withLocation = summary?.withLocation || 0;
@@ -415,7 +343,7 @@ export default function TrackingPage() {
     );
   }
 
-  if (!mounted || loading) {
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50">
         <div className="flex items-center space-x-2">
@@ -457,26 +385,14 @@ export default function TrackingPage() {
           <div className="lg:col-span-2 glass rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Live map</h2>
-              <p className="text-sm text-gray-600">Real-time vehicle positions</p>
+              <p className="text-sm text-gray-600">Real-time vehicle positions using OpenStreetMap</p>
             </div>
             <div className="relative">
-              <div ref={mapRef} className="w-full h-96 bg-gray-200" style={{ minHeight: "400px" }} />
-              {!mapLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p className="text-gray-600">Loading map...</p>
-                  </div>
-                </div>
-              )}
-              {mapError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-50">
-                  <div className="text-center p-4">
-                    <p className="text-red-600 font-semibold mb-2">{mapError}</p>
-                    <p className="text-sm text-red-500">Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable the live map.</p>
-                  </div>
-                </div>
-              )}
+              <LeafletMap
+                trackingData={trackingData}
+                selectedJob={selectedJob}
+                onJobSelect={setSelectedJob}
+              />
             </div>
           </div>
 
@@ -493,24 +409,13 @@ export default function TrackingPage() {
                     type="button"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => {
-                      setSelectedJob(job);
-                      // Center map on this job's location
-                      if (job.lastLocation && mapInstanceRef.current) {
-                        const lat = Number(job.lastLocation.lat);
-                        const lng = Number(job.lastLocation.lng);
-                        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                          mapInstanceRef.current.setCenter({ lat, lng });
-                          mapInstanceRef.current.setZoom(14);
-                        }
-                      }
-                    }}
+                    onClick={() => setSelectedJob(job)}
                     className={`w-full text-left p-4 rounded-xl border transition shadow-sm ${selectedJob?.jobId === job.jobId ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-500">{job.client.name}</p>
-                        <p className="text-base font-semibold text-gray-900">{job.route.origin} ? {job.route.destination}</p>
+                        <p className="text-base font-semibold text-gray-900">{job.route.origin} → {job.route.destination}</p>
                       </div>
                       <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-900 text-white">
                         {job.status.replace(/_/g, " ")}
@@ -520,9 +425,13 @@ export default function TrackingPage() {
                       <span>Driver: <strong className="text-gray-800">{job.driver.name}</strong></span>
                       <span>Vehicle: <strong className="text-gray-800">{job.vehicle.regNo}</strong></span>
                     </div>
-                    {job.lastLocation && (
+                    {job.lastLocation ? (
                       <div className="mt-2 text-xs text-gray-500">
-                        Updated {job.lastLocation.timeSinceUpdate} min ago � {job.lastLocation.speed} km/h
+                        Updated {job.lastLocation.timeSinceUpdate} min ago • {job.lastLocation.speed} km/h
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-xs text-gray-400">
+                        Waiting for location update...
                       </div>
                     )}
                   </motion.button>
@@ -535,5 +444,3 @@ export default function TrackingPage() {
     </main>
   );
 }
-
-
