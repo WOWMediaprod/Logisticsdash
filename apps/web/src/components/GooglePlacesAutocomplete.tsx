@@ -29,10 +29,10 @@ export default function GooglePlacesAutocomplete({
   className = '',
   label,
 }: GooglePlacesAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteWidgetRef = useRef<any>(null);
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -51,21 +51,27 @@ export default function GooglePlacesAutocomplete({
 
     loader
       .load()
-      .then(() => {
-        if (!inputRef.current) return;
+      .then(async () => {
+        if (!containerRef.current) return;
 
-        // Initialize autocomplete with Sri Lanka restriction
-        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+        // Use the NEW PlaceAutocompleteElement (required for new customers as of March 2025)
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary('places') as any;
+
+        // Create the autocomplete widget
+        const autocomplete = new PlaceAutocompleteElement({
           componentRestrictions: { country: 'lk' }, // Restrict to Sri Lanka
           fields: ['formatted_address', 'geometry', 'name'],
-          types: ['geocode', 'establishment'], // Allow both addresses and places
+          types: ['geocode', 'establishment'],
         });
 
-        autocompleteRef.current = autocomplete;
+        autocompleteWidgetRef.current = autocomplete;
+
+        // Add to DOM
+        containerRef.current.appendChild(autocomplete);
 
         // Listen for place selection
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
+        autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
+          const place = event.place;
 
           if (!place.geometry || !place.geometry.location) {
             setError('Please select a valid address from the dropdown');
@@ -96,8 +102,8 @@ export default function GooglePlacesAutocomplete({
 
     // Cleanup
     return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      if (autocompleteWidgetRef.current && containerRef.current) {
+        containerRef.current.innerHTML = '';
       }
     };
   }, [onChange]);
@@ -111,42 +117,33 @@ export default function GooglePlacesAutocomplete({
         </label>
       )}
 
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => {
-            // Update the value immediately for typing experience
-            onChange({ address: e.target.value, lat: 0, lng: 0 });
-          }}
-          placeholder={isLoading ? 'Loading...' : placeholder}
-          required={required}
-          disabled={isLoading || !!error}
-          className={`w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
-        />
-
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-          </div>
-        )}
-
-        {!isLoading && !error && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <MapPin className="w-5 h-5 text-gray-400" />
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+      {isLoading && (
+        <div className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          <span className="text-gray-500">Loading address search...</span>
+        </div>
       )}
 
-      {!error && !isLoading && (
-        <p className="mt-1 text-sm text-gray-500">
-          Start typing to search for addresses in Sri Lanka
-        </p>
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (
+        <div>
+          {/* Google PlaceAutocompleteElement will be inserted here */}
+          <div
+            ref={containerRef}
+            className={`google-places-autocomplete ${className}`}
+            style={{
+              width: '100%',
+            }}
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Start typing to search for addresses in Sri Lanka
+          </p>
+        </div>
       )}
     </div>
   );

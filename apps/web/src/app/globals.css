@@ -302,3 +302,30 @@
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
 }
+
+/* Google Places Autocomplete Element Styling */
+.google-places-autocomplete gmp-place-autocomplete {
+  width: 100%;
+}
+
+.google-places-autocomplete input {
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.google-places-autocomplete input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  ring: 2px !important;
+  ring-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.google-places-autocomplete input::placeholder {
+  color: #9ca3af !important;
+}
