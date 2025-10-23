@@ -258,7 +258,7 @@ export default function DriverDashboardPage() {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-blue-100 text-sm">Client</p>
+                    <p className="text-white/80 text-sm font-medium">Client</p>
                     <p className="text-white font-semibold text-lg">{currentJob.client?.name || 'N/A'}</p>
                   </div>
                   <div className={`w-3 h-3 rounded-full ${PRIORITY_COLORS[currentJob.priority]} ring-4 ring-white/30`} />
@@ -272,7 +272,7 @@ export default function DriverDashboardPage() {
                 </div>
 
                 {currentJob.waypoints && currentJob.waypoints.length > 0 && (
-                  <div className="flex items-center gap-2 text-blue-100 text-sm">
+                  <div className="flex items-center gap-2 text-white/90 text-sm">
                     <CheckCircle className="w-4 h-4" />
                     <span>
                       {getCompletedWaypoints(currentJob.waypoints).completed} / {getCompletedWaypoints(currentJob.waypoints).total} waypoints completed
