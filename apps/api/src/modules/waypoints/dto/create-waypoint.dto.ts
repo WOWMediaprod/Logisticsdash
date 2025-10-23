@@ -1,24 +1,11 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsDateString, IsInt, Min } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum WaypointType {
-  PICKUP = 'PICKUP',
-  CONTAINER_PICKUP = 'CONTAINER_PICKUP',
-  DOCUMENT_PICKUP = 'DOCUMENT_PICKUP',
-  CHECKPOINT = 'CHECKPOINT',
-  DELIVERY = 'DELIVERY',
-  DOCUMENT_DROPOFF = 'DOCUMENT_DROPOFF',
-  RETURN = 'RETURN',
-}
+import { WaypointType } from '@prisma/client';
 
 export class CreateWaypointDto {
   @ApiProperty({ description: 'Job ID' })
   @IsString()
   jobId: string;
-
-  @ApiProperty({ description: 'Route ID' })
-  @IsString()
-  routeId: string;
 
   @ApiProperty({ description: 'Waypoint name' })
   @IsString()
@@ -45,17 +32,8 @@ export class CreateWaypointDto {
   @Min(1)
   sequence: number;
 
-  @ApiPropertyOptional({ description: 'Estimated arrival time' })
+  @ApiPropertyOptional({ description: 'Geofence radius in meters', default: 150 })
   @IsOptional()
-  @IsDateString()
-  estimatedArrival?: string;
-
-  @ApiPropertyOptional({ description: 'Special instructions' })
-  @IsOptional()
-  @IsString()
-  instructions?: string;
-
-  @ApiPropertyOptional({ description: 'Required documents/photos' })
-  @IsOptional()
-  requiredDocuments?: string[];
+  @IsInt()
+  radiusM?: number;
 }

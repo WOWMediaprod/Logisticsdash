@@ -33,6 +33,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useCompany } from '../../../contexts/CompanyContext';
+import WaypointManager from '../../../components/WaypointManager';
 
 interface JobRequest {
   id: string;
@@ -829,6 +830,13 @@ function RequestDetailView({
                 </div>
               </div>
             </div>
+
+            {/* Waypoint Management - Only show if job has been created */}
+            {request.jobId && (
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
+                <WaypointManager jobId={request.jobId} />
+              </div>
+            )}
 
             {/* Documents */}
             <DocumentsSection

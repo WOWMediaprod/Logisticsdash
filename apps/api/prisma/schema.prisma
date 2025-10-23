@@ -633,6 +633,12 @@ model JobRequest {
   jobType             JobType              @default(ONE_WAY)
   requestedPickupTs   DateTime?
   requestedDeliveryTs DateTime?
+  pickupAddress       String?
+  pickupLat           Float?
+  pickupLng           Float?
+  deliveryAddress     String?
+  deliveryLat         Float?
+  deliveryLng         Float?
   containerSize       String?
   cargoDescription    String?
   specialInstructions String?

@@ -9,16 +9,15 @@ export class WaypointsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createWaypointDto: CreateWaypointDto) {
-    const { instructions, requiredDocuments, ...data } = createWaypointDto;
-
-    const metadata: any = {};
-    if (instructions) metadata.instructions = instructions;
-    if (requiredDocuments) metadata.requiredDocuments = requiredDocuments;
-
-    const waypoint = await this.prisma.routeWaypoint.create({
+    const waypoint = await this.prisma.waypoint.create({
       data: {
-        ...data,
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        jobId: createWaypointDto.jobId,
+        name: createWaypointDto.name,
+        type: createWaypointDto.type,
+        sequence: createWaypointDto.sequence,
+        address: createWaypointDto.address,
+        lat: createWaypointDto.lat,
+        lng: createWaypointDto.lng,
       },
     });
 
@@ -30,7 +29,7 @@ export class WaypointsService {
   }
 
   async findAllByJob(jobId: string) {
-    const waypoints = await this.prisma.routeWaypoint.findMany({
+    const waypoints = await this.prisma.waypoint.findMany({
       where: { jobId },
       orderBy: { sequence: 'asc' },
     });
@@ -42,7 +41,7 @@ export class WaypointsService {
   }
 
   async findOne(id: string) {
-    const waypoint = await this.prisma.routeWaypoint.findUnique({
+    const waypoint = await this.prisma.waypoint.findUnique({
       where: { id },
     });
 
@@ -57,21 +56,12 @@ export class WaypointsService {
   }
 
   async update(id: string, updateWaypointDto: UpdateWaypointDto) {
-    const { instructions, requiredDocuments, ...data } = updateWaypointDto;
-
     // Check if waypoint exists
     await this.findOne(id);
 
-    const metadata: any = {};
-    if (instructions !== undefined) metadata.instructions = instructions;
-    if (requiredDocuments !== undefined) metadata.requiredDocuments = requiredDocuments;
-
-    const waypoint = await this.prisma.routeWaypoint.update({
+    const waypoint = await this.prisma.waypoint.update({
       where: { id },
-      data: {
-        ...data,
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      },
+      data: updateWaypointDto,
     });
 
     return {
@@ -85,7 +75,7 @@ export class WaypointsService {
     // Check if waypoint exists
     await this.findOne(id);
 
-    await this.prisma.routeWaypoint.delete({
+    await this.prisma.waypoint.delete({
       where: { id },
     });
 
@@ -99,7 +89,7 @@ export class WaypointsService {
     // Update sequences in a transaction
     await this.prisma.$transaction(
       reorderDto.waypoints.map((wp) =>
-        this.prisma.routeWaypoint.update({
+        this.prisma.waypoint.update({
           where: { id: wp.id },
           data: { sequence: wp.sequence },
         })
@@ -113,11 +103,11 @@ export class WaypointsService {
   }
 
   async markAsCompleted(id: string) {
-    const waypoint = await this.prisma.routeWaypoint.update({
+    const waypoint = await this.prisma.waypoint.update({
       where: { id },
       data: {
         isCompleted: true,
-        actualArrival: new Date(),
+        completedAt: new Date(),
       },
     });
 

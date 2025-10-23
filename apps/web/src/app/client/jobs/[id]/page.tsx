@@ -8,6 +8,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
 import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt } from "lucide-react";
+import WaypointManager from "../../../../components/WaypointManager";
 
 type JobDetail = {
   id: string;
@@ -466,6 +467,11 @@ export default function ClientJobDetailPage() {
                   <p className="text-sm text-gray-600">No updates yet.</p>
                 )}
               </div>
+            </motion.div>
+
+            {/* Route Waypoints - Read-only view for client */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
+              <WaypointManager jobId={job.id} readOnly={true} />
             </motion.div>
           </div>
 

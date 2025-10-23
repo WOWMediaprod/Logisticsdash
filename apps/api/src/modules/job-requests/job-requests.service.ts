@@ -25,12 +25,12 @@ export class JobRequestsService {
         requestedDeliveryTs: createJobRequestDto.requestedDropTs // Changed from requestedDropTs
           ? new Date(createJobRequestDto.requestedDropTs)
           : null,
-        // pickupAddress: createJobRequestDto.pickupAddress, // Field doesn't exist
-        // deliveryAddress: createJobRequestDto.deliveryAddress, // Field doesn't exist
-        // pickupLat: createJobRequestDto.pickupLat, // Field doesn't exist
-        // pickupLng: createJobRequestDto.pickupLng, // Field doesn't exist
-        // deliveryLat: createJobRequestDto.deliveryLat, // Field doesn't exist
-        // deliveryLng: createJobRequestDto.deliveryLng, // Field doesn't exist
+        pickupAddress: createJobRequestDto.pickupAddress,
+        deliveryAddress: createJobRequestDto.deliveryAddress,
+        pickupLat: createJobRequestDto.pickupLat,
+        pickupLng: createJobRequestDto.pickupLng,
+        deliveryLat: createJobRequestDto.deliveryLat,
+        deliveryLng: createJobRequestDto.deliveryLng,
         containerSize: createJobRequestDto.containerType, // Changed from containerType
         specialInstructions: createJobRequestDto.specialRequirements, // Changed from specialRequirements
         // estimatedValue: createJobRequestDto.estimatedValue, // Field doesn't exist
@@ -135,12 +135,12 @@ export class JobRequestsService {
         requestedDeliveryTs: updateJobRequestDto.requestedDropTs // Changed from requestedDropTs
           ? new Date(updateJobRequestDto.requestedDropTs)
           : undefined,
-        // pickupAddress: updateJobRequestDto.pickupAddress, // Field doesn't exist
-        // deliveryAddress: updateJobRequestDto.deliveryAddress, // Field doesn't exist
-        // pickupLat: updateJobRequestDto.pickupLat, // Field doesn't exist
-        // pickupLng: updateJobRequestDto.pickupLng, // Field doesn't exist
-        // deliveryLat: updateJobRequestDto.deliveryLat, // Field doesn't exist
-        // deliveryLng: updateJobRequestDto.deliveryLng, // Field doesn't exist
+        pickupAddress: updateJobRequestDto.pickupAddress,
+        deliveryAddress: updateJobRequestDto.deliveryAddress,
+        pickupLat: updateJobRequestDto.pickupLat,
+        pickupLng: updateJobRequestDto.pickupLng,
+        deliveryLat: updateJobRequestDto.deliveryLat,
+        deliveryLng: updateJobRequestDto.deliveryLng,
         containerSize: updateJobRequestDto.containerType, // Changed from containerType
         specialInstructions: updateJobRequestDto.specialRequirements, // Changed from specialRequirements
         // estimatedValue: updateJobRequestDto.estimatedValue, // Field doesn't exist
@@ -242,6 +242,42 @@ export class JobRequestsService {
         route: true,
       },
     });
+
+    // Auto-create PICKUP and DELIVERY waypoints from job request addresses
+    const waypointsToCreate: any[] = [];
+
+    if (jobRequest.pickupAddress && jobRequest.pickupLat && jobRequest.pickupLng) {
+      waypointsToCreate.push({
+        jobId: job.id,
+        name: 'Pickup Location',
+        type: 'PICKUP',
+        sequence: 1,
+        address: jobRequest.pickupAddress,
+        lat: jobRequest.pickupLat,
+        lng: jobRequest.pickupLng,
+        radiusM: 150,
+      });
+    }
+
+    if (jobRequest.deliveryAddress && jobRequest.deliveryLat && jobRequest.deliveryLng) {
+      waypointsToCreate.push({
+        jobId: job.id,
+        name: 'Delivery Location',
+        type: 'DELIVERY',
+        sequence: waypointsToCreate.length + 1,
+        address: jobRequest.deliveryAddress,
+        lat: jobRequest.deliveryLat,
+        lng: jobRequest.deliveryLng,
+        radiusM: 150,
+      });
+    }
+
+    // Create waypoints if any exist
+    if (waypointsToCreate.length > 0) {
+      await this.prisma.waypoint.createMany({
+        data: waypointsToCreate,
+      });
+    }
 
     // Update the job request with acceptance info and link to job
     const updatedJobRequest = await this.prisma.jobRequest.update({
