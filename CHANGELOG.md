@@ -2,6 +2,225 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-10-23] - Multi-Stop Waypoint Management System
+
+### 🎯 **Session Focus**: Complete Route Planning with Intermediate Stops
+
+**Status**: ✅ **Production Deployed** - Multi-waypoint system with auto-creation and manager control
+**Achievement**: Manager can add intermediate stops (container yards, checkpoints), client sees full route timeline
+**Note**: ⏳ **Pending additional changes** - More features to be added before final release
+
+### Added
+
+#### **1. Waypoint Management System** (`/apps/api/src/modules/waypoints/`)
+- ✅ **Simplified Waypoint Architecture**: Switched from RouteWaypoint to Waypoint table
+  - **jobId-based waypoints**: Direct job association instead of route dependency
+  - **Sequence-based ordering**: Integer sequence for flexible waypoint ordering
+  - **Waypoint types**: PICKUP, DELIVERY, CHECKPOINT, REST_STOP, YARD, PORT
+  - **Completion tracking**: isCompleted flag with completedAt timestamp
+  - **Geofencing radius**: radiusM field for proximity detection (default 150m)
+- ✅ **Auto-create PICKUP/DELIVERY waypoints**: Automatically generated when job request accepted
+  - Preserves client-submitted pickup address from job request
+  - Preserves client-submitted delivery address from job request
+  - Sequence #1: Pickup location, Sequence #2+: Delivery location
+  - Protected waypoints: PICKUP and DELIVERY cannot be deleted by manager
+- ✅ **Waypoint CRUD API**: Complete waypoint management
+  - `POST /api/v1/waypoints` - Create new waypoint
+  - `GET /api/v1/waypoints?jobId=xxx` - Get all waypoints for job
+  - `PUT /api/v1/waypoints/:id` - Update waypoint
+  - `DELETE /api/v1/waypoints/:id` - Delete waypoint (except PICKUP/DELIVERY)
+  - `PATCH /api/v1/waypoints/:id/complete` - Mark waypoint as completed
+  - `PATCH /api/v1/waypoints/reorder` - Reorder waypoint sequence
+
+#### **2. WaypointManager Component** (`/apps/web/src/components/WaypointManager.tsx`)
+- ✅ **Full-Featured Timeline Display**: Visual route planning interface
+  - **Numbered sequence**: Sequential waypoint display with visual indicators
+  - **Waypoint type badges**: Color-coded labels (green=pickup, red=delivery, blue=checkpoint, etc.)
+  - **Completion status**: Green checkmark icon for completed waypoints
+  - **Address display**: Full address with map pin icon
+  - **Add waypoint form**: Inline form with Places API autocomplete
+  - **Edit/Delete actions**: Conditional based on waypoint type and completion status
+- ✅ **Places API Integration**: Uber-style address autocomplete for new waypoints
+  - Reuses AddressAutocomplete component from job request form
+  - Captures GPS coordinates (lat/lng) automatically
+  - Works with backend proxy (ad blocker proof)
+- ✅ **Waypoint Type Selection**: Dropdown with 4 intermediate stop types
+  - Checkpoint: General route checkpoints
+  - Container Yard: Container pickup/drop locations
+  - Port: Port of loading/discharge
+  - Rest Stop: Driver rest areas
+- ✅ **Read-only Mode**: Client view without edit/delete capabilities
+  - Disabled add waypoint button
+  - Hidden delete/complete actions
+  - Full visibility of route timeline
+
+#### **3. Manager Dashboard Integration** (`/apps/web/src/app/dashboard/requests/page.tsx`)
+- ✅ **Waypoint Management Section**: Added below Route Information
+  - Only visible after job request is accepted (has jobId)
+  - Shows auto-created PICKUP and DELIVERY waypoints
+  - Manager can add intermediate stops (container yard, checkpoint, etc.)
+  - Manager can mark waypoints as complete during job execution
+  - Manager can delete intermediate waypoints (not PICKUP/DELIVERY)
+- ✅ **Visual Hierarchy**: Clear separation between route info and waypoint management
+
+#### **4. Client Job Detail Integration** (`/apps/web/src/app/client/jobs/[id]/page.tsx`)
+- ✅ **Read-only Waypoint Timeline**: Client sees full route with all stops
+  - Displays all waypoints in sequence order
+  - Shows waypoint types and completion status
+  - No edit/delete capabilities (read-only mode)
+  - Positioned after Shipment Timeline section
+
+#### **5. Database Schema Updates** (`/apps/api/prisma/schema.prisma`)
+- ✅ **JobRequest Address Fields**: Added 6 new fields for client-submitted addresses
+  - `pickupAddress String?` - Full pickup address text
+  - `pickupLat Float?` - Pickup GPS latitude
+  - `pickupLng Float?` - Pickup GPS longitude
+  - `deliveryAddress String?` - Full delivery address text
+  - `deliveryLat Float?` - Delivery GPS latitude
+  - `deliveryLng Float?` - Delivery GPS longitude
+- ✅ **Waypoint Table Utilization**: Simplified from RouteWaypoint complexity
+  - Direct jobId foreign key (no route dependency)
+  - Simpler data model for job-specific waypoints
+
+### Fixed
+
+#### **1. Empty Pickup/Delivery Location Display**
+- **Problem**: Manager dashboard showed empty "Pickup Location" and "Delivery Location" fields
+- **Root Cause**: JobRequest model lacked fields to store client-submitted addresses
+- **Fix**: Added address fields to JobRequest schema and updated service
+  - `job-requests.service.ts` now saves pickupAddress, deliveryAddress with GPS coords
+  - Manager dashboard displays addresses in Route Information section
+- **Result**: Manager sees exactly where client wants pickup and delivery
+
+#### **2. Waypoint Service Table Confusion**
+- **Problem**: Service was using complex RouteWaypoint table with routeId dependency
+- **Root Cause**: Schema had both Waypoint and RouteWaypoint tables, wrong one was selected
+- **Fix**: Complete migration to simpler Waypoint table
+  - Removed routeId from DTOs
+  - Updated all CRUD operations to use `prisma.waypoint`
+  - Changed `completedAt` field from `actualArrival` to match schema
+- **Result**: Cleaner architecture, easier to manage job-specific waypoints
+
+#### **3. Waypoint Auto-Creation Missing**
+- **Problem**: When accepting job request, no waypoints were created
+- **Root Cause**: Job creation logic didn't include waypoint initialization
+- **Fix**: Added auto-create logic in `acceptAndCreateJob` method
+  - Creates PICKUP waypoint from request.pickupAddress/Lat/Lng
+  - Creates DELIVERY waypoint from request.deliveryAddress/Lat/Lng
+  - Uses sequence 1 for pickup, sequence 2 for delivery
+  - Sets default 150m geofence radius
+- **Result**: Every accepted job starts with pickup and delivery waypoints
+
+### Enhanced
+
+#### **Multi-Stop Route Planning**
+- **Manager Workflow**:
+  1. Receive job request from client with pickup/delivery addresses
+  2. Accept request → Job created with auto-generated PICKUP/DELIVERY waypoints
+  3. Add intermediate stops (container yard, checkpoint, rest stop, port)
+  4. Waypoints display in sequential order with visual timeline
+  5. Mark waypoints as complete as driver progresses through route
+- **Client Visibility**:
+  1. Submit job request with pickup/delivery addresses via autocomplete
+  2. After acceptance, view job details with full waypoint timeline
+  3. See all manager-added intermediate stops (container yards, checkpoints, etc.)
+  4. Track completion status of each waypoint in real-time
+
+#### **Data Flow Architecture**
+```
+Client Request → JobRequest (with addresses) → Job Acceptance →
+Auto-create Waypoints (PICKUP + DELIVERY) → Manager Adds Stops →
+Full Route Timeline Visible to Both Parties
+```
+
+#### **Waypoint Type System**
+- **PICKUP**: Auto-created, sequence #1, cannot delete, green badge
+- **DELIVERY**: Auto-created, final sequence, cannot delete, red badge
+- **CHECKPOINT**: Manager-added, blue badge, can edit/delete
+- **YARD**: Container yard stops, yellow badge, can edit/delete
+- **PORT**: Port locations, purple badge, can edit/delete
+- **REST_STOP**: Driver rest areas, gray badge, can edit/delete
+
+### Technical Improvements
+
+#### **Component Reusability**
+- WaypointManager component used in both manager and client views
+- `readOnly` prop controls edit/delete functionality
+- Conditional rendering based on waypoint type and permissions
+
+#### **Sequential Waypoint Management**
+```typescript
+// Auto-calculate next sequence number
+const sequence = waypoints.length + 1;
+
+// Create waypoint with sequence
+await prisma.waypoint.create({
+  data: { jobId, name, type, sequence, address, lat, lng }
+});
+```
+
+#### **Protected Waypoint Logic**
+```typescript
+// Cannot delete PICKUP or DELIVERY waypoints
+{waypoint.type !== 'PICKUP' && waypoint.type !== 'DELIVERY' && (
+  <button onClick={() => handleDeleteWaypoint(waypoint.id)}>
+    <Trash2 />
+  </button>
+)}
+```
+
+### Files Modified
+
+**Backend API:**
+- `apps/api/prisma/schema.prisma` (Added JobRequest address fields)
+- `apps/api/src/modules/waypoints/waypoints.service.ts` (Switched to Waypoint table)
+- `apps/api/src/modules/waypoints/dto/create-waypoint.dto.ts` (Removed routeId)
+- `apps/api/src/modules/job-requests/job-requests.service.ts` (Auto-create waypoints + address fields)
+
+**Frontend:**
+- `apps/web/src/components/WaypointManager.tsx` (Created - 326 lines)
+- `apps/web/src/app/dashboard/requests/page.tsx` (Integrated WaypointManager)
+- `apps/web/src/app/client/jobs/[id]/page.tsx` (Integrated read-only WaypointManager)
+
+### Deployment Status
+- ✅ **Render API**: Live with waypoint auto-creation and CRUD endpoints
+- ✅ **Vercel Frontend**: Auto-deployed with WaypointManager component
+- ✅ **Database**: Schema updated with JobRequest address fields
+- ✅ **Commit**: `f204473` - "feat: Implement multi-stop waypoint management system"
+
+### Known Limitations
+- ⚠️ **Manual Waypoint Completion**: Manager must manually mark waypoints as complete
+- ⚠️ **No Automatic Status Change**: Driver proximity to waypoint doesn't auto-complete waypoint
+- ⚠️ **No Geofencing Logic**: radiusM field stored but not yet used for proximity detection
+- ⚠️ **No Waypoint Reordering UI**: API supports reordering, but UI doesn't allow drag-and-drop yet
+
+### Future Enhancements (Pending)
+1. **Automatic Waypoint Completion**: Geofence-based auto-completion when driver enters radius
+2. **Status Change Triggers**: Auto-update job status when reaching certain waypoints
+   - Arrival at PICKUP → Status: AT_PICKUP
+   - Departure from PICKUP → Status: LOADED
+   - Arrival at DELIVERY → Status: AT_DELIVERY
+   - Completion of DELIVERY → Status: DELIVERED
+3. **Drag-and-Drop Reordering**: Visual waypoint sequence management
+4. **ETA Calculations**: Estimated arrival time for each waypoint based on distance/traffic
+5. **Waypoint Notifications**: Alert driver when approaching next waypoint
+6. **Route Optimization**: Suggest optimal waypoint sequence based on distance
+
+### Testing Notes
+- ✅ Old job requests (created before schema update) won't have pickup/delivery addresses
+- ✅ Test with NEW job request to see full waypoint functionality
+- ✅ Waypoints only appear AFTER accepting job request (when jobId is created)
+- ✅ PICKUP and DELIVERY waypoints protected from deletion
+
+### Developer Notes
+- **Waypoint vs RouteWaypoint**: Simplified to use Waypoint table with direct jobId association
+- **Auto-creation Pattern**: Waypoints created in transaction immediately after job creation
+- **Protected Waypoint Logic**: Type-based permissions prevent deletion of system-generated waypoints
+- **Component Pattern**: Single WaypointManager component with readOnly mode for client view
+- **Sequence Management**: Auto-calculated based on current waypoint count
+
+---
+
 ## [2025-10-23] - Google Places API Migration & Dashboard Reliability Improvements
 
 ### 🎯 **Session Focus**: Address Autocomplete Modernization & Cold Start Handling
