@@ -87,8 +87,11 @@ export class GeocodingService {
 
     try {
       // Using NEW Places API endpoint for place details
+      // Ensure placeId is in the format "places/{placeId}"
+      const placeIdFormatted = placeId.startsWith('places/') ? placeId : `places/${placeId}`;
+
       const response = await axios.get(
-        `https://places.googleapis.com/v1/${placeId}`,
+        `https://places.googleapis.com/v1/${placeIdFormatted}`,
         {
           headers: {
             'X-Goog-Api-Key': this.apiKey,
