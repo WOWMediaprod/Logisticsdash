@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../common/services/prisma.service';
+import { PrismaService } from '../../database/prisma.service';
 import { CreateWaypointDto } from './dto/create-waypoint.dto';
 import { UpdateWaypointDto } from './dto/update-waypoint.dto';
 import { ReorderWaypointsDto } from './dto/reorder-waypoints.dto';
