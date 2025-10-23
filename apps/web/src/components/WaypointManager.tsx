@@ -48,6 +48,7 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [newWaypoint, setNewWaypoint] = useState({
     name: '',
     type: 'CHECKPOINT' as Waypoint['type'],
@@ -156,6 +157,77 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
     }
   };
 
+  // Drag and Drop Handlers
+  const handleDragStart = (index: number) => {
+    const waypoint = waypoints[index];
+    // Don't allow dragging PICKUP or DELIVERY waypoints
+    if (waypoint.type === 'PICKUP' || waypoint.type === 'DELIVERY') {
+      return;
+    }
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    const waypoint = waypoints[index];
+    // Don't allow dropping on PICKUP or DELIVERY waypoints
+    if (waypoint.type === 'PICKUP' || waypoint.type === 'DELIVERY') {
+      return;
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const dropWaypoint = waypoints[dropIndex];
+    // Don't allow dropping on PICKUP or DELIVERY waypoints
+    if (dropWaypoint.type === 'PICKUP' || dropWaypoint.type === 'DELIVERY') {
+      setDraggedIndex(null);
+      return;
+    }
+
+    // Reorder waypoints array
+    const newWaypoints = [...waypoints];
+    const [draggedWaypoint] = newWaypoints.splice(draggedIndex, 1);
+    newWaypoints.splice(dropIndex, 0, draggedWaypoint);
+
+    // Update sequences
+    const reorderedWaypoints = newWaypoints.map((wp, idx) => ({
+      id: wp.id,
+      sequence: idx + 1,
+    }));
+
+    try {
+      // Call reorder API
+      const response = await fetch(getApiUrl('/api/v1/waypoints/reorder'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          waypoints: reorderedWaypoints,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        await loadWaypoints();
+      } else {
+        alert('Failed to reorder waypoints');
+      }
+    } catch (error) {
+      console.error('Failed to reorder waypoints:', error);
+      alert('Failed to reorder waypoints');
+    }
+
+    setDraggedIndex(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -252,16 +324,32 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
         </div>
       ) : (
         <div className="space-y-3">
-          {waypoints.map((waypoint, index) => (
-            <div
-              key={waypoint.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-4">
-                {/* Sequence Number */}
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
-                  {index + 1}
-                </div>
+          {waypoints.map((waypoint, index) => {
+            const isDraggable = !readOnly && waypoint.type !== 'PICKUP' && waypoint.type !== 'DELIVERY';
+
+            return (
+              <div
+                key={waypoint.id}
+                draggable={isDraggable}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow ${
+                  isDraggable ? 'cursor-move' : ''
+                } ${draggedIndex === index ? 'opacity-50' : ''}`}
+              >
+                <div className="flex items-start gap-4">
+                  {/* Drag Handle Icon */}
+                  {isDraggable && (
+                    <div className="flex-shrink-0 pt-1">
+                      <GripVertical className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                    </div>
+                  )}
+
+                  {/* Sequence Number */}
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
 
                 {/* Waypoint Details */}
                 <div className="flex-grow min-w-0">
@@ -317,7 +405,8 @@ export default function WaypointManager({ jobId, readOnly = false, onWaypointsCh
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

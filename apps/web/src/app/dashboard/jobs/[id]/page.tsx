@@ -541,6 +541,148 @@ export default function JobDetailPage() {
               </div>
             </div>
 
+            {/* Assignment Panel - Inline After Documents */}
+            {!job.driver && (
+              <div className="border-t pt-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Assign to Driver</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Assign a driver, vehicle, and container to this job. The driver will receive all trip details once assigned.
+                </p>
+
+                {isAssigning && (
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Sending details to driver...</span>
+                      <span className="font-semibold text-blue-600">{assignProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${assignProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Preparing trip details, route information, and documents...
+                    </p>
+                  </div>
+                )}
+
+                {!isAssigning && (
+                  <>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Vehicle
+                        <select
+                          value={assignmentData.vehicleId}
+                          onChange={(event) => {
+                            if (vehicles.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, vehicleId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (vehicles.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select vehicle</option>
+                          {vehicles.map((vehicle) => (
+                            <option key={vehicle.id} value={vehicle.id}>
+                              {vehicle.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Driver *
+                        <select
+                          value={assignmentData.driverId}
+                          onChange={(event) => {
+                            if (drivers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, driverId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (drivers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select driver</option>
+                          {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Container
+                        <select
+                          value={assignmentData.containerId}
+                          onChange={(event) => {
+                            if (containers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, containerId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (containers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select container</option>
+                          {containers.map((container) => (
+                            <option key={container.id} value={container.id}>
+                              {container.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {/* Trip Details Summary */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Trip Details to be Sent:</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        {job.route && (
+                          <p>• Route: {job.route.origin} → {job.route.destination} ({job.route.kmEstimate} km)</p>
+                        )}
+                        {job.pickupTs && <p>• Pickup: {formatDateTime(job.pickupTs)}</p>}
+                        {job.etaTs && <p>• ETA: {formatDateTime(job.etaTs)}</p>}
+                        {job.container && <p>• Container: {job.container.iso}</p>}
+                        {job.specialNotes && <p>• Special instructions included</p>}
+                      </div>
+                    </div>
+
+                    <motion.button
+                      onClick={handleAssignmentUpdate}
+                      whileHover={{ scale: updating || !assignmentData.driverId ? 1 : 1.02 }}
+                      whileTap={{ scale: updating || !assignmentData.driverId ? 1 : 0.98 }}
+                      disabled={updating || !assignmentData.driverId}
+                      className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all ${
+                        updating || !assignmentData.driverId
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-purple-600 hover:bg-purple-700"
+                      }`}
+                    >
+                      {updating ? "Assigning..." : "Assign Job to Driver"}
+                    </motion.button>
+                  </>
+                )}
+              </div>
+            )}
+
           </motion.div>
         </div>
       </div>
