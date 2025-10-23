@@ -586,6 +586,19 @@ function RequestDetailView({
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Driver assignment states
+  const [vehicles, setVehicles] = useState<Array<{id: string; label: string}>>([]);
+  const [drivers, setDrivers] = useState<Array<{id: string; label: string}>>([]);
+  const [containers, setContainers] = useState<Array<{id: string; label: string}>>([]);
+  const [assignmentData, setAssignmentData] = useState({
+    vehicleId: '',
+    driverId: '',
+    containerId: '',
+  });
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [assignProgress, setAssignProgress] = useState(0);
+  const [jobHasDriver, setJobHasDriver] = useState(false);
+
   const handleAccept = async () => {
     if (!companyId) {
       setError('Company ID is required');
@@ -670,6 +683,113 @@ function RequestDetailView({
       setError('Failed to decline job request');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Load assignment options (drivers, vehicles, containers)
+  const loadAssignmentOptions = async () => {
+    if (!companyId) return;
+
+    try {
+      const [vehiclesRes, driversRes, containersRes] = await Promise.all([
+        fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
+      ]);
+
+      const [vehiclesData, driversData, containersData] = await Promise.all([
+        vehiclesRes.json(),
+        driversRes.json(),
+        containersRes.json(),
+      ]);
+
+      if (vehiclesData.success) {
+        setVehicles(
+          vehiclesData.data.map((item: any) => ({
+            id: item.id,
+            label: `${item.regNo} - ${[item.make, item.model].filter(Boolean).join(" ")}`.trim(),
+          }))
+        );
+      }
+
+      if (driversData.success) {
+        setDrivers(
+          driversData.data.map((item: any) => ({
+            id: item.id,
+            label: item.phone ? `${item.name} (${item.phone})` : item.name,
+          }))
+        );
+      }
+
+      if (containersData.success) {
+        setContainers(
+          containersData.data.map((item: any) => ({
+            id: item.id,
+            label: `${item.iso} - ${item.size} (${item.owner})${item.checkOk ? "" : " [check pending]"}`,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch assignment data", err);
+    }
+  };
+
+  // Handle job assignment
+  const handleAssignmentUpdate = async () => {
+    if (!request.jobId || !companyId) return;
+
+    setIsAssigning(true);
+    setAssignProgress(0);
+
+    // Simulate progress animation
+    const progressInterval = setInterval(() => {
+      setAssignProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
+
+    try {
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${request.jobId}/assign`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyId,
+          vehicleId: assignmentData.vehicleId || null,
+          driverId: assignmentData.driverId || null,
+          containerId: assignmentData.containerId || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      clearInterval(progressInterval);
+      setAssignProgress(100);
+
+      if (result.success) {
+        setTimeout(() => {
+          setJobHasDriver(true);
+          setIsAssigning(false);
+          setAssignProgress(0);
+          alert('Job assigned successfully!');
+        }, 500);
+      } else {
+        console.error("Failed to update assignment", result.error);
+        setIsAssigning(false);
+        setAssignProgress(0);
+        alert('Failed to assign job');
+      }
+    } catch (err) {
+      console.error("Failed to update assignment", err);
+      clearInterval(progressInterval);
+      setIsAssigning(false);
+      setAssignProgress(0);
+      alert('Failed to assign job');
     }
   };
 
@@ -835,6 +955,134 @@ function RequestDetailView({
             {request.jobId && (
               <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
                 <WaypointManager jobId={request.jobId} />
+              </div>
+            )}
+
+            {/* Driver Assignment Panel - Show after job is created and driver not yet assigned */}
+            {request.jobId && !jobHasDriver && (
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Assign to Driver</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Assign a driver, vehicle, and container to this job. The driver will receive all trip details once assigned.
+                </p>
+
+                {isAssigning && (
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Sending details to driver...</span>
+                      <span className="font-semibold text-blue-600">{assignProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${assignProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Preparing trip details, route information, and documents...
+                    </p>
+                  </div>
+                )}
+
+                {!isAssigning && (
+                  <>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Vehicle
+                        <select
+                          value={assignmentData.vehicleId}
+                          onChange={(event) => {
+                            if (vehicles.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, vehicleId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (vehicles.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select vehicle</option>
+                          {vehicles.map((vehicle) => (
+                            <option key={vehicle.id} value={vehicle.id}>
+                              {vehicle.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Driver *
+                        <select
+                          value={assignmentData.driverId}
+                          onChange={(event) => {
+                            if (drivers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, driverId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (drivers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select driver</option>
+                          {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Container
+                        <select
+                          value={assignmentData.containerId}
+                          onChange={(event) => {
+                            if (containers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, containerId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (containers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select container</option>
+                          {containers.map((container) => (
+                            <option key={container.id} value={container.id}>
+                              {container.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <motion.button
+                      onClick={handleAssignmentUpdate}
+                      whileHover={{ scale: !assignmentData.driverId ? 1 : 1.02 }}
+                      whileTap={{ scale: !assignmentData.driverId ? 1 : 0.98 }}
+                      disabled={!assignmentData.driverId}
+                      className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all ${
+                        !assignmentData.driverId
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-purple-600 hover:bg-purple-700"
+                      }`}
+                    >
+                      Assign Job to Driver
+                    </motion.button>
+                  </>
+                )}
               </div>
             )}
 
