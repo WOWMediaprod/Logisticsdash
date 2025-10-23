@@ -18,6 +18,7 @@ import { DriverAuthModule } from './modules/driver-auth/driver-auth.module';
 import { TrackingV2Module } from './modules/tracking-v2/tracking-v2.module';
 import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
 import { WaypointsModule } from './modules/waypoints/waypoints.module';
+import { GeocodingModule } from './modules/geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { WaypointsModule } from './modules/waypoints/waypoints.module';
     TrackingV2Module,
     DriverStatsModule,
     WaypointsModule,
+    GeocodingModule,
     // AuthModule,
     // EconomicsModule,
     // MaintenanceModule,

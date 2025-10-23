@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GooglePlacesAutocomplete from './GooglePlacesAutocomplete';
+import AddressAutocomplete from './AddressAutocomplete';
 import { getApiUrl } from '../lib/api-config';
 import {
   MapPin,
@@ -370,7 +370,7 @@ function WaypointModal({ jobId, routeId, waypoint, onClose, onSuccess, nextSeque
             </select>
           </div>
 
-          <GooglePlacesAutocomplete
+          <AddressAutocomplete
             label="Location"
             value={formData.address}
             onChange={(result) => setFormData({

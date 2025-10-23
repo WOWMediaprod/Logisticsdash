@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { useClientAuth } from '../../../contexts/ClientAuthContext';
 import { getApiUrl } from '../../../lib/api-config';
-import GooglePlacesAutocomplete from '../../../components/GooglePlacesAutocomplete';
+import AddressAutocomplete from '../../../components/AddressAutocomplete';
 import {
   ArrowLeft,
   MapPin,
@@ -465,7 +465,7 @@ function LocationTimeStep({
       className="space-y-6"
     >
       <div className="grid md:grid-cols-2 gap-6">
-        <GooglePlacesAutocomplete
+        <AddressAutocomplete
           label="Pickup Address"
           value={formData.pickupAddress}
           onChange={(result) => setFormData({
@@ -478,7 +478,7 @@ function LocationTimeStep({
           required
         />
 
-        <GooglePlacesAutocomplete
+        <AddressAutocomplete
           label="Delivery Address"
           value={formData.deliveryAddress}
           onChange={(result) => setFormData({
