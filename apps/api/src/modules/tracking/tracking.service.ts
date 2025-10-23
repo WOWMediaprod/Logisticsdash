@@ -4,6 +4,7 @@ import { LocationUpdateDto, LocationQueryDto, LiveDriverLocationDto } from './dt
 import { TrackingGateway } from './tracking.gateway';
 import { ETAService } from './services/eta.service';
 import { GeofenceService } from './services/geofence.service';
+import { AutogateService } from './services/autogate.service';
 
 @Injectable()
 export class TrackingService {
@@ -13,7 +14,8 @@ export class TrackingService {
     private prisma: PrismaService,
     private trackingGateway?: TrackingGateway,
     private etaService?: ETAService,
-    private geofenceService?: GeofenceService
+    private geofenceService?: GeofenceService,
+    private autogateService?: AutogateService
   ) {}
 
   async updateLocation(locationData: LocationUpdateDto) {
@@ -77,6 +79,23 @@ export class TrackingService {
           locationData.driverId,
           job.companyId
         );
+      }
+
+      // Check waypoint proximity and auto-update job status (AUTOGATE)
+      if (this.autogateService) {
+        const autogateResult = await this.autogateService.checkWaypointProximity(
+          locationData.lat,
+          locationData.lng,
+          locationData.jobId,
+          locationData.driverId
+        );
+
+        if (autogateResult) {
+          this.logger.log(
+            `🚪 AUTOGATE: Job ${locationData.jobId} status auto-updated to ${autogateResult.newStatus} ` +
+            `at waypoint "${autogateResult.waypointReached.name}"`
+          );
+        }
       }
 
       // Calculate ETA updates
