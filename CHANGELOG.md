@@ -2,6 +2,249 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-10-23] - Admin & Client Dashboard UX Improvements
+
+### 🎯 **Session Focus**: Enhanced Job Request Workflow & Invoice Management
+
+**Status**: ✅ **Production Deployed** - Complete admin and client dashboard improvements
+**Achievement**: Streamlined job assignment workflow, animated route progress, and functional invoice display
+**Note**: ✅ **Admin and Client dashboards complete** - Next phase: Driver dashboard
+
+### Added
+
+#### **1. Driver Assignment Confirmation Dialog** (`/apps/web/src/app/dashboard/requests/page.tsx`)
+- ✅ **Assignment Confirmation Modal**: Warning dialog before assigning jobs to drivers
+  - **AlertTriangle icon**: Visual warning indicator for critical action
+  - **Assignment details preview**: Shows selected vehicle, driver, and container before confirmation
+  - **Warning message**: "Once assigned, the driver will receive all trip details and the job will be visible to the client"
+  - **Two-button confirmation**: "Cancel" and "Yes, Assign Job" for clear user intent
+  - **Framer Motion animations**: Smooth modal entrance/exit transitions
+- ✅ **Prevents accidental assignments**: Adds deliberate confirmation step before job dispatch
+
+#### **2. Animated Route Progress Timeline** (`/apps/web/src/components/RouteProgressTimeline.tsx`)
+- ✅ **Visual Route Progress Display**: Animated truck moving along route timeline
+  - **Progress percentage**: Real-time calculation based on GPS location or completed waypoints
+  - **Animated truck icon**: Bouncing truck indicator showing current position
+  - **Waypoint markers**: Color-coded waypoints with completion status
+  - **Progress bar**: Gradient blue progress fill showing journey completion
+  - **Distance display**: Total route distance in kilometers
+  - **Status messages**: Dynamic text showing journey state
+- ✅ **GPS-based progress calculation**: Uses distance algorithms to calculate accurate progress
+- ✅ **Fallback logic**: When GPS unavailable, uses last completed waypoint for progress estimation
+
+#### **3. Smooth Waypoint Reordering Animations** (`/apps/web/src/components/WaypointManager.tsx`)
+- ✅ **Framer Motion drag-and-drop**: Animated waypoint reordering with visual feedback
+  - **Layout animations**: Waypoints smoothly move up/down during drag
+  - **Hover feedback**: Hovered waypoint scales down (0.95) with blue border
+  - **Drag opacity**: Dragged waypoint becomes semi-transparent (50%)
+  - **Smooth transitions**: 300ms ease-in-out animations
+  - **AnimatePresence**: Handles waypoint additions/deletions gracefully
+- ✅ **Protected waypoints**: PICKUP and DELIVERY cannot be dragged (visual indicator)
+- ✅ **Sequence preservation**: Maintains PICKUP first, DELIVERY last during reordering
+
+#### **4. Disabled Waypoint Editing After Assignment**
+- ✅ **Context-aware "Add Waypoint" button**: Disabled when job assigned to driver
+  - **Grey disabled state**: `bg-gray-400 text-gray-200` styling
+  - **Cursor-not-allowed**: Visual feedback that action is blocked
+  - **Tooltip explanation**: "Cannot add waypoints after job is assigned to driver"
+  - **isJobAssigned prop**: New prop passed from parent to control button state
+- ✅ **Prevents route changes after dispatch**: Ensures route integrity once driver assigned
+
+#### **5. Real Document Display in Client Dashboard** (`/apps/web/src/app/client/jobs/[id]/page.tsx`)
+- ✅ **Actual document list**: Replaces placeholder documents with API data
+  - **Document details**: Filename, upload date, file type
+  - **View button**: Opens document in new tab via `fileUrl`
+  - **ExternalLink icon**: Clear indication of external document opening
+  - **Responsive layout**: Truncates long filenames, proper mobile display
+  - **Empty state**: "No documents available yet" when no documents exist
+- ✅ **Document viewing**: Click "View" to open document in new browser tab
+
+#### **6. Functional Invoice Display in Client Dashboard**
+- ✅ **Invoice Modal**: Full-featured invoice viewer for clients
+  - **Invoice details**: Invoice number, status, amount, tax, total
+  - **Status badges**: Color-coded (PAID=green, OVERDUE=red, DRAFT=yellow)
+  - **Date information**: Due date, paid date, created date
+  - **Currency formatting**: LKR with proper number localization
+  - **Print button**: Opens browser print dialog for invoice download
+  - **Close button**: Clean modal dismissal with X icon
+  - **Framer Motion**: Smooth modal entrance (scale + fade)
+- ✅ **Smart button states**:
+  - **When bill exists**: Green "View Invoice" button (active)
+  - **When bill missing**: Grey "Invoice Not Generated" button (disabled)
+
+#### **7. Automatic Hiding of Assigned Jobs** (`/apps/api/src/modules/job-requests/job-requests.service.ts`)
+- ✅ **API enhancement**: Job requests API now includes `convertedToJob` relation with `driverId`
+- ✅ **Frontend filtering**: Requests with assigned drivers automatically hidden from list
+  - **Filter logic**: Checks `request.convertedToJob?.driverId` existence
+  - **Clean request list**: Only shows pending/unassigned job requests
+  - **Manager workflow**: Once assigned, request moves out of active queue
+
+### Fixed
+
+#### **1. Job Request List Clutter**
+- **Problem**: Assigned jobs remained visible in `/dashboard/requests`, cluttering the list
+- **Root Cause**: No filtering logic for jobs with assigned drivers
+- **Fix**: Added filtering in `filteredRequests` to hide jobs where `convertedToJob.driverId` exists
+- **Result**: Clean job requests list showing only actionable items
+
+#### **2. Missing Waypoint Reordering Feedback**
+- **Problem**: Waypoints jumped instantly during drag-and-drop, poor UX
+- **Root Cause**: No animation library for smooth layout transitions
+- **Fix**: Integrated Framer Motion with `layout` prop and `AnimatePresence`
+- **Result**: Smooth, animated waypoint reordering with visual feedback
+
+#### **3. Accidental Job Assignment**
+- **Problem**: Single-click assignment could lead to mistakes
+- **Root Cause**: No confirmation step before critical action
+- **Fix**: Added confirmation modal with assignment preview
+- **Result**: Deliberate two-step process prevents errors
+
+#### **4. Placeholder Documents in Client Dashboard**
+- **Problem**: Hardcoded fake documents (Trip Sheet, Route Details, Container Info)
+- **Root Cause**: Component not fetching actual job documents from API
+- **Fix**: Updated JobDetail type to include documents array, mapped real data
+- **Result**: Actual uploaded documents displayed with view functionality
+
+#### **5. Missing Invoice Display**
+- **Problem**: "View Invoice" button was non-functional placeholder
+- **Root Cause**: No bill data in JobDetail type, button not wired to API
+- **Fix**: Added bill relation to JobDetail, created invoice modal component
+- **Result**: Full invoice details viewable by clients when bill exists
+
+### Enhanced
+
+#### **Manager Workflow Improvements**
+- **Job Request Processing**:
+  1. Review job request with pickup/delivery addresses and documents
+  2. Accept request → Job created with auto-generated waypoints
+  3. Add intermediate stops (container yards, checkpoints) with animated feedback
+  4. Assign vehicle, driver, container
+  5. Review assignment details in confirmation dialog
+  6. Confirm assignment → Job moves to driver, hidden from requests list
+  7. Waypoint editing disabled to preserve route integrity
+
+#### **Client Visibility Enhancements**
+- **Job Tracking Experience**:
+  1. View assigned jobs with animated route progress timeline
+  2. See real-time truck position moving along route
+  3. Track waypoint completion with color-coded markers
+  4. View uploaded documents (invoices, manifests, insurance certificates)
+  5. Access invoice details when bill is generated
+  6. Print invoice for records
+
+#### **Route Progress Calculation Logic**
+```typescript
+// GPS-based progress (when available)
+if (currentLocation) {
+  progress = calculateRouteProgress(currentLocation, waypointCoords);
+}
+// Fallback: Last completed waypoint
+else if (lastCompletedIndex >= 0) {
+  progress = calculateProgressByWaypoint(coords, lastCompletedIndex);
+}
+// Default: In-transit baseline
+else if (status === 'IN_TRANSIT') {
+  progress = 15; // Show some progress for jobs in transit
+}
+```
+
+#### **Waypoint Animation System**
+```typescript
+<motion.div
+  layout  // Enable automatic layout animations
+  initial={{ opacity: 0, y: -20 }}
+  animate={{
+    opacity: draggedIndex === index ? 0.5 : 1,
+    y: 0,
+    scale: isHovered && draggedIndex !== null ? 0.95 : 1,
+  }}
+  transition={{
+    layout: { duration: 0.3, ease: 'easeInOut' },
+    opacity: { duration: 0.2 },
+    scale: { duration: 0.2 },
+  }}
+/>
+```
+
+### Technical Improvements
+
+#### **Component Architecture**
+- **WaypointManager**: Now accepts `isJobAssigned` prop for context-aware editing
+- **RouteProgressTimeline**: Standalone component for reusable progress visualization
+- **Invoice Modal**: Self-contained modal component with print functionality
+
+#### **Data Flow Enhancements**
+```
+Job Request → Manager Review → Acceptance → Waypoints Created →
+Assignment Dialog → Confirmation → Driver Assigned →
+Job Hidden from Requests → Client Sees Progress Timeline + Documents + Invoice
+```
+
+#### **TypeScript Type Safety**
+- **JobDetail interface**: Extended with `documents[]` and `bill` optional properties
+- **WaypointManagerProps**: Added `isJobAssigned?: boolean` prop
+- **Waypoint interface**: Full type definition for all waypoint properties
+
+### Files Modified
+
+**Backend API:**
+- `apps/api/src/modules/job-requests/job-requests.service.ts` (Added convertedToJob with driverId to API response)
+- `apps/api/scripts/delete-jobs.ts` (Created utility script for database cleanup)
+
+**Frontend - Admin Dashboard:**
+- `apps/web/src/app/dashboard/requests/page.tsx` (Added confirmation dialog, moved assignment panel, updated filtering)
+- `apps/web/src/components/WaypointManager.tsx` (Added Framer Motion animations, isJobAssigned prop)
+
+**Frontend - Client Dashboard:**
+- `apps/web/src/app/client/jobs/[id]/page.tsx` (Added real documents, invoice modal, bill type)
+- `apps/web/src/components/RouteProgressTimeline.tsx` (Animated progress timeline component)
+
+**Utilities:**
+- `apps/web/src/lib/distance-utils.ts` (GPS distance calculations for progress)
+
+### Deployment Status
+- ✅ **Render API**: Live with enhanced job-requests endpoint
+- ✅ **Vercel Frontend**: Auto-deployed with all UI improvements
+- ✅ **Commit 1**: `23a16fa` - "feat: improve job requests workflow and UX"
+- ✅ **Commit 2**: `c205727` - "feat: disable waypoint editing after assignment and add invoice display"
+
+### Testing Notes
+- ✅ **Waypoint animations**: Smooth drag-and-drop with visual feedback
+- ✅ **Assignment confirmation**: Prevents accidental job dispatch
+- ✅ **Job hiding**: Assigned jobs removed from requests list automatically
+- ✅ **Document display**: Real documents appear when uploaded
+- ✅ **Invoice modal**: Shows when bill exists, disabled state when not generated
+- ✅ **Progress timeline**: Truck animation and waypoint tracking working
+
+### Known Limitations
+- ⚠️ **Invoice printing**: Uses browser print dialog, not PDF generation
+- ⚠️ **Document preview**: Opens in new tab, no inline preview
+- ⚠️ **Progress calculation**: Requires GPS location for accuracy, fallback to waypoint completion
+- ⚠️ **Animation performance**: May be slower on low-end mobile devices
+
+### Future Enhancements (Next Phase: Driver Dashboard)
+1. **Driver Mobile Interface**: Dedicated driver dashboard for job details and navigation
+2. **GPS Auto-completion**: Automatic waypoint completion when driver enters geofence radius
+3. **Push Notifications**: Real-time alerts for drivers when new jobs assigned
+4. **Offline Mode**: Cache job details for offline access during poor connectivity
+5. **Route Navigation**: Integration with Google Maps/Waze for turn-by-turn directions
+6. **POD Capture**: Photo/signature capture for proof of delivery at waypoints
+7. **Status Updates**: Driver-initiated status changes (arrived, loaded, departed, delivered)
+
+### Developer Notes
+- **Framer Motion**: All animations use `layout` prop for automatic transitions
+- **Modal Pattern**: Invoice modal follows standard backdrop + content pattern
+- **Type Extensions**: JobDetail interface extended, maintain backward compatibility
+- **Filtering Logic**: Both frontend and backend filtering for assigned jobs
+- **Progress Algorithms**: Haversine formula for GPS distance calculations
+
+### Client Feedback
+> "Admin and Client dashboards complete. Next is the Driver's dashboard."
+
+**🚀 READY FOR DRIVER DASHBOARD PHASE** - Admin workflow optimized, client visibility enhanced, foundation ready for driver interface
+
+---
+
 ## [2025-10-23] - Multi-Stop Waypoint Management System
 
 ### 🎯 **Session Focus**: Complete Route Planning with Intermediate Stops
