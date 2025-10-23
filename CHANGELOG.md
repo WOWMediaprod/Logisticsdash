@@ -2,6 +2,281 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-10-23] - Google Places API Migration & Dashboard Reliability Improvements
+
+### 🎯 **Session Focus**: Address Autocomplete Modernization & Cold Start Handling
+
+**Status**: ✅ **Production Deployed** - Uber-style autocomplete with backend proxy and automatic retry logic
+**Achievement**: Migrated to Google Places API (New), fixed intermittent dashboard loading issues
+
+### Added
+
+#### **1. Google Places API (New) Integration** (`/apps/api/src/modules/geocoding/`)
+- ✅ **Backend Proxy Implementation**: Complete geocoding module with backend API proxy
+  - **Geocoding Service**: `geocoding.service.ts` with Places API (New) endpoints
+  - **Autocomplete Endpoint**: POST request to `https://places.googleapis.com/v1/places:autocomplete`
+  - **Place Details Endpoint**: GET request to `https://places.googleapis.com/v1/{placeId}`
+  - **Header-based Authentication**: `X-Goog-Api-Key` header instead of query parameters
+  - **Field Masks**: `X-Goog-FieldMask` for response optimization
+- ✅ **DTOs Created**:
+  - `autocomplete-query.dto.ts` - Query validation with country, latitude, longitude
+  - `PlaceDetailsDto` - PlaceId validation for coordinate fetching
+- ✅ **TypeScript Interfaces**: Exported interfaces for type safety
+  - `AutocompleteSuggestion` - Suggestion format with placeId, name, address
+  - `PlaceDetails` - Complete place data with GPS coordinates
+- ✅ **Controller Endpoints**: REST API for frontend consumption
+  - `GET /api/v1/geocoding/autocomplete` - Address suggestions
+  - `POST /api/v1/geocoding/place-details` - GPS coordinate fetching
+  - `GET /api/v1/geocoding/geocode` - Direct address geocoding
+- **Security**: API key secured server-side, not exposed to browser
+
+#### **2. Uber-Style Address Autocomplete Component** (`/apps/web/src/components/AddressAutocomplete.tsx`)
+- ✅ **Custom React Component**: Complete replacement for browser-based Google Places SDK
+  - **Debounced Search**: 300ms delay to reduce API calls
+  - **Dropdown Suggestions**: Uber-style UI with location icons
+  - **Keyboard Navigation**: Arrow keys, Enter, Escape support
+  - **GPS Coordinate Capture**: Automatic lat/lng fetching on selection
+- ✅ **Ad Blocker Proof**: Backend proxy prevents ERR_BLOCKED_BY_CLIENT errors
+- ✅ **Mobile-Friendly**: Touch-optimized dropdown with proper z-index handling
+- ✅ **Loading States**: Spinner during API requests
+- **Integration**: Used in client job request form and waypoint management
+
+#### **3. Dashboard Retry Logic for Render Cold Starts** (`/apps/web/src/app/dashboard/page.tsx`)
+- ✅ **Automatic Retry with Exponential Backoff**:
+  - **Retry Strategy**: Up to 3 attempts with 1s, 2s, 4s delays
+  - **Extended Timeout**: 60-second timeout for initial requests
+  - **Smart Retry Logic**: Detects timeouts and connection failures
+- ✅ **Enhanced Loading States**:
+  - Attempt 1: "Loading dashboard..."
+  - Attempt 2: "Connecting to server..."
+  - Attempt 3+: "Server is waking up, please wait..."
+  - Helper text: "This may take up to a minute if the server was sleeping..."
+- ✅ **Error Recovery UI**:
+  - Clear error message when all retries fail
+  - Manual "Try Again" button for user-initiated retry
+  - Informative message explaining cold start behavior
+- **Root Cause**: Render free tier sleeps services after 15 minutes of inactivity
+- **Solution**: Gracefully handle 30-60 second wake-up delays
+
+### Fixed
+
+#### **1. Google Places API REQUEST_DENIED Error**
+- **Problem**: Legacy Places API deprecated as of March 1, 2025 for new customers
+  - Error: "This API key is not authorized to use this service or API"
+  - Old endpoint: `https://maps.googleapis.com/maps/api/place/autocomplete/json`
+- **Root Cause**: Attempting to use deprecated API with new Google Cloud project
+- **Fix**: Migrated to Places API (New) with completely different endpoint structure
+  - New autocomplete: `https://places.googleapis.com/v1/places:autocomplete` (POST)
+  - New place details: `https://places.googleapis.com/v1/{placeId}` (GET)
+  - PlaceId format: `places/ChIJ...` instead of `ChIJ...`
+- **Result**: All autocomplete and geocoding endpoints working correctly
+- **Commits**: `407d884`, `33c7a6a`, `98c6fcb`, `3952daf`
+
+#### **2. Ad Blocker Blocking Google Maps SDK (ERR_BLOCKED_BY_CLIENT)**
+- **Problem**: Browser-based Google Places SDK blocked by ad blockers (uBlock Origin, Privacy Badger)
+- **Root Cause**: Direct loading of `https://maps.googleapis.com/maps/api/js` flagged as tracking script
+- **Fix**: Implemented complete backend proxy pattern
+  - All Google API calls go through NestJS backend
+  - API key never exposed to browser
+  - No external scripts loaded in frontend
+- **Result**: Autocomplete works regardless of ad blocker settings
+- **Commit**: `407d884`
+
+#### **3. TypeScript Build Errors - Interface Visibility**
+- **Problem**: Vercel build failing with "Return type has or is using name from external module"
+- **Root Cause**: Interfaces defined inside service file not exported
+- **Fix**: Created `interfaces/geocoding.interface.ts` with exported interfaces
+- **Commit**: `7700357`
+
+#### **4. Missing axios Dependency**
+- **Problem**: Render build failing with "Cannot find module 'axios'"
+- **Root Cause**: New geocoding service uses axios but it wasn't in package.json
+- **Fix**: Added axios to API dependencies (`pnpm add axios --filter api`)
+- **Commit**: `7700357`
+
+#### **5. Wrong API Endpoint URLs (404 Errors)**
+- **Problem**: Frontend getting 404 on `/geocoding/autocomplete`
+- **Root Cause**: API has global prefix `/api/v1` but frontend wasn't including it
+- **Fix**: Updated AddressAutocomplete component to use correct URL format
+  - Before: `/geocoding/autocomplete`
+  - After: `/api/v1/geocoding/autocomplete`
+- **Commit**: `33c7a6a`
+
+#### **6. PlaceId Format Mismatch (400 Bad Request)**
+- **Problem**: Place details endpoint returning 400 when fetching GPS coordinates
+- **Root Cause**: Places API (New) expects placeId in format `places/ChIJ...` not just `ChIJ...`
+- **Fix**: Added normalization in service to ensure correct format
+- **Commit**: `3952daf`
+
+#### **7. Job Requests Page TypeError**
+- **Problem**: Page crashing with "Cannot read properties of undefined (reading 'split')"
+- **Root Cause**: Some job requests don't have pickupAddress/deliveryAddress populated
+- **Fix**: Added optional chaining and fallback text
+  - Before: `request.pickupAddress.split(',')[0]`
+  - After: `request.pickupAddress?.split(',')[0] || 'Not specified'`
+- **Location**: `/dashboard/requests` page
+- **Commit**: `72c74bc`
+
+#### **8. Dashboard Intermittent "No Jobs Yet" Issue**
+- **Problem**: Dashboard randomly shows "No jobs found" even though jobs exist
+  - Requires multiple page refreshes to load data
+  - Intermittent connection failures
+- **Root Cause**: Render free tier cold starts
+  - Service sleeps after 15 minutes of inactivity
+  - First request takes 30-60 seconds to wake service
+  - Default fetch timeout causes request to fail
+  - User sees empty dashboard and has to manually refresh
+- **Fix**: Implemented automatic retry logic with exponential backoff
+  - 60-second timeout for each request
+  - Retries up to 3 times with increasing delays
+  - Progress messages inform user of retry state
+  - Manual retry button if all attempts fail
+- **Result**: Dashboard gracefully handles cold starts without manual intervention
+- **Commit**: `af7e234`
+
+### Enhanced
+
+#### **Backend API Structure**
+- **Module Organization**: Clean geocoding module following NestJS best practices
+- **Error Handling**: BadRequestException for invalid API keys or failed requests
+- **Type Safety**: Comprehensive TypeScript interfaces for all data structures
+- **Configuration**: API key loaded from environment variables with validation
+- **Logging**: Console logging for debugging API errors
+
+#### **Frontend Integration**
+- **Component Reusability**: AddressAutocomplete component used across multiple forms
+  - Client job request form (`/client/request`)
+  - Waypoint management component
+- **User Experience**:
+  - Instant address suggestions as user types
+  - Clear loading indicators
+  - Keyboard accessibility
+  - Mobile-optimized touch targets
+- **Data Flow**: Two-step process ensures GPS accuracy
+  1. Autocomplete returns suggestions
+  2. Place details fetches exact coordinates on selection
+- **Dashboard Resilience**: Automatic recovery from backend downtime
+
+### Technical Improvements
+
+#### **API Migration Comparison**
+
+**Legacy Places API (Deprecated):**
+```javascript
+GET https://maps.googleapis.com/maps/api/place/autocomplete/json?input=colombo&key=API_KEY
+```
+
+**Places API (New):**
+```javascript
+POST https://places.googleapis.com/v1/places:autocomplete
+Headers:
+  Content-Type: application/json
+  X-Goog-Api-Key: API_KEY
+  X-Goog-FieldMask: suggestions.placePrediction.place,suggestions.placePrediction.placeId,...
+Body:
+  {
+    "input": "colombo",
+    "includedRegionCodes": ["LK"],
+    "languageCode": "en"
+  }
+```
+
+#### **Backend Proxy Pattern Benefits**
+1. **Security**: API keys never exposed to browser
+2. **Ad Blocker Proof**: No external script dependencies
+3. **Rate Limiting**: Easier to implement server-side controls
+4. **Provider Flexibility**: Can swap geocoding providers without frontend changes
+5. **Caching**: Future opportunity for server-side response caching
+
+#### **Retry Logic Implementation**
+```typescript
+const fetchWithRetry = async (url: string, options: RequestInit = {}, attempt: number = 0): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (err) {
+    clearTimeout(timeoutId);
+
+    if (attempt < 3) {
+      setRetryCount(attempt + 1);
+      const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, attempt + 1);
+    }
+
+    throw err;
+  }
+};
+```
+
+### Files Modified
+
+**Backend API:**
+- `apps/api/src/modules/geocoding/geocoding.service.ts` (Created)
+- `apps/api/src/modules/geocoding/geocoding.controller.ts` (Created)
+- `apps/api/src/modules/geocoding/geocoding.module.ts` (Created)
+- `apps/api/src/modules/geocoding/dto/autocomplete-query.dto.ts` (Created)
+- `apps/api/src/modules/geocoding/interfaces/geocoding.interface.ts` (Created)
+- `apps/api/src/app.module.ts` (Added GeocodingModule import)
+- `apps/api/.env` (Added GOOGLE_MAPS_API_KEY)
+- `apps/api/package.json` (Added axios dependency)
+
+**Frontend:**
+- `apps/web/src/components/AddressAutocomplete.tsx` (Created - Uber-style autocomplete)
+- `apps/web/src/app/client/request/page.tsx` (Updated to use AddressAutocomplete)
+- `apps/web/src/components/WaypointManagement.tsx` (Updated to use AddressAutocomplete)
+- `apps/web/src/app/dashboard/requests/page.tsx` (Fixed optional chaining bug)
+- `apps/web/src/app/dashboard/page.tsx` (Added retry logic and enhanced loading states)
+
+**Documentation:**
+- `CRITICAL-GPS-TRACKING-FIX.md` (Comprehensive documentation of Places API migration)
+
+### Deployment Status
+- ✅ **Render API**: Live with geocoding module and Places API (New)
+- ✅ **Vercel Frontend**: Auto-deployed with AddressAutocomplete component
+- ✅ **Google Cloud**: Places API (New) enabled, API key configured
+- ✅ **Environment Variables**: GOOGLE_MAPS_API_KEY set on Render
+
+### Testing Results
+- ✅ **Autocomplete Working**: Returns 5 suggestions for "Colombo"
+- ✅ **Place Details Working**: Returns GPS coordinates (6.9271, 79.8612)
+- ✅ **Address Capture**: Pickup and delivery addresses saved with lat/lng
+- ✅ **Job Requests Page**: No crashes, displays addresses correctly
+- ✅ **Dashboard Loading**: Retry logic tested, handles cold starts gracefully
+- ✅ **Build Success**: Both API and Web compiled without TypeScript errors
+
+### Compilation Status
+- ✅ **Backend API**: Geocoding module compiled successfully
+- ✅ **Frontend Web**: Next.js build passed with AddressAutocomplete component
+- ✅ **TypeScript**: Zero type errors across all modified files
+- ✅ **Linting**: All code passes ESLint validation
+
+### Developer Notes
+- **Google Places API Migration**: All new projects must use Places API (New) as legacy API deprecated March 2025
+- **Backend Proxy Benefits**: Prevents ad blocker issues, secures API keys, enables future caching
+- **Retry Logic Pattern**: Can be reused for other endpoints that may experience cold starts
+- **PlaceId Format**: Always ensure `places/` prefix when calling Place Details endpoint
+- **Render Cold Starts**: Free tier services sleep after 15 minutes, consider keep-alive or paid tier for production
+
+### Known Limitations
+- **Render Free Tier**: Services sleep after inactivity, causing 30-60 second wake-up delays
+- **First Load Delay**: Users may experience longer initial load times after inactivity
+- **Autocomplete Language**: Currently hardcoded to English (en)
+- **Country Filtering**: Defaults to Sri Lanka (LK), but configurable via query parameter
+
+### Future Enhancements
+1. **Keep-Alive Service**: Implement cron job to ping Render every 10 minutes during business hours
+2. **Response Caching**: Add server-side caching for frequent address searches
+3. **Multi-language Support**: Allow users to select preferred language for address results
+4. **Recent Searches**: Store and suggest recently used addresses
+5. **Render Upgrade**: Consider paid plan ($7/month) to eliminate cold starts
+
+---
+
 ## [2025-10-17] - Resource Management & Client Portal Enhancements
 
 ### 🎯 **Session Focus**: Complete CRUD API Implementation & Client-Side Integration
