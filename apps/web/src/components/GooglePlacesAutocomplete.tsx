@@ -1,7 +1,5 @@
 'use client';
 
-/// <reference types="google.maps" />
-
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, MapPin } from 'lucide-react';
 
@@ -20,6 +18,14 @@ interface GooglePlacesAutocompleteProps {
   label?: string;
 }
 
+// Declare google as a global variable
+declare global {
+  interface Window {
+    google: any;
+    initGoogleMaps: () => void;
+  }
+}
+
 export default function GooglePlacesAutocomplete({
   value,
   onChange,
@@ -28,10 +34,10 @@ export default function GooglePlacesAutocomplete({
   className = '',
   label,
 }: GooglePlacesAutocompleteProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const autocompleteWidgetRef = useRef<any>(null);
+  const autocompleteRef = useRef<any>(null);
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -42,63 +48,71 @@ export default function GooglePlacesAutocomplete({
       return;
     }
 
-    const initAutocomplete = async () => {
-      try {
-        if (!containerRef.current) return;
-
-        // Load the Google Maps script dynamically
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=Function.prototype`;
-        script.async = true;
-        script.defer = true;
-
-        await new Promise((resolve, reject) => {
-          script.onload = resolve;
-          script.onerror = reject;
-          if (!document.querySelector(`script[src^="https://maps.googleapis.com/maps/api/js"]`)) {
-            document.head.appendChild(script);
-          } else {
-            resolve(null);
-          }
-        });
-
-        // Wait for google object to be available
-        if (typeof google === 'undefined') {
-          throw new Error('Google Maps not loaded');
+    const loadGoogleMapsScript = () => {
+      return new Promise<void>((resolve, reject) => {
+        // Check if already loaded
+        if (window.google && window.google.maps) {
+          resolve();
+          return;
         }
 
-        // Use the NEW PlaceAutocompleteElement (required for new customers as of March 2025)
-        const { PlaceAutocompleteElement } = await google.maps.importLibrary('places') as any;
+        // Check if script is already being loaded
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (existingScript) {
+          existingScript.addEventListener('load', () => resolve());
+          existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps')));
+          return;
+        }
 
-        // Create the autocomplete widget with options
-        const autocomplete = new PlaceAutocompleteElement({
-          componentRestrictions: { country: ['lk'] }, // Restrict to Sri Lanka
+        // Create and load script
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load Google Maps'));
+        document.head.appendChild(script);
+      });
+    };
+
+    const initAutocomplete = async () => {
+      try {
+        // Load Google Maps
+        await loadGoogleMapsScript();
+
+        // Wait a bit for google object to be fully available
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!window.google || !window.google.maps || !window.google.maps.places) {
+          throw new Error('Google Maps Places library not available');
+        }
+
+        if (!inputRef.current) {
+          throw new Error('Input ref not available');
+        }
+
+        // Create autocomplete using the legacy API (but with new options format)
+        const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+          componentRestrictions: { country: 'lk' },
+          fields: ['formatted_address', 'geometry', 'name'],
+          types: ['address'],
         });
 
-        autocompleteWidgetRef.current = autocomplete;
-
-        // Add to DOM
-        containerRef.current.appendChild(autocomplete);
+        autocompleteRef.current = autocomplete;
 
         // Listen for place selection
-        autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
-          const place = event.place;
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
 
-          // Fetch additional place details
-          await place.fetchFields({
-            fields: ['displayName', 'formattedAddress', 'location'],
-          });
-
-          if (!place.location) {
+          if (!place.geometry || !place.geometry.location) {
             setError('Please select a valid address from the dropdown');
             return;
           }
 
-          const lat = place.location.lat();
-          const lng = place.location.lng();
-          const address = place.formattedAddress || place.displayName || '';
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const address = place.formatted_address || place.name || '';
 
-          // Call onChange with the full place result
           onChange({
             address,
             lat,
@@ -109,9 +123,10 @@ export default function GooglePlacesAutocomplete({
         });
 
         setIsLoading(false);
-      } catch (err) {
-        console.error('Failed to load Google Maps:', err);
-        setError('Failed to load address autocomplete');
+        setError(null);
+      } catch (err: any) {
+        console.error('Failed to initialize autocomplete:', err);
+        setError(err.message || 'Failed to load address search');
         setIsLoading(false);
       }
     };
@@ -120,8 +135,8 @@ export default function GooglePlacesAutocomplete({
 
     // Cleanup
     return () => {
-      if (autocompleteWidgetRef.current && containerRef.current) {
-        containerRef.current.innerHTML = '';
+      if (autocompleteRef.current && window.google && window.google.maps) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
   }, [onChange]);
@@ -135,33 +150,42 @@ export default function GooglePlacesAutocomplete({
         </label>
       )}
 
-      {isLoading && (
-        <div className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-          <span className="text-gray-500">Loading address search...</span>
-        </div>
-      )}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            // Allow typing but don't update coordinates until place is selected
+            onChange({ address: e.target.value, lat: 0, lng: 0 });
+          }}
+          placeholder={isLoading ? 'Loading...' : error || placeholder}
+          required={required}
+          disabled={isLoading}
+          className={`w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
+        />
+
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          </div>
+        )}
+
+        {!isLoading && !error && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <MapPin className="w-5 h-5 text-gray-400" />
+          </div>
+        )}
+      </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
+        <p className="mt-2 text-sm text-red-600">{error}</p>
       )}
 
-      {!isLoading && !error && (
-        <div>
-          {/* Google PlaceAutocompleteElement will be inserted here */}
-          <div
-            ref={containerRef}
-            className={`google-places-autocomplete ${className}`}
-            style={{
-              width: '100%',
-            }}
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Start typing to search for addresses in Sri Lanka
-          </p>
-        </div>
+      {!error && !isLoading && (
+        <p className="mt-1 text-sm text-gray-500">
+          Start typing to search for addresses in Sri Lanka
+        </p>
       )}
     </div>
   );
