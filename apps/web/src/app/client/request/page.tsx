@@ -141,14 +141,24 @@ export default function JobRequestPage() {
   };
 
   const uploadFile = async (file: File, type: string): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    formData.append('enableOcr', 'false');
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+    uploadFormData.append('type', type);
+    uploadFormData.append('enableOcr', 'false');
+
+    // Add client tracking metadata
+    if (clientId) {
+      const metadata = JSON.stringify({
+        uploadedBy: 'client',
+        clientId: clientId,
+        clientName: clientName || 'Unknown'
+      });
+      uploadFormData.append('metadata', metadata);
+    }
 
     const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
       method: 'POST',
-      body: formData,
+      body: uploadFormData,
     });
 
     if (!response.ok) {

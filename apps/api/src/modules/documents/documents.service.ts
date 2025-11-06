@@ -42,20 +42,36 @@ export class DocumentsService {
         uploadDto.jobId,
       );
 
+      // Determine createdBy: null for demo/unauthenticated users, actual userId for authenticated users
+      const createdByUserId = userId === 'demo-user-id' ? null : userId;
+
+      this.logger.log(`Creating document record:`, {
+        companyId,
+        userId,
+        createdByUserId,
+        fileName,
+        type: uploadDto.type,
+        jobId: uploadDto.jobId,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+      });
+
       // Create document record
-      const document = await this.prisma.document.create({
-        data: {
-          companyId,
-          jobId: uploadDto.jobId,
-          type: uploadDto.type,
-          fileName,
-          fileUrl,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          isOriginal: uploadDto.isOriginal ?? true,
-          metadata: uploadDto.metadata,
-          createdBy: userId,
-        },
+      let document;
+      try {
+        document = await this.prisma.document.create({
+          data: {
+            companyId,
+            jobId: uploadDto.jobId,
+            type: uploadDto.type,
+            fileName,
+            fileUrl,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            isOriginal: uploadDto.isOriginal ?? true,
+            metadata: uploadDto.metadata,
+            createdBy: createdByUserId,
+          },
         include: {
           job: {
             select: {
@@ -74,7 +90,20 @@ export class DocumentsService {
             },
           },
         },
-      });
+        });
+      } catch (prismaError) {
+        this.logger.error(`Prisma document creation failed:`, {
+          error: prismaError.message,
+          code: prismaError.code,
+          meta: prismaError.meta,
+          userId,
+          createdByUserId,
+          companyId,
+          fileName,
+          type: uploadDto.type,
+        });
+        throw new BadRequestException(`Failed to create document record: ${prismaError.message}`);
+      }
 
       // Process OCR if enabled and file is supported
       if (uploadDto.enableOcr && this.isOcrSupported(file.mimetype)) {
