@@ -1,31 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as AWS from 'aws-sdk';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import * as path from 'path';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly s3: AWS.S3;
+  private readonly supabase: SupabaseClient;
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
-    const endpoint = this.configService.get('S3_ENDPOINT');
-    const accessKey = this.configService.get('S3_ACCESS_KEY');
-    const secretKey = this.configService.get('S3_SECRET_KEY');
-    const region = this.configService.get('S3_REGION', 'us-east-1');
+    const supabaseUrl = this.configService.get('SUPABASE_URL');
+    const supabaseKey = this.configService.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    this.bucketName = this.configService.get('S3_BUCKET', 'logistics-assets');
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required Supabase configuration: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+    }
 
-    this.s3 = new AWS.S3({
-      endpoint,
-      accessKeyId: accessKey,
-      secretAccessKey: secretKey,
-      region,
-      s3ForcePathStyle: true, // Required for Minio
-      signatureVersion: 'v4',
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     });
+
+    this.bucketName = this.configService.get('SUPABASE_BUCKET', 'logistics-documents');
   }
 
   async uploadFile(
@@ -39,27 +38,30 @@ export class StorageService {
       const sanitizedName = this.sanitizeFilename(file.originalname);
       const fileExtension = this.extractFileExtension(sanitizedName);
       const fileName = `${uuidv4()}${fileExtension}`;
-      const key = this.generateFileKey(companyId, documentType, fileName, jobId);
+      const filePath = this.generateFilePath(companyId, documentType, fileName, jobId);
 
-      const params: AWS.S3.PutObjectRequest = {
-        Bucket: this.bucketName,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        Metadata: {
-          originalName: sanitizedName,
-          companyId,
-          documentType,
-          ...(jobId && { jobId }),
-        },
-      };
+      // Upload to Supabase Storage
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
 
-      const result = await this.s3.upload(params).promise();
+      if (error) {
+        this.logger.error(`Supabase upload error: ${error.message}`, error);
+        throw new Error(`File upload failed: ${error.message}`);
+      }
 
-      this.logger.log(`File uploaded successfully: ${key}`);
+      // Get public URL
+      const { data: { publicUrl } } = this.supabase.storage
+        .from(this.bucketName)
+        .getPublicUrl(filePath);
+
+      this.logger.log(`File uploaded successfully: ${filePath}`);
 
       return {
-        fileUrl: result.Location,
+        fileUrl: publicUrl,
         fileName: sanitizedName,
       };
     } catch (error) {
@@ -70,15 +72,18 @@ export class StorageService {
 
   async deleteFile(fileUrl: string): Promise<void> {
     try {
-      const key = this.extractKeyFromUrl(fileUrl);
+      const filePath = this.extractPathFromUrl(fileUrl);
 
-      const params: AWS.S3.DeleteObjectRequest = {
-        Bucket: this.bucketName,
-        Key: key,
-      };
+      const { error } = await this.supabase.storage
+        .from(this.bucketName)
+        .remove([filePath]);
 
-      await this.s3.deleteObject(params).promise();
-      this.logger.log(`File deleted successfully: ${key}`);
+      if (error) {
+        this.logger.error(`Supabase delete error: ${error.message}`, error);
+        throw new Error(`File deletion failed: ${error.message}`);
+      }
+
+      this.logger.log(`File deleted successfully: ${filePath}`);
     } catch (error) {
       this.logger.error(`Failed to delete file: ${error.message}`, error.stack);
       throw new Error(`File deletion failed: ${error.message}`);
@@ -87,15 +92,18 @@ export class StorageService {
 
   async getSignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
     try {
-      const key = this.extractKeyFromUrl(fileUrl);
+      const filePath = this.extractPathFromUrl(fileUrl);
 
-      const params = {
-        Bucket: this.bucketName,
-        Key: key,
-        Expires: expiresIn,
-      };
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .createSignedUrl(filePath, expiresIn);
 
-      return this.s3.getSignedUrl('getObject', params);
+      if (error) {
+        this.logger.error(`Supabase signed URL error: ${error.message}`, error);
+        throw new Error(`Signed URL generation failed: ${error.message}`);
+      }
+
+      return data.signedUrl;
     } catch (error) {
       this.logger.error(`Failed to generate signed URL: ${error.message}`, error.stack);
       throw new Error(`Signed URL generation failed: ${error.message}`);
@@ -104,22 +112,27 @@ export class StorageService {
 
   async getFileBuffer(fileUrl: string): Promise<Buffer> {
     try {
-      const key = this.extractKeyFromUrl(fileUrl);
+      const filePath = this.extractPathFromUrl(fileUrl);
 
-      const params: AWS.S3.GetObjectRequest = {
-        Bucket: this.bucketName,
-        Key: key,
-      };
+      const { data, error } = await this.supabase.storage
+        .from(this.bucketName)
+        .download(filePath);
 
-      const result = await this.s3.getObject(params).promise();
-      return result.Body as Buffer;
+      if (error) {
+        this.logger.error(`Supabase download error: ${error.message}`, error);
+        throw new Error(`File retrieval failed: ${error.message}`);
+      }
+
+      // Convert Blob to Buffer
+      const arrayBuffer = await data.arrayBuffer();
+      return Buffer.from(arrayBuffer);
     } catch (error) {
       this.logger.error(`Failed to get file buffer: ${error.message}`, error.stack);
       throw new Error(`File retrieval failed: ${error.message}`);
     }
   }
 
-  private generateFileKey(
+  private generateFilePath(
     companyId: string,
     documentType: string,
     fileName: string,
@@ -134,11 +147,20 @@ export class StorageService {
     return `companies/${companyId}/documents/${documentType}/${timestamp}/${fileName}`;
   }
 
-  private extractKeyFromUrl(fileUrl: string): string {
-    // Extract key from S3/Minio URL
-    const url = new URL(fileUrl);
-    // Remove leading slash from pathname
-    return url.pathname.substring(1);
+  private extractPathFromUrl(fileUrl: string): string {
+    try {
+      const url = new URL(fileUrl);
+      // Extract path after /storage/v1/object/public/{bucket}/
+      const pathParts = url.pathname.split(`/object/public/${this.bucketName}/`);
+      if (pathParts.length > 1) {
+        return pathParts[1];
+      }
+      // Fallback: remove leading slash
+      return url.pathname.substring(1);
+    } catch (error) {
+      // If not a valid URL, assume it's already a path
+      return fileUrl;
+    }
   }
 
   /**

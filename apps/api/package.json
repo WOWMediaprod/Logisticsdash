@@ -41,6 +41,7 @@
     "@nestjs/throttler": "^5.0.1",
     "@nestjs/websockets": "^10.4.20",
     "@prisma/client": "^6.16.1",
+    "@supabase/supabase-js": "^2.39.0",
     "@types/aws-sdk": "^2.7.4",
     "@types/tesseract.js": "^2.0.0",
     "aws-sdk": "^2.1692.0",
