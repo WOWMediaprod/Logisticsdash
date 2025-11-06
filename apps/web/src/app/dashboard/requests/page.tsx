@@ -44,13 +44,53 @@ interface JobRequest {
   description?: string;
   priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
   status: 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
-  pickupAddress: string;
-  deliveryAddress: string;
+
+  // Legacy fields
+  pickupAddress?: string;
+  deliveryAddress?: string;
   requestedPickupTs?: string;
   requestedDropTs?: string;
   containerType?: string;
   specialRequirements?: string;
   estimatedValue?: string;
+
+  // New workflow fields
+  shipmentType?: 'EXPORT' | 'IMPORT' | 'LCL';
+  releaseOrderUrl?: string;
+
+  // Loading information
+  loadingLocation?: string;
+  loadingLocationLat?: number;
+  loadingLocationLng?: number;
+  loadingContact?: string;
+  loadingDate?: string;
+  loadingTime?: string;
+
+  // Container reservation
+  containerReservation?: boolean;
+  containerNumber?: string;
+  sealNumber?: string;
+  containerYardLocation?: string;
+  containerYardLocationLat?: number;
+  containerYardLocationLng?: number;
+
+  // Cargo details
+  cargoDescription?: string;
+  cargoWeight?: number;
+  cargoWeightUnit?: string;
+
+  // BL Cutoff
+  blCutoffRequired?: boolean;
+  blCutoffDateTime?: string;
+
+  // Wharf information
+  wharfName?: string;
+  wharfContact?: string;
+
+  // Delivery information (enhanced)
+  deliveryContact?: string;
+
+  // System fields
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNotes?: string;
@@ -66,8 +106,8 @@ interface JobRequest {
   client: {
     name: string;
     code: string;
-    contactEmail: string;
-    contactPhone: string;
+    contactEmail?: string;
+    contactPhone?: string;
   };
   requestedByUser?: {
     name: string;

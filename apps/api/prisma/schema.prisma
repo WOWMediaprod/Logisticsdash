@@ -622,40 +622,83 @@ model UsageMeter {
 }
 
 model JobRequest {
-  id                  String               @id @default(cuid())
-  companyId           String
-  clientId            String?
-  routeId             String?
-  requestedBy         String?
-  title               String
-  description         String?
-  priority            Priority             @default(NORMAL)
-  jobType             JobType              @default(ONE_WAY)
-  requestedPickupTs   DateTime?
-  requestedDeliveryTs DateTime?
-  pickupAddress       String?
-  pickupLat           Float?
-  pickupLng           Float?
-  deliveryAddress     String?
-  deliveryLat         Float?
-  deliveryLng         Float?
-  containerSize       String?
-  cargoDescription    String?
-  specialInstructions String?
-  status              JobRequestStatus     @default(PENDING)
-  reviewedBy          String?
-  reviewedAt          DateTime?
-  reviewNotes         String?
-  convertedToJobId    String?
-  metadata            Json?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  client              Client?              @relation(fields: [clientId], references: [id])
-  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  convertedToJob      Job?                 @relation(fields: [convertedToJobId], references: [id])
-  route               Route?               @relation(fields: [routeId], references: [id])
-  documents           JobRequestDocument[]
-  updates             JobRequestUpdate[]
+  id                        String               @id @default(cuid())
+  companyId                 String
+  clientId                  String?
+  routeId                   String?
+  requestedBy               String?
+  title                     String
+  description               String?
+  priority                  Priority             @default(NORMAL)
+
+  // Legacy fields (kept for backward compatibility)
+  jobType                   JobType              @default(ONE_WAY)
+  requestedPickupTs         DateTime?
+  requestedDeliveryTs       DateTime?
+  pickupAddress             String?
+  pickupLat                 Float?
+  pickupLng                 Float?
+  containerSize             String?
+
+  // New workflow fields
+  shipmentType              ShipmentType?
+  releaseOrderUrl           String?
+
+  // Loading information
+  loadingLocation           String?
+  loadingLocationLat        Float?
+  loadingLocationLng        Float?
+  loadingContact            String?
+  loadingDate               DateTime?
+  loadingTime               String?
+
+  // Container reservation (conditional)
+  containerReservation      Boolean              @default(false)
+  containerNumber           String?
+  sealNumber                String?
+  containerYardLocation     String?
+  containerYardLocationLat  Float?
+  containerYardLocationLng  Float?
+
+  // Cargo details
+  cargoDescription          String?
+  cargoWeight               Decimal?             @db.Decimal(10, 2)
+  cargoWeightUnit           String?              @default("kg")
+
+  // BL Cutoff (conditional)
+  blCutoffRequired          Boolean              @default(false)
+  blCutoffDateTime          DateTime?
+
+  // Wharf information
+  wharfName                 String?
+  wharfContact              String?
+
+  // Delivery information
+  deliveryAddress           String?
+  deliveryLat               Float?
+  deliveryLng               Float?
+  deliveryContact           String?
+
+  // Additional notes
+  specialInstructions       String?
+
+  // Review and status
+  status                    JobRequestStatus     @default(PENDING)
+  reviewedBy                String?
+  reviewedAt                DateTime?
+  reviewNotes               String?
+  convertedToJobId          String?
+  metadata                  Json?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+
+  // Relations
+  client                    Client?              @relation(fields: [clientId], references: [id])
+  company                   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  convertedToJob            Job?                 @relation(fields: [convertedToJobId], references: [id])
+  route                     Route?               @relation(fields: [routeId], references: [id])
+  documents                 JobRequestDocument[]
+  updates                   JobRequestUpdate[]
 
   @@index([companyId])
   @@index([clientId])
@@ -663,6 +706,8 @@ model JobRequest {
   @@index([status])
   @@index([createdAt])
   @@index([requestedPickupTs])
+  @@index([shipmentType])
+  @@index([loadingDate])
   @@map("job_requests")
 }
 
@@ -881,6 +926,12 @@ enum JobType {
   MULTI_STOP
   EXPORT
   IMPORT
+}
+
+enum ShipmentType {
+  EXPORT
+  IMPORT
+  LCL
 }
 
 enum Priority {

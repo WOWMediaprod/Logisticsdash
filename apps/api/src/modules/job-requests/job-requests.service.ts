@@ -18,22 +18,65 @@ export class JobRequestsService {
         title: createJobRequestDto.title,
         description: createJobRequestDto.description,
         priority: createJobRequestDto.priority || 'NORMAL',
+
+        // Legacy fields (for backward compatibility)
         jobType: createJobRequestDto.jobType || 'ONE_WAY',
         requestedPickupTs: createJobRequestDto.requestedPickupTs
           ? new Date(createJobRequestDto.requestedPickupTs)
           : null,
-        requestedDeliveryTs: createJobRequestDto.requestedDropTs // Changed from requestedDropTs
+        requestedDeliveryTs: createJobRequestDto.requestedDropTs
           ? new Date(createJobRequestDto.requestedDropTs)
           : null,
         pickupAddress: createJobRequestDto.pickupAddress,
-        deliveryAddress: createJobRequestDto.deliveryAddress,
         pickupLat: createJobRequestDto.pickupLat,
         pickupLng: createJobRequestDto.pickupLng,
+        containerSize: createJobRequestDto.containerType,
+
+        // New workflow fields
+        shipmentType: createJobRequestDto.shipmentType,
+        releaseOrderUrl: createJobRequestDto.releaseOrderUrl,
+
+        // Loading information
+        loadingLocation: createJobRequestDto.loadingLocation,
+        loadingLocationLat: createJobRequestDto.loadingLocationLat,
+        loadingLocationLng: createJobRequestDto.loadingLocationLng,
+        loadingContact: createJobRequestDto.loadingContact,
+        loadingDate: createJobRequestDto.loadingDate
+          ? new Date(createJobRequestDto.loadingDate)
+          : null,
+        loadingTime: createJobRequestDto.loadingTime,
+
+        // Container reservation
+        containerReservation: createJobRequestDto.containerReservation || false,
+        containerNumber: createJobRequestDto.containerNumber,
+        sealNumber: createJobRequestDto.sealNumber,
+        containerYardLocation: createJobRequestDto.containerYardLocation,
+        containerYardLocationLat: createJobRequestDto.containerYardLocationLat,
+        containerYardLocationLng: createJobRequestDto.containerYardLocationLng,
+
+        // Cargo details
+        cargoDescription: createJobRequestDto.cargoDescription,
+        cargoWeight: createJobRequestDto.cargoWeight,
+        cargoWeightUnit: createJobRequestDto.cargoWeightUnit || 'kg',
+
+        // BL Cutoff
+        blCutoffRequired: createJobRequestDto.blCutoffRequired || false,
+        blCutoffDateTime: createJobRequestDto.blCutoffDateTime
+          ? new Date(createJobRequestDto.blCutoffDateTime)
+          : null,
+
+        // Wharf information
+        wharfName: createJobRequestDto.wharfName,
+        wharfContact: createJobRequestDto.wharfContact,
+
+        // Delivery information
+        deliveryAddress: createJobRequestDto.deliveryAddress,
         deliveryLat: createJobRequestDto.deliveryLat,
         deliveryLng: createJobRequestDto.deliveryLng,
-        containerSize: createJobRequestDto.containerType, // Changed from containerType
-        specialInstructions: createJobRequestDto.specialRequirements, // Changed from specialRequirements
-        // estimatedValue: createJobRequestDto.estimatedValue, // Field doesn't exist
+        deliveryContact: createJobRequestDto.deliveryContact,
+
+        // Additional notes
+        specialInstructions: createJobRequestDto.specialRequirements,
       },
       include: {
         client: true,
@@ -132,21 +175,64 @@ export class JobRequestsService {
         title: updateJobRequestDto.title,
         description: updateJobRequestDto.description,
         priority: updateJobRequestDto.priority,
+
+        // Legacy fields
         requestedPickupTs: updateJobRequestDto.requestedPickupTs
           ? new Date(updateJobRequestDto.requestedPickupTs)
           : undefined,
-        requestedDeliveryTs: updateJobRequestDto.requestedDropTs // Changed from requestedDropTs
+        requestedDeliveryTs: updateJobRequestDto.requestedDropTs
           ? new Date(updateJobRequestDto.requestedDropTs)
           : undefined,
         pickupAddress: updateJobRequestDto.pickupAddress,
-        deliveryAddress: updateJobRequestDto.deliveryAddress,
         pickupLat: updateJobRequestDto.pickupLat,
         pickupLng: updateJobRequestDto.pickupLng,
+        containerSize: updateJobRequestDto.containerType,
+
+        // New workflow fields
+        shipmentType: updateJobRequestDto.shipmentType,
+        releaseOrderUrl: updateJobRequestDto.releaseOrderUrl,
+
+        // Loading information
+        loadingLocation: updateJobRequestDto.loadingLocation,
+        loadingLocationLat: updateJobRequestDto.loadingLocationLat,
+        loadingLocationLng: updateJobRequestDto.loadingLocationLng,
+        loadingContact: updateJobRequestDto.loadingContact,
+        loadingDate: updateJobRequestDto.loadingDate
+          ? new Date(updateJobRequestDto.loadingDate)
+          : undefined,
+        loadingTime: updateJobRequestDto.loadingTime,
+
+        // Container reservation
+        containerReservation: updateJobRequestDto.containerReservation,
+        containerNumber: updateJobRequestDto.containerNumber,
+        sealNumber: updateJobRequestDto.sealNumber,
+        containerYardLocation: updateJobRequestDto.containerYardLocation,
+        containerYardLocationLat: updateJobRequestDto.containerYardLocationLat,
+        containerYardLocationLng: updateJobRequestDto.containerYardLocationLng,
+
+        // Cargo details
+        cargoDescription: updateJobRequestDto.cargoDescription,
+        cargoWeight: updateJobRequestDto.cargoWeight,
+        cargoWeightUnit: updateJobRequestDto.cargoWeightUnit,
+
+        // BL Cutoff
+        blCutoffRequired: updateJobRequestDto.blCutoffRequired,
+        blCutoffDateTime: updateJobRequestDto.blCutoffDateTime
+          ? new Date(updateJobRequestDto.blCutoffDateTime)
+          : undefined,
+
+        // Wharf information
+        wharfName: updateJobRequestDto.wharfName,
+        wharfContact: updateJobRequestDto.wharfContact,
+
+        // Delivery information
+        deliveryAddress: updateJobRequestDto.deliveryAddress,
         deliveryLat: updateJobRequestDto.deliveryLat,
         deliveryLng: updateJobRequestDto.deliveryLng,
-        containerSize: updateJobRequestDto.containerType, // Changed from containerType
-        specialInstructions: updateJobRequestDto.specialRequirements, // Changed from specialRequirements
-        // estimatedValue: updateJobRequestDto.estimatedValue, // Field doesn't exist
+        deliveryContact: updateJobRequestDto.deliveryContact,
+
+        // Additional notes
+        specialInstructions: updateJobRequestDto.specialRequirements,
       },
       include: {
         client: true,
@@ -246,18 +332,23 @@ export class JobRequestsService {
       },
     });
 
-    // Auto-create PICKUP and DELIVERY waypoints from job request addresses
+    // Auto-create PICKUP/LOADING and DELIVERY waypoints from job request addresses
     const waypointsToCreate: any[] = [];
 
-    if (jobRequest.pickupAddress && jobRequest.pickupLat && jobRequest.pickupLng) {
+    // Use new loading location if available, otherwise fall back to legacy pickup address
+    const pickupLocation = jobRequest.loadingLocation || jobRequest.pickupAddress;
+    const pickupLat = jobRequest.loadingLocationLat || jobRequest.pickupLat;
+    const pickupLng = jobRequest.loadingLocationLng || jobRequest.pickupLng;
+
+    if (pickupLocation && pickupLat && pickupLng) {
       waypointsToCreate.push({
         jobId: job.id,
-        name: 'Pickup Location',
+        name: jobRequest.loadingLocation ? 'Loading Location' : 'Pickup Location',
         type: 'PICKUP',
         sequence: 1,
-        address: jobRequest.pickupAddress,
-        lat: jobRequest.pickupLat,
-        lng: jobRequest.pickupLng,
+        address: pickupLocation,
+        lat: pickupLat,
+        lng: pickupLng,
         radiusM: 150,
       });
     }
