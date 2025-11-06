@@ -1111,7 +1111,7 @@ function Step4WharfDelivery({ formData, setFormData, onNext, onPrevious }: StepP
 // STEP 5: REVIEW & SUBMIT
 // ============================================================================
 
-interface Step5Props extends Omit<StepProps, 'onNext'> {
+interface Step5Props extends Omit<StepProps, 'onNext' | 'setFormData'> {
   onSubmit: () => void;
   submitting: boolean;
   onEdit: (step: number) => void;
