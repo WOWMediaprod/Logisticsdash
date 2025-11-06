@@ -60,11 +60,12 @@ export class StorageService {
 
       if (error) {
         this.logger.error(`Supabase upload error:`, {
-          error: error.message,
-          statusCode: error.statusCode,
+          message: error.message,
+          name: error.name,
           bucket: this.bucketName,
           filePath,
           fileName: sanitizedName,
+          fullError: JSON.stringify(error),
         });
         throw new Error(`File upload failed: ${error.message}`);
       }
