@@ -35,7 +35,9 @@ export class StorageService {
     jobId?: string,
   ): Promise<{ fileUrl: string; fileName: string }> {
     try {
-      const fileExtension = path.extname(file.originalname);
+      // Sanitize filename and extract extension
+      const sanitizedName = this.sanitizeFilename(file.originalname);
+      const fileExtension = this.extractFileExtension(sanitizedName);
       const fileName = `${uuidv4()}${fileExtension}`;
       const key = this.generateFileKey(companyId, documentType, fileName, jobId);
 
@@ -45,7 +47,7 @@ export class StorageService {
         Body: file.buffer,
         ContentType: file.mimetype,
         Metadata: {
-          originalName: file.originalname,
+          originalName: sanitizedName,
           companyId,
           documentType,
           ...(jobId && { jobId }),
@@ -58,7 +60,7 @@ export class StorageService {
 
       return {
         fileUrl: result.Location,
-        fileName: file.originalname,
+        fileName: sanitizedName,
       };
     } catch (error) {
       this.logger.error(`Failed to upload file: ${error.message}`, error.stack);
@@ -137,5 +139,40 @@ export class StorageService {
     const url = new URL(fileUrl);
     // Remove leading slash from pathname
     return url.pathname.substring(1);
+  }
+
+  /**
+   * Sanitize filename by removing or replacing problematic characters
+   * Handles WhatsApp images and other files with special characters
+   */
+  private sanitizeFilename(filename: string): string {
+    // Replace problematic characters with safe alternatives
+    let sanitized = filename
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^\w\-_.]/g, '') // Remove all non-word chars except dash, underscore, and dot
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single underscore
+      .replace(/\.{2,}/g, '.'); // Replace multiple dots with single dot
+
+    // Ensure filename is not empty after sanitization
+    if (!sanitized || sanitized === '.') {
+      sanitized = 'file';
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * Extract file extension robustly, handling complex filenames
+   */
+  private extractFileExtension(filename: string): string {
+    const lastDotIndex = filename.lastIndexOf('.');
+
+    // If there's a dot and it's not at the start or end
+    if (lastDotIndex > 0 && lastDotIndex < filename.length - 1) {
+      return filename.substring(lastDotIndex).toLowerCase();
+    }
+
+    // No valid extension found
+    return '';
   }
 }

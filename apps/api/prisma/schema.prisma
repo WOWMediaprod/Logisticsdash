@@ -648,7 +648,8 @@ model JobRequest {
   loadingLocation           String?
   loadingLocationLat        Float?
   loadingLocationLng        Float?
-  loadingContact            String?
+  loadingContactName        String?
+  loadingContactPhone       String?
   loadingDate               DateTime?
   loadingTime               String?
 
@@ -677,7 +678,8 @@ model JobRequest {
   deliveryAddress           String?
   deliveryLat               Float?
   deliveryLng               Float?
-  deliveryContact           String?
+  deliveryContactName       String?
+  deliveryContactPhone      String?
 
   // Additional notes
   specialInstructions       String?

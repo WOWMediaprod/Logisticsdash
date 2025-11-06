@@ -45,7 +45,8 @@ interface JobRequestFormData {
   loadingLocation: string;
   loadingLocationLat: number;
   loadingLocationLng: number;
-  loadingContact: string;
+  loadingContactName: string;
+  loadingContactPhone: string;
   loadingDate: string;
   loadingTime: string;
 
@@ -75,7 +76,8 @@ interface JobRequestFormData {
   deliveryAddress: string;
   deliveryLat: number;
   deliveryLng: number;
-  deliveryContact: string;
+  deliveryContactName: string;
+  deliveryContactPhone: string;
 
   // Additional notes
   specialRequirements: string;
@@ -90,7 +92,8 @@ const initialFormData: JobRequestFormData = {
   loadingLocation: '',
   loadingLocationLat: 0,
   loadingLocationLng: 0,
-  loadingContact: '',
+  loadingContactName: '',
+  loadingContactPhone: '',
   loadingDate: '',
   loadingTime: '',
   containerReservation: false,
@@ -110,7 +113,8 @@ const initialFormData: JobRequestFormData = {
   deliveryAddress: '',
   deliveryLat: 0,
   deliveryLng: 0,
-  deliveryContact: '',
+  deliveryContactName: '',
+  deliveryContactPhone: '',
   specialRequirements: ''
 };
 
@@ -203,7 +207,8 @@ export default function JobRequestPage() {
         loadingLocation: formData.loadingLocation,
         loadingLocationLat: formData.loadingLocationLat || undefined,
         loadingLocationLng: formData.loadingLocationLng || undefined,
-        loadingContact: formData.loadingContact,
+        loadingContactName: formData.loadingContactName,
+        loadingContactPhone: formData.loadingContactPhone,
         loadingDate: loadingDateTime,
         loadingTime: formData.loadingTime,
         containerReservation: formData.containerReservation,
@@ -222,7 +227,8 @@ export default function JobRequestPage() {
         deliveryAddress: formData.deliveryAddress,
         deliveryLat: formData.deliveryLat || undefined,
         deliveryLng: formData.deliveryLng || undefined,
-        deliveryContact: formData.deliveryContact,
+        deliveryContactName: formData.deliveryContactName,
+        deliveryContactPhone: formData.deliveryContactPhone,
         specialRequirements: formData.specialRequirements || undefined,
       };
 
@@ -586,7 +592,7 @@ function Step1BasicInfo({ formData, setFormData, onNext }: StepProps) {
 // ============================================================================
 
 function Step2LoadingCargo({ formData, setFormData, onNext, onPrevious }: StepProps) {
-  const canProceed = formData.loadingLocation && formData.cargoDescription;
+  const canProceed = formData.loadingLocation && formData.cargoDescription && formData.loadingContactName && formData.loadingContactPhone;
 
   return (
     <motion.div
@@ -617,18 +623,34 @@ function Step2LoadingCargo({ formData, setFormData, onNext, onPrevious }: StepPr
         />
       </div>
 
-      {/* Loading Contact */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Loading Contact (Name & Phone)
-        </label>
-        <input
-          type="text"
-          value={formData.loadingContact}
-          onChange={(e) => setFormData({ ...formData, loadingContact: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="e.g., John Doe - +94 77 123 4567"
-        />
+      {/* Loading Contact - Split into Name and Phone */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loading Contact Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.loadingContactName}
+            onChange={(e) => setFormData({ ...formData, loadingContactName: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., John Doe"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loading Contact Phone <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            value={formData.loadingContactPhone}
+            onChange={(e) => setFormData({ ...formData, loadingContactPhone: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., +94 77 123 4567"
+            required
+          />
+        </div>
       </div>
 
       {/* Loading Date & Time */}
@@ -910,7 +932,7 @@ function Step3ContainerBL({ formData, setFormData, onNext, onPrevious }: StepPro
 // ============================================================================
 
 function Step4WharfDelivery({ formData, setFormData, onNext, onPrevious }: StepProps) {
-  const canProceed = formData.deliveryAddress;
+  const canProceed = formData.deliveryAddress && formData.deliveryContactName && formData.deliveryContactPhone;
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1003,18 +1025,34 @@ function Step4WharfDelivery({ formData, setFormData, onNext, onPrevious }: StepP
         />
       </div>
 
-      {/* Delivery Contact */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Delivery Contact (Name & Phone)
-        </label>
-        <input
-          type="text"
-          value={formData.deliveryContact}
-          onChange={(e) => setFormData({ ...formData, deliveryContact: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="e.g., Mike Johnson - +94 77 555 1234"
-        />
+      {/* Delivery Contact - Split into Name and Phone */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Delivery Contact Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.deliveryContactName}
+            onChange={(e) => setFormData({ ...formData, deliveryContactName: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., Mike Johnson"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Delivery Contact Phone <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            value={formData.deliveryContactPhone}
+            onChange={(e) => setFormData({ ...formData, deliveryContactPhone: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., +94 77 555 1234"
+            required
+          />
+        </div>
       </div>
 
       {/* Special Requirements */}
@@ -1171,10 +1209,14 @@ function Step5Review({ formData, onSubmit, onPrevious, submitting, onEdit }: Ste
             <span className="text-gray-600">Loading Location:</span>
             <p className="font-medium">{formData.loadingLocation}</p>
           </div>
-          {formData.loadingContact && (
+          {(formData.loadingContactName || formData.loadingContactPhone) && (
             <div>
               <span className="text-gray-600">Loading Contact:</span>
-              <p className="font-medium">{formData.loadingContact}</p>
+              <p className="font-medium">
+                {formData.loadingContactName}
+                {formData.loadingContactName && formData.loadingContactPhone && ' - '}
+                {formData.loadingContactPhone}
+              </p>
             </div>
           )}
           {formData.loadingDate && (
@@ -1269,10 +1311,14 @@ function Step5Review({ formData, onSubmit, onPrevious, submitting, onEdit }: Ste
             <span className="text-gray-600">Delivery Address:</span>
             <p className="font-medium">{formData.deliveryAddress}</p>
           </div>
-          {formData.deliveryContact && (
+          {(formData.deliveryContactName || formData.deliveryContactPhone) && (
             <div>
               <span className="text-gray-600">Delivery Contact:</span>
-              <p className="font-medium">{formData.deliveryContact}</p>
+              <p className="font-medium">
+                {formData.deliveryContactName}
+                {formData.deliveryContactName && formData.deliveryContactPhone && ' - '}
+                {formData.deliveryContactPhone}
+              </p>
             </div>
           )}
           {formData.specialRequirements && (

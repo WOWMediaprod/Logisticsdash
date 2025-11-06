@@ -108,10 +108,13 @@ export class CreateJobRequestDto {
   @IsNumber()
   loadingLocationLng?: number;
 
-  @ApiProperty({ description: 'Loading contact (name and phone)', required: false })
-  @IsOptional()
+  @ApiProperty({ description: 'Loading contact name' })
   @IsString()
-  loadingContact?: string;
+  loadingContactName: string;
+
+  @ApiProperty({ description: 'Loading contact phone' })
+  @IsString()
+  loadingContactPhone: string;
 
   @ApiProperty({ description: 'Loading date', required: false })
   @IsOptional()
@@ -207,10 +210,13 @@ export class CreateJobRequestDto {
   @IsNumber()
   deliveryLng?: number;
 
-  @ApiProperty({ description: 'Delivery contact (name and phone)', required: false })
-  @IsOptional()
+  @ApiProperty({ description: 'Delivery contact name' })
   @IsString()
-  deliveryContact?: string;
+  deliveryContactName: string;
+
+  @ApiProperty({ description: 'Delivery contact phone' })
+  @IsString()
+  deliveryContactPhone: string;
 
   // Additional Notes
   @ApiProperty({ description: 'Special requirements/instructions', required: false })

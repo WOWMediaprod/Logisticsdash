@@ -40,7 +40,8 @@ export class JobRequestsService {
         loadingLocation: createJobRequestDto.loadingLocation,
         loadingLocationLat: createJobRequestDto.loadingLocationLat,
         loadingLocationLng: createJobRequestDto.loadingLocationLng,
-        loadingContact: createJobRequestDto.loadingContact,
+        loadingContactName: createJobRequestDto.loadingContactName,
+        loadingContactPhone: createJobRequestDto.loadingContactPhone,
         loadingDate: createJobRequestDto.loadingDate
           ? new Date(createJobRequestDto.loadingDate)
           : null,
@@ -73,7 +74,8 @@ export class JobRequestsService {
         deliveryAddress: createJobRequestDto.deliveryAddress,
         deliveryLat: createJobRequestDto.deliveryLat,
         deliveryLng: createJobRequestDto.deliveryLng,
-        deliveryContact: createJobRequestDto.deliveryContact,
+        deliveryContactName: createJobRequestDto.deliveryContactName,
+        deliveryContactPhone: createJobRequestDto.deliveryContactPhone,
 
         // Additional notes
         specialInstructions: createJobRequestDto.specialRequirements,
@@ -196,7 +198,8 @@ export class JobRequestsService {
         loadingLocation: updateJobRequestDto.loadingLocation,
         loadingLocationLat: updateJobRequestDto.loadingLocationLat,
         loadingLocationLng: updateJobRequestDto.loadingLocationLng,
-        loadingContact: updateJobRequestDto.loadingContact,
+        loadingContactName: updateJobRequestDto.loadingContactName,
+        loadingContactPhone: updateJobRequestDto.loadingContactPhone,
         loadingDate: updateJobRequestDto.loadingDate
           ? new Date(updateJobRequestDto.loadingDate)
           : undefined,
@@ -229,7 +232,8 @@ export class JobRequestsService {
         deliveryAddress: updateJobRequestDto.deliveryAddress,
         deliveryLat: updateJobRequestDto.deliveryLat,
         deliveryLng: updateJobRequestDto.deliveryLng,
-        deliveryContact: updateJobRequestDto.deliveryContact,
+        deliveryContactName: updateJobRequestDto.deliveryContactName,
+        deliveryContactPhone: updateJobRequestDto.deliveryContactPhone,
 
         // Additional notes
         specialInstructions: updateJobRequestDto.specialRequirements,
