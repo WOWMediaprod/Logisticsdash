@@ -605,12 +605,12 @@ function Step2LoadingCargo({ formData, setFormData, onNext, onPrevious }: StepPr
         </label>
         <AddressAutocomplete
           value={formData.loadingLocation}
-          onChange={(address, lat, lng) => {
+          onChange={(result) => {
             setFormData({
               ...formData,
-              loadingLocation: address,
-              loadingLocationLat: lat || 0,
-              loadingLocationLng: lng || 0
+              loadingLocation: result.address,
+              loadingLocationLat: result.lat || 0,
+              loadingLocationLng: result.lng || 0
             });
           }}
           placeholder="Enter loading location address"
@@ -809,12 +809,12 @@ function Step3ContainerBL({ formData, setFormData, onNext, onPrevious }: StepPro
                 </label>
                 <AddressAutocomplete
                   value={formData.containerYardLocation}
-                  onChange={(address, lat, lng) => {
+                  onChange={(result) => {
                     setFormData({
                       ...formData,
-                      containerYardLocation: address,
-                      containerYardLocationLat: lat || 0,
-                      containerYardLocationLng: lng || 0
+                      containerYardLocation: result.address,
+                      containerYardLocationLat: result.lat || 0,
+                      containerYardLocationLng: result.lng || 0
                     });
                   }}
                   placeholder="Enter container yard location"
@@ -991,12 +991,12 @@ function Step4WharfDelivery({ formData, setFormData, onNext, onPrevious }: StepP
         </label>
         <AddressAutocomplete
           value={formData.deliveryAddress}
-          onChange={(address, lat, lng) => {
+          onChange={(result) => {
             setFormData({
               ...formData,
-              deliveryAddress: address,
-              deliveryLat: lat || 0,
-              deliveryLng: lng || 0
+              deliveryAddress: result.address,
+              deliveryLat: result.lat || 0,
+              deliveryLng: result.lng || 0
             });
           }}
           placeholder="Enter delivery destination address"
