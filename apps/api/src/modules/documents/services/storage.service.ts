@@ -40,6 +40,16 @@ export class StorageService {
       const fileName = `${uuidv4()}${fileExtension}`;
       const filePath = this.generateFilePath(companyId, documentType, fileName, jobId);
 
+      this.logger.log(`Starting Supabase upload:`, {
+        bucket: this.bucketName,
+        filePath,
+        fileName: sanitizedName,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        companyId,
+        documentType,
+      });
+
       // Upload to Supabase Storage
       const { data, error } = await this.supabase.storage
         .from(this.bucketName)
@@ -49,23 +59,39 @@ export class StorageService {
         });
 
       if (error) {
-        this.logger.error(`Supabase upload error: ${error.message}`, error);
+        this.logger.error(`Supabase upload error:`, {
+          error: error.message,
+          statusCode: error.statusCode,
+          bucket: this.bucketName,
+          filePath,
+          fileName: sanitizedName,
+        });
         throw new Error(`File upload failed: ${error.message}`);
       }
+
+      this.logger.log(`Supabase upload succeeded, data:`, data);
 
       // Get public URL
       const { data: { publicUrl } } = this.supabase.storage
         .from(this.bucketName)
         .getPublicUrl(filePath);
 
-      this.logger.log(`File uploaded successfully: ${filePath}`);
+      this.logger.log(`File uploaded successfully:`, {
+        filePath,
+        publicUrl,
+        bucket: this.bucketName,
+      });
 
       return {
         fileUrl: publicUrl,
         fileName: sanitizedName,
       };
     } catch (error) {
-      this.logger.error(`Failed to upload file: ${error.message}`, error.stack);
+      this.logger.error(`Failed to upload file:`, {
+        error: error.message,
+        stack: error.stack,
+        fileName: file.originalname,
+      });
       throw new Error(`File upload failed: ${error.message}`);
     }
   }
