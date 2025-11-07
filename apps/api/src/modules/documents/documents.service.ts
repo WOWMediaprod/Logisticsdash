@@ -374,4 +374,20 @@ export class DocumentsService {
       });
     }
   }
+
+  async checkBucketStatus() {
+    try {
+      const status = await this.storageService.checkBucketStatus();
+      return {
+        success: true,
+        data: status,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to check bucket status: ${error.message}`, error.stack);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }

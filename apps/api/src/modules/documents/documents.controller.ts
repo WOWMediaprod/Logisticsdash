@@ -264,4 +264,31 @@ export class DocumentsController {
   ) {
     return this.documentsService.deleteDocument(documentId, companyId);
   }
+
+  @Get('bucket-status')
+  @ApiOperation({ summary: 'Check Supabase bucket status and configuration' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bucket status retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            bucketName: { type: 'string' },
+            exists: { type: 'boolean' },
+            isPublic: { type: 'boolean', nullable: true },
+            fileCount: { type: 'number', nullable: true },
+            error: { type: 'string', nullable: true },
+            supabaseUrl: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  async checkBucketStatus() {
+    return this.documentsService.checkBucketStatus();
+  }
 }

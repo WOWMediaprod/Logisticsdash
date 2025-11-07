@@ -194,6 +194,13 @@ export default function JobRequestPage() {
 
       // Upload supporting documents if provided
       const supportingDocIds: string[] = [];
+
+      // Include release order document if uploaded
+      if (releaseOrderDocId) {
+        supportingDocIds.push(releaseOrderDocId);
+        console.log('[Client Request] Added release order document to supportingDocIds:', releaseOrderDocId);
+      }
+
       if (formData.supportingDocuments.length > 0) {
         for (let i = 0; i < formData.supportingDocuments.length; i++) {
           const doc = formData.supportingDocuments[i];
@@ -203,6 +210,8 @@ export default function JobRequestPage() {
           setUploadProgress(prev => ({ ...prev, [`doc_${i}`]: 100 }));
         }
       }
+
+      console.log('[Client Request] Total supporting documents:', supportingDocIds.length, supportingDocIds);
 
       // Combine date and time fields
       const loadingDateTime = formData.loadingDate && formData.loadingTime

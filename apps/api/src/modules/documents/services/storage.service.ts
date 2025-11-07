@@ -224,4 +224,86 @@ export class StorageService {
     // No valid extension found
     return '';
   }
+
+  /**
+   * Check Supabase bucket status and configuration
+   */
+  async checkBucketStatus(): Promise<{
+    bucketName: string;
+    exists: boolean;
+    isPublic: boolean | null;
+    fileCount: number | null;
+    error: string | null;
+    supabaseUrl: string;
+  }> {
+    try {
+      this.logger.log(`Checking bucket status for: ${this.bucketName}`);
+
+      // Try to list files in the bucket
+      const { data: files, error: listError } = await this.supabase.storage
+        .from(this.bucketName)
+        .list('', {
+          limit: 1,
+        });
+
+      if (listError) {
+        this.logger.error(`Bucket list error:`, listError);
+
+        // Check if bucket doesn't exist (404 error)
+        if (listError.message?.includes('not found') || listError.message?.includes('404')) {
+          return {
+            bucketName: this.bucketName,
+            exists: false,
+            isPublic: null,
+            fileCount: null,
+            error: `Bucket "${this.bucketName}" does not exist`,
+            supabaseUrl: this.configService.get('SUPABASE_URL'),
+          };
+        }
+
+        return {
+          bucketName: this.bucketName,
+          exists: false,
+          isPublic: null,
+          fileCount: null,
+          error: listError.message,
+          supabaseUrl: this.configService.get('SUPABASE_URL'),
+        };
+      }
+
+      // Try to get bucket details
+      const { data: buckets, error: bucketsError } = await this.supabase.storage.listBuckets();
+
+      let isPublic = null;
+      if (!bucketsError && buckets) {
+        const bucket = buckets.find(b => b.name === this.bucketName);
+        isPublic = bucket?.public || false;
+      }
+
+      this.logger.log(`Bucket status check successful:`, {
+        exists: true,
+        isPublic,
+        fileCount: files?.length || 0,
+      });
+
+      return {
+        bucketName: this.bucketName,
+        exists: true,
+        isPublic,
+        fileCount: files?.length || 0,
+        error: null,
+        supabaseUrl: this.configService.get('SUPABASE_URL'),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to check bucket status:`, error);
+      return {
+        bucketName: this.bucketName,
+        exists: false,
+        isPublic: null,
+        fileCount: null,
+        error: error.message,
+        supabaseUrl: this.configService.get('SUPABASE_URL'),
+      };
+    }
+  }
 }
