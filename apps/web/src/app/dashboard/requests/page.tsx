@@ -609,7 +609,7 @@ function RequestCard({
           {request.estimatedValue && (
             <span>Value: R{request.estimatedValue}</span>
           )}
-          <span>{request.documents.length} documents</span>
+          <span>{request.attachedDocuments?.length || 0} documents</span>
         </div>
         {request.requestedPickupTs && (
           <span>
