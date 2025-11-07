@@ -1507,8 +1507,8 @@ function DocumentsSection({
         <AdminUploadModal
           onClose={() => setShowUploadModal(false)}
           onUpload={(newDocs) => {
-            // Append new documents to current list
-            setDocuments([...documents, ...newDocs]);
+            // Documents are now fetched with the request, so just close modal
+            // Parent component should refetch the request to show new documents
             setShowUploadModal(false);
           }}
           requestId={request.id}
