@@ -1358,56 +1358,73 @@ function DocumentsSection({
   request: JobRequest;
   onUpdate: (request: JobRequest) => void;
 }) {
+  const { companyId } = useCompany();
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [adminDocuments, setAdminDocuments] = useState<Array<{
-    id: string;
-    fileName: string;
-    type: string;
-    fileSize: number;
-    uploadedBy: string;
-    uploadedByRole: 'client' | 'admin';
-    visibility: 'client' | 'driver' | 'internal' | 'all';
-    category: 'driver-instructions' | 'permits' | 'rate-cards' | 'insurance' | 'route-maps' | 'safety' | 'other';
-    isRequired: boolean;
-    createdAt: string;
-  }>>([
-    {
-      id: 'admin-doc-001',
-      fileName: 'Driver_Route_Instructions.pdf',
-      type: 'driver-instructions',
-      fileSize: 524288,
-      uploadedBy: 'Admin User',
-      uploadedByRole: 'admin',
-      visibility: 'driver',
-      category: 'driver-instructions',
-      isRequired: true,
-      createdAt: '2024-09-21T15:30:00Z'
-    },
-    {
-      id: 'admin-doc-002',
-      fileName: 'Transport_Permit_GP_to_WC.pdf',
-      type: 'permits',
-      fileSize: 1048576,
-      uploadedBy: 'Admin User',
-      uploadedByRole: 'admin',
-      visibility: 'all',
-      category: 'permits',
-      isRequired: true,
-      createdAt: '2024-09-21T16:00:00Z'
-    }
-  ]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
-  const allDocuments = [
-    ...request.documents.map(doc => ({
-      ...doc,
-      uploadedByRole: 'client' as const,
-      visibility: 'all' as const,
-      category: doc.type as any,
-      isRequired: false,
-      createdAt: '2024-09-21T09:30:00Z'
-    })),
-    ...adminDocuments
-  ];
+  // Fetch documents from API if request has been converted to a job
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      const jobId = request.convertedToJobId || request.jobId;
+
+      // If no jobId, use documents from request object (client uploads during request submission)
+      if (!jobId || !companyId) {
+        setDocuments(request.documents.map(doc => ({
+          ...doc,
+          uploadedByRole: 'client' as const,
+          visibility: 'all' as const,
+          category: doc.type as any,
+          isRequired: false
+        })));
+        return;
+      }
+
+      try {
+        setDocumentsLoading(true);
+        setDocumentsError(null);
+
+        const response = await fetch(
+          getApiUrl(`/api/v1/documents?companyId=${companyId}&jobId=${jobId}`),
+          { headers: { 'Accept': 'application/json' } }
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          // Transform API documents to match the expected structure
+          const transformedDocs = data.data.map((doc: any) => ({
+            id: doc.id,
+            fileName: doc.fileName,
+            type: doc.type,
+            fileSize: doc.fileSize,
+            uploadedBy: doc.creator ? `${doc.creator.firstName} ${doc.creator.lastName}` : 'Client',
+            uploadedByRole: doc.createdBy ? 'admin' : 'client',
+            visibility: 'all',
+            category: doc.type,
+            isRequired: false,
+            createdAt: doc.createdAt,
+            fileUrl: doc.fileUrl,
+            mimeType: doc.mimeType
+          }));
+          setDocuments(transformedDocs);
+        } else {
+          setDocumentsError(data.error || "Failed to load documents");
+          setDocuments([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch documents", err);
+        setDocumentsError("Failed to load documents");
+        setDocuments([]);
+      } finally {
+        setDocumentsLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [request.id, request.convertedToJobId, request.jobId, companyId, request.documents]);
+
+  const allDocuments = documents;
 
   const clientDocuments = allDocuments.filter(doc => doc.uploadedByRole === 'client');
   const companyDocuments = allDocuments.filter(doc => doc.uploadedByRole === 'admin');
@@ -1463,23 +1480,37 @@ function DocumentsSection({
       </div>
 
       {/* Documents List */}
-      <div className="space-y-3">
-        {allDocuments.map((doc) => (
-          <DocumentCard key={doc.id} document={doc} />
-        ))}
-        {allDocuments.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No documents uploaded yet.
+      {documentsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600">Loading documents...</span>
           </div>
-        )}
-      </div>
+        </div>
+      ) : documentsError ? (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{documentsError}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {allDocuments.map((doc) => (
+            <DocumentCard key={doc.id} document={doc} />
+          ))}
+          {allDocuments.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No documents uploaded yet.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (
         <AdminUploadModal
           onClose={() => setShowUploadModal(false)}
           onUpload={(newDocs) => {
-            setAdminDocuments([...adminDocuments, ...newDocs]);
+            // Append new documents to current list
+            setDocuments([...documents, ...newDocs]);
             setShowUploadModal(false);
           }}
           requestId={request.id}
@@ -1551,14 +1582,38 @@ function DocumentCard({ document }: { document: any }) {
       </div>
 
       <div className="flex items-center space-x-2">
-        <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-          <Eye className="w-4 h-4" />
-        </button>
-        <button className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-          <Download className="w-4 h-4" />
-        </button>
+        {document.fileUrl ? (
+          <>
+            <a
+              href={document.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="View document"
+            >
+              <Eye className="w-4 h-4" />
+            </a>
+            <a
+              href={document.fileUrl}
+              download={document.fileName}
+              className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              title="Download document"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          </>
+        ) : (
+          <>
+            <button disabled className="p-2 text-gray-400 cursor-not-allowed rounded-lg" title="File not available">
+              <Eye className="w-4 h-4" />
+            </button>
+            <button disabled className="p-2 text-gray-400 cursor-not-allowed rounded-lg" title="File not available">
+              <Download className="w-4 h-4" />
+            </button>
+          </>
+        )}
         {document.uploadedByRole === 'admin' && (
-          <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete document">
             <Trash2 className="w-4 h-4" />
           </button>
         )}

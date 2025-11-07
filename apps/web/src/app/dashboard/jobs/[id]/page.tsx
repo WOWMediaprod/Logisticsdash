@@ -52,6 +52,20 @@ type StatusEvent = {
   source: string;
 };
 
+type DocumentInfo = {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  type: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+  creator?: {
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
 type JobDetail = {
   id: string;
   status: string;
@@ -115,6 +129,34 @@ const formatDateTime = (value?: string) => {
   });
 };
 
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getDocumentIcon = (mimeType: string) => {
+  if (mimeType.includes('pdf')) {
+    return (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    );
+  }
+  if (mimeType.includes('image')) {
+    return (
+      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const { companyId } = useCompany();
@@ -123,6 +165,10 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -174,6 +220,38 @@ export default function JobDetailPage() {
     };
 
     fetchJob();
+  }, [companyId, jobId]);
+
+  useEffect(() => {
+    if (!companyId || !jobId) {
+      return;
+    }
+
+    const fetchDocuments = async () => {
+      try {
+        setDocumentsLoading(true);
+        setDocumentsError(null);
+
+        const response = await fetch(
+          getApiUrl(`/api/v1/documents?companyId=${companyId}&jobId=${jobId}`),
+          { headers: { 'Accept': 'application/json' } }
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setDocuments(data.data || []);
+        } else {
+          setDocumentsError(data.error || "Failed to load documents");
+        }
+      } catch (err) {
+        console.error("Failed to fetch documents", err);
+        setDocumentsError("Failed to load documents");
+      } finally {
+        setDocumentsLoading(false);
+      }
+    };
+
+    fetchDocuments();
   }, [companyId, jobId]);
 
   const loadAssignmentOptions = async () => {
@@ -483,62 +561,54 @@ export default function JobDetailPage() {
 
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Documents</h2>
-              <div className="space-y-2">
-                <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Trip Sheet</p>
-                        <p className="text-xs text-gray-500">Auto-generated</p>
-                      </div>
-                    </div>
-                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                      View
-                    </button>
+
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-gray-600">Loading documents...</span>
                   </div>
                 </div>
-
-                {job.route && (
-                  <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Route Details</p>
-                          <p className="text-xs text-gray-500">{job.route.code}</p>
+              ) : documentsError ? (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-sm text-red-700">{documentsError}</p>
+                </div>
+              ) : documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          {getDocumentIcon(doc.mimeType)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(doc.fileSize)} · {doc.type}
+                              {doc.creator && ` · ${doc.creator.firstName} ${doc.creator.lastName}`}
+                            </p>
+                          </div>
                         </div>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium whitespace-nowrap ml-2"
+                        >
+                          View
+                        </a>
                       </div>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        View
-                      </button>
                     </div>
-                  </div>
-                )}
-
-                {job.container && (
-                  <div className="p-3 bg-white/70 rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Container Info</p>
-                          <p className="text-xs text-gray-500">{job.container.iso}</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        View
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-600 font-medium">No documents uploaded yet</p>
+                  <p className="text-xs text-gray-500 mt-1">Documents will appear here once uploaded</p>
+                </div>
+              )}
             </div>
 
             {/* Assignment Panel - Inline After Documents */}
