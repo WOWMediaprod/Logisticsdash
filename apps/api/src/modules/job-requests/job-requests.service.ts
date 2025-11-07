@@ -190,6 +190,7 @@ export class JobRequestsService {
         title: updateJobRequestDto.title,
         description: updateJobRequestDto.description,
         priority: updateJobRequestDto.priority,
+        routeId: updateJobRequestDto.routeId,
 
         // Legacy fields
         requestedPickupTs: updateJobRequestDto.requestedPickupTs
