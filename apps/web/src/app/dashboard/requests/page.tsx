@@ -667,25 +667,38 @@ function RequestDetailView({
   // Fetch fresh request details when component mounts
   useEffect(() => {
     const fetchRequestDetails = async () => {
-      if (!request.id || !companyId) return;
+      if (!request.id || !companyId) {
+        console.log('[RequestDetailView] Skipping fetch - missing request.id or companyId');
+        return;
+      }
 
+      console.log(`[RequestDetailView] Fetching fresh details for request ${request.id}`);
       setLoadingDetails(true);
       setDetailsError(null);
 
       try {
-        const response = await fetch(
-          getApiUrl(`/api/v1/job-requests/${request.id}?companyId=${companyId}`)
-        );
+        const url = getApiUrl(`/api/v1/job-requests/${request.id}?companyId=${companyId}`);
+        console.log('[RequestDetailView] Fetching from:', url);
+
+        const response = await fetch(url);
         const result = await response.json();
 
+        console.log('[RequestDetailView] API Response:', {
+          success: result.success,
+          hasData: !!result.data,
+          documentCount: result.data?.attachedDocuments?.length || 0
+        });
+
         if (result.success) {
+          console.log('[RequestDetailView] Calling onUpdate with fresh data');
           // Update parent state with fresh data including attachedDocuments
           onUpdate(result.data);
         } else {
+          console.error('[RequestDetailView] API returned failure:', result);
           setDetailsError('Failed to load request details');
         }
       } catch (error) {
-        console.error('Failed to fetch request details', error);
+        console.error('[RequestDetailView] Failed to fetch request details:', error);
         setDetailsError('Failed to load request details');
       } finally {
         setLoadingDetails(false);

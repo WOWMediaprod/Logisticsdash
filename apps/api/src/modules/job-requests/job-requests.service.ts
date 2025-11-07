@@ -89,7 +89,10 @@ export class JobRequestsService {
 
     // Link uploaded documents to this job request
     if (createJobRequestDto.supportingDocumentIds && createJobRequestDto.supportingDocumentIds.length > 0) {
-      await this.prisma.document.updateMany({
+      console.log(`[JobRequest Create] Linking ${createJobRequestDto.supportingDocumentIds.length} documents to job request ${jobRequest.id}`);
+      console.log('[JobRequest Create] Document IDs:', createJobRequestDto.supportingDocumentIds);
+
+      const updateResult = await this.prisma.document.updateMany({
         where: {
           id: { in: createJobRequestDto.supportingDocumentIds },
           companyId: createJobRequestDto.companyId,
@@ -98,6 +101,8 @@ export class JobRequestsService {
           jobRequestId: jobRequest.id,
         },
       });
+
+      console.log(`[JobRequest Create] Updated ${updateResult.count} documents with jobRequestId`);
 
       // Re-fetch the job request to include the newly linked documents
       const updatedJobRequest = await this.prisma.jobRequest.findUnique({
@@ -109,9 +114,12 @@ export class JobRequestsService {
         },
       });
 
+      console.log(`[JobRequest Create] Re-fetched job request has ${updatedJobRequest?.attachedDocuments?.length || 0} attached documents`);
+
       return { success: true, data: updatedJobRequest };
     }
 
+    console.log('[JobRequest Create] No supporting documents to link');
     return { success: true, data: jobRequest };
   }
 
@@ -165,6 +173,8 @@ export class JobRequestsService {
   }
 
   async findOne(id: string, companyId: string) {
+    console.log(`[JobRequest FindOne] Fetching job request ${id} for company ${companyId}`);
+
     const jobRequest = await this.prisma.jobRequest.findFirst({
       where: { id, companyId },
       include: {
@@ -182,7 +192,13 @@ export class JobRequestsService {
     });
 
     if (!jobRequest) {
+      console.log(`[JobRequest FindOne] Job request ${id} not found`);
       throw new NotFoundException('Job request not found');
+    }
+
+    console.log(`[JobRequest FindOne] Found job request with ${jobRequest.attachedDocuments?.length || 0} attached documents`);
+    if (jobRequest.attachedDocuments && jobRequest.attachedDocuments.length > 0) {
+      console.log('[JobRequest FindOne] Document IDs:', jobRequest.attachedDocuments.map(d => d.id));
     }
 
     return { success: true, data: jobRequest };
