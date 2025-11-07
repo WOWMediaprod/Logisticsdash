@@ -39,6 +39,7 @@ interface JobRequest {
   id: string;
   companyId: string;
   clientId: string;
+  routeId?: string;
   requestedBy?: string;
   title: string;
   description?: string;
@@ -641,6 +642,8 @@ function RequestDetailView({
   const [vehicles, setVehicles] = useState<Array<{id: string; label: string}>>([]);
   const [drivers, setDrivers] = useState<Array<{id: string; label: string}>>([]);
   const [containers, setContainers] = useState<Array<{id: string; label: string}>>([]);
+  const [routes, setRoutes] = useState<Array<{id: string; label: string}>>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState(request.routeId || '');
   const [assignmentData, setAssignmentData] = useState({
     vehicleId: '',
     driverId: '',
@@ -657,10 +660,33 @@ function RequestDetailView({
       return;
     }
 
+    if (!selectedRouteId) {
+      setError('Please select a route before accepting');
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
     try {
+      // First, update the job request with the selected route
+      const updateResponse = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId,
+          routeId: selectedRouteId
+        })
+      });
+
+      const updateResult = await updateResponse.json();
+      if (!updateResult.success) {
+        setError('Failed to update route. Please try again.');
+        setProcessing(false);
+        return;
+      }
+
+      // Now accept the request
       const response = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}/accept`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -738,21 +764,23 @@ function RequestDetailView({
     }
   };
 
-  // Load assignment options (drivers, vehicles, containers)
+  // Load assignment options (drivers, vehicles, containers, routes)
   const loadAssignmentOptions = async () => {
     if (!companyId) return;
 
     try {
-      const [vehiclesRes, driversRes, containersRes] = await Promise.all([
+      const [vehiclesRes, driversRes, containersRes, routesRes] = await Promise.all([
         fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/routes?companyId=${companyId}${request.clientId ? `&clientId=${request.clientId}` : ''}`)),
       ]);
 
-      const [vehiclesData, driversData, containersData] = await Promise.all([
+      const [vehiclesData, driversData, containersData, routesData] = await Promise.all([
         vehiclesRes.json(),
         driversRes.json(),
         containersRes.json(),
+        routesRes.json(),
       ]);
 
       if (vehiclesData.success) {
@@ -778,6 +806,15 @@ function RequestDetailView({
           containersData.data.map((item: any) => ({
             id: item.id,
             label: `${item.iso} - ${item.size} (${item.owner})${item.checkOk ? "" : " [check pending]"}`,
+          }))
+        );
+      }
+
+      if (routesData.success) {
+        setRoutes(
+          routesData.data.map((item: any) => ({
+            id: item.id,
+            label: `${item.origin} → ${item.destination} (${item.distance}km)`,
           }))
         );
       }
@@ -890,6 +927,7 @@ function RequestDetailView({
                     onClick={() => {
                       setActionType('accept');
                       setShowReviewModal(true);
+                      loadAssignmentOptions(); // Load routes and other options
                     }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center"
                   >
@@ -1233,6 +1271,33 @@ function RequestDetailView({
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 {actionType === 'accept' ? 'Accept Request' : 'Decline Request'}
               </h3>
+
+              {actionType === 'accept' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Route <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={selectedRouteId}
+                    onChange={(e) => setSelectedRouteId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">-- Select a route --</option>
+                    {routes.map((route) => (
+                      <option key={route.id} value={route.id}>
+                        {route.label}
+                      </option>
+                    ))}
+                  </select>
+                  {routes.length === 0 && (
+                    <p className="mt-2 text-sm text-yellow-600">
+                      ⚠️ No routes available. Please create a route first.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Review Notes {actionType === 'decline' && <span className="text-red-600">*</span>}
@@ -1264,7 +1329,7 @@ function RequestDetailView({
                 </button>
                 <button
                   onClick={handleSubmitReview}
-                  disabled={processing || (actionType === 'decline' && !reviewNotes.trim())}
+                  disabled={processing || (actionType === 'decline' && !reviewNotes.trim()) || (actionType === 'accept' && !selectedRouteId)}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
                     actionType === 'accept'
                       ? 'bg-green-600 text-white hover:bg-green-700'
