@@ -162,20 +162,24 @@ const mockRequests: JobRequest[] = [
       name: 'Sarah Johnson',
       email: 'sarah.johnson@precisionmfg.co.za'
     },
-    documents: [
+    attachedDocuments: [
       {
         id: 'doc-001',
         fileName: 'Equipment_Manifest.pdf',
         type: 'manifest',
+        fileUrl: '#',
         fileSize: 2457600,
-        uploadedBy: 'Sarah Johnson'
+        mimeType: 'application/pdf',
+        createdAt: new Date().toISOString()
       },
       {
         id: 'doc-002',
         fileName: 'Insurance_Certificate.pdf',
         type: 'insurance',
+        fileUrl: '#',
         fileSize: 1048576,
-        uploadedBy: 'Sarah Johnson'
+        mimeType: 'application/pdf',
+        createdAt: new Date().toISOString()
       }
     ],
     updates: [
@@ -215,13 +219,15 @@ const mockRequests: JobRequest[] = [
       name: 'Michael Chen',
       email: 'michael.chen@globalts.com'
     },
-    documents: [
+    attachedDocuments: [
       {
         id: 'doc-003',
         fileName: 'Shipping_Invoice.pdf',
         type: 'invoice',
+        fileUrl: '#',
         fileSize: 1536000,
-        uploadedBy: 'Michael Chen'
+        mimeType: 'application/pdf',
+        createdAt: new Date().toISOString()
       }
     ],
     updates: [
