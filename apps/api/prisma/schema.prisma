@@ -403,27 +403,30 @@ model StatusEvent {
 }
 
 model Document {
-  id         String       @id @default(cuid())
-  companyId  String
-  jobId      String?
-  type       DocumentType
-  fileName   String
-  fileUrl    String
-  fileSize   Int?
-  mimeType   String?
-  ocrData    Json?
-  metadata   Json?
-  version    Int          @default(1)
-  isOriginal Boolean      @default(true)
-  createdBy  String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  creator    User?        @relation("CreatedBy", fields: [createdBy], references: [id])
-  job        Job?         @relation(fields: [jobId], references: [id])
+  id           String       @id @default(cuid())
+  companyId    String
+  jobId        String?
+  jobRequestId String?
+  type         DocumentType
+  fileName     String
+  fileUrl      String
+  fileSize     Int?
+  mimeType     String?
+  ocrData      Json?
+  metadata     Json?
+  version      Int          @default(1)
+  isOriginal   Boolean      @default(true)
+  createdBy    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator      User?        @relation("CreatedBy", fields: [createdBy], references: [id])
+  job          Job?         @relation(fields: [jobId], references: [id])
+  jobRequest   JobRequest?  @relation(fields: [jobRequestId], references: [id])
 
   @@index([companyId])
   @@index([jobId])
+  @@index([jobRequestId])
   @@index([type])
   @@index([createdBy])
   @@map("documents")
@@ -701,6 +704,7 @@ model JobRequest {
   route                     Route?               @relation(fields: [routeId], references: [id])
   documents                 JobRequestDocument[]
   updates                   JobRequestUpdate[]
+  attachedDocuments         Document[]
 
   @@index([companyId])
   @@index([clientId])

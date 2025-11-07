@@ -1364,20 +1364,10 @@ function DocumentsSection({
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
 
-  // Fetch documents from API if request has been converted to a job
+  // Fetch documents linked to this job request
   useEffect(() => {
     const fetchDocuments = async () => {
-      const jobId = request.convertedToJobId || request.jobId;
-
-      // If no jobId, use documents from request object (client uploads during request submission)
-      if (!jobId || !companyId) {
-        setDocuments(request.documents.map(doc => ({
-          ...doc,
-          uploadedByRole: 'client' as const,
-          visibility: 'all' as const,
-          category: doc.type as any,
-          isRequired: false
-        })));
+      if (!companyId) {
         return;
       }
 
@@ -1385,15 +1375,33 @@ function DocumentsSection({
         setDocumentsLoading(true);
         setDocumentsError(null);
 
+        // Fetch documents linked to the job request OR the converted job
+        const jobId = request.convertedToJobId || request.jobId;
+        let queryParams = `companyId=${companyId}`;
+
+        // If there's a job, fetch by jobId; otherwise fetch by jobRequestId
+        if (jobId) {
+          queryParams += `&jobId=${jobId}`;
+        }
+        // Note: The documents API doesn't support jobRequestId filtering yet
+        // We'll need to fetch all and filter client-side for now
+
         const response = await fetch(
-          getApiUrl(`/api/v1/documents?companyId=${companyId}&jobId=${jobId}`),
+          getApiUrl(`/api/v1/documents?${queryParams}`),
           { headers: { 'Accept': 'application/json' } }
         );
         const data = await response.json();
 
         if (data.success) {
+          // Filter documents for this specific request
+          const relevantDocs = data.data.filter((doc: any) =>
+            doc.jobId === jobId || // Documents linked to the converted job
+            doc.jobRequestId === request.id || // Documents linked to this request
+            (doc.metadata?.jobRequestId === request.id) // Fallback: check metadata
+          );
+
           // Transform API documents to match the expected structure
-          const transformedDocs = data.data.map((doc: any) => ({
+          const transformedDocs = relevantDocs.map((doc: any) => ({
             id: doc.id,
             fileName: doc.fileName,
             type: doc.type,
@@ -1422,7 +1430,7 @@ function DocumentsSection({
     };
 
     fetchDocuments();
-  }, [request.id, request.convertedToJobId, request.jobId, companyId, request.documents]);
+  }, [request.id, request.convertedToJobId, request.jobId, companyId]);
 
   const allDocuments = documents;
 

@@ -140,7 +140,7 @@ export default function JobRequestPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const uploadFile = async (file: File, type: string): Promise<string> => {
+  const uploadFile = async (file: File, type: string): Promise<{id: string; fileUrl: string}> => {
     const uploadFormData = new FormData();
     uploadFormData.append('file', file);
     uploadFormData.append('type', type);
@@ -166,7 +166,10 @@ export default function JobRequestPage() {
     }
 
     const result = await response.json();
-    return result.data.fileUrl;
+    return {
+      id: result.data.id,
+      fileUrl: result.data.fileUrl
+    };
   };
 
   const handleSubmit = async () => {
@@ -180,20 +183,23 @@ export default function JobRequestPage() {
     try {
       // Upload release order if provided
       let releaseOrderUrl = '';
+      let releaseOrderDocId = '';
       if (formData.releaseOrderFile) {
         setUploadProgress({ releaseOrder: 0 });
-        releaseOrderUrl = await uploadFile(formData.releaseOrderFile, 'RELEASE_ORDER');
+        const result = await uploadFile(formData.releaseOrderFile, 'RELEASE_ORDER');
+        releaseOrderUrl = result.fileUrl;
+        releaseOrderDocId = result.id;
         setUploadProgress({ releaseOrder: 100 });
       }
 
       // Upload supporting documents if provided
-      const supportingDocUrls: string[] = [];
+      const supportingDocIds: string[] = [];
       if (formData.supportingDocuments.length > 0) {
         for (let i = 0; i < formData.supportingDocuments.length; i++) {
           const doc = formData.supportingDocuments[i];
           setUploadProgress(prev => ({ ...prev, [`doc_${i}`]: 0 }));
-          const url = await uploadFile(doc, 'OTHER');
-          supportingDocUrls.push(url);
+          const result = await uploadFile(doc, 'OTHER');
+          supportingDocIds.push(result.id);
           setUploadProgress(prev => ({ ...prev, [`doc_${i}`]: 100 }));
         }
       }
@@ -214,6 +220,7 @@ export default function JobRequestPage() {
         priority: formData.priority,
         shipmentType: formData.shipmentType,
         releaseOrderUrl: releaseOrderUrl || undefined,
+        supportingDocumentIds: supportingDocIds.length > 0 ? supportingDocIds : undefined,
         loadingLocation: formData.loadingLocation,
         loadingLocationLat: formData.loadingLocationLat || undefined,
         loadingLocationLng: formData.loadingLocationLng || undefined,

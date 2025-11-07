@@ -86,6 +86,19 @@ export class JobRequestsService {
       },
     });
 
+    // Link uploaded documents to this job request
+    if (createJobRequestDto.supportingDocumentIds && createJobRequestDto.supportingDocumentIds.length > 0) {
+      await this.prisma.document.updateMany({
+        where: {
+          id: { in: createJobRequestDto.supportingDocumentIds },
+          companyId: createJobRequestDto.companyId,
+        },
+        data: {
+          jobRequestId: jobRequest.id,
+        },
+      });
+    }
+
     return { success: true, data: jobRequest };
   }
 

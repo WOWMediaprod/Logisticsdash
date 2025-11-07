@@ -93,6 +93,11 @@ export class CreateJobRequestDto {
   @IsString()
   releaseOrderUrl?: string;
 
+  @ApiProperty({ description: 'Supporting document IDs', required: false, type: [String] })
+  @IsOptional()
+  @IsString({ each: true })
+  supportingDocumentIds?: string[];
+
   // Loading Information
   @ApiProperty({ description: 'Loading location (goods location)' })
   @IsString()
