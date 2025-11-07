@@ -661,6 +661,39 @@ function RequestDetailView({
   const [assignProgress, setAssignProgress] = useState(0);
   const [jobHasDriver, setJobHasDriver] = useState(false);
   const [showAssignConfirmation, setShowAssignConfirmation] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  // Fetch fresh request details when component mounts
+  useEffect(() => {
+    const fetchRequestDetails = async () => {
+      if (!request.id || !companyId) return;
+
+      setLoadingDetails(true);
+      setDetailsError(null);
+
+      try {
+        const response = await fetch(
+          getApiUrl(`/api/v1/job-requests/${request.id}?companyId=${companyId}`)
+        );
+        const result = await response.json();
+
+        if (result.success) {
+          // Update parent state with fresh data including attachedDocuments
+          onUpdate(result.data);
+        } else {
+          setDetailsError('Failed to load request details');
+        }
+      } catch (error) {
+        console.error('Failed to fetch request details', error);
+        setDetailsError('Failed to load request details');
+      } finally {
+        setLoadingDetails(false);
+      }
+    };
+
+    fetchRequestDetails();
+  }, [request.id, companyId]);
 
   const handleAccept = async () => {
     if (!companyId) {
