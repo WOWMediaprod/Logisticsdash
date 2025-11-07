@@ -83,6 +83,7 @@ export class JobRequestsService {
       include: {
         client: true,
         company: true,
+        attachedDocuments: true, // Include attachedDocuments in initial creation
       },
     });
 
@@ -97,6 +98,18 @@ export class JobRequestsService {
           jobRequestId: jobRequest.id,
         },
       });
+
+      // Re-fetch the job request to include the newly linked documents
+      const updatedJobRequest = await this.prisma.jobRequest.findUnique({
+        where: { id: jobRequest.id },
+        include: {
+          client: true,
+          company: true,
+          attachedDocuments: true, // This will now include the linked documents
+        },
+      });
+
+      return { success: true, data: updatedJobRequest };
     }
 
     return { success: true, data: jobRequest };
