@@ -130,7 +130,7 @@ export class JobRequestsService {
           client: {
             select: { id: true, name: true, code: true },
           },
-          documents: true,
+          attachedDocuments: true,
           convertedToJob: {
             select: { id: true, driverId: true, status: true },
           },
@@ -156,7 +156,7 @@ export class JobRequestsService {
       where: { id, companyId },
       include: {
         client: true,
-        documents: true,
+        attachedDocuments: true,
         updates: {
           include: {
             updatedByUser: {
@@ -254,7 +254,7 @@ export class JobRequestsService {
       },
       include: {
         client: true,
-        documents: true,
+        attachedDocuments: true,
       },
     });
 
@@ -403,7 +403,7 @@ export class JobRequestsService {
       },
       include: {
         client: true,
-        documents: true,
+        attachedDocuments: true,
       },
     });
 
@@ -445,7 +445,7 @@ export class JobRequestsService {
       },
       include: {
         client: true,
-        documents: true,
+        attachedDocuments: true,
       },
     });
 

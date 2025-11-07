@@ -114,12 +114,14 @@ interface JobRequest {
     name: string;
     email: string;
   };
-  documents: Array<{
+  attachedDocuments?: Array<{
     id: string;
     fileName: string;
     type: string;
-    fileSize: number;
-    uploadedBy: string;
+    fileUrl: string;
+    fileSize?: number;
+    mimeType?: string;
+    createdAt: string;
   }>;
   updates: Array<{
     id: string;
@@ -1425,82 +1427,12 @@ function DocumentsSection({
 }) {
   const { companyId } = useCompany();
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
-  // Fetch documents linked to this job request
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!companyId) {
-        return;
-      }
+  // Use documents directly from the job request
+  const allDocuments = request.attachedDocuments || [];
 
-      try {
-        setDocumentsLoading(true);
-        setDocumentsError(null);
-
-        // Fetch documents linked to the job request OR the converted job
-        const jobId = request.convertedToJobId || request.jobId;
-        let queryParams = `companyId=${companyId}`;
-
-        // If there's a job, fetch by jobId; otherwise fetch by jobRequestId
-        if (jobId) {
-          queryParams += `&jobId=${jobId}`;
-        }
-        // Note: The documents API doesn't support jobRequestId filtering yet
-        // We'll need to fetch all and filter client-side for now
-
-        const response = await fetch(
-          getApiUrl(`/api/v1/documents?${queryParams}`),
-          { headers: { 'Accept': 'application/json' } }
-        );
-        const data = await response.json();
-
-        if (data.success) {
-          // Filter documents for this specific request
-          const relevantDocs = data.data.filter((doc: any) =>
-            doc.jobId === jobId || // Documents linked to the converted job
-            doc.jobRequestId === request.id || // Documents linked to this request
-            (doc.metadata?.jobRequestId === request.id) // Fallback: check metadata
-          );
-
-          // Transform API documents to match the expected structure
-          const transformedDocs = relevantDocs.map((doc: any) => ({
-            id: doc.id,
-            fileName: doc.fileName,
-            type: doc.type,
-            fileSize: doc.fileSize,
-            uploadedBy: doc.creator ? `${doc.creator.firstName} ${doc.creator.lastName}` : 'Client',
-            uploadedByRole: doc.createdBy ? 'admin' : 'client',
-            visibility: 'all',
-            category: doc.type,
-            isRequired: false,
-            createdAt: doc.createdAt,
-            fileUrl: doc.fileUrl,
-            mimeType: doc.mimeType
-          }));
-          setDocuments(transformedDocs);
-        } else {
-          setDocumentsError(data.error || "Failed to load documents");
-          setDocuments([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch documents", err);
-        setDocumentsError("Failed to load documents");
-        setDocuments([]);
-      } finally {
-        setDocumentsLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [request.id, request.convertedToJobId, request.jobId, companyId]);
-
-  const allDocuments = documents;
-
-  const clientDocuments = allDocuments.filter(doc => doc.uploadedByRole === 'client');
-  const companyDocuments = allDocuments.filter(doc => doc.uploadedByRole === 'admin');
+  const clientDocuments = allDocuments;
+  const companyDocuments = [];
 
   const getDocumentIcon = (category: string) => {
     switch (category) {
@@ -1631,25 +1563,21 @@ function DocumentCard({ document }: { document: any }) {
           </div>
           <div className="flex items-center space-x-3 text-sm text-gray-600">
             <span>{document.type}</span>
-            <span>•</span>
-            <span>{(document.fileSize / 1024 / 1024).toFixed(2)} MB</span>
-            <span>•</span>
-            <span className="flex items-center space-x-1">
-              {document.uploadedByRole === 'admin' ? (
-                <Building className="w-3 h-3" />
-              ) : (
-                <User className="w-3 h-3" />
-              )}
-              <span>{document.uploadedBy}</span>
-            </span>
-            {document.visibility && (
+            {document.fileSize && (
               <>
                 <span>•</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded ${getVisibilityColor(document.visibility)}`}>
-                  {document.visibility}
-                </span>
+                <span>{(document.fileSize / 1024 / 1024).toFixed(2)} MB</span>
               </>
             )}
+            <span>•</span>
+            <span className="flex items-center space-x-1">
+              <User className="w-3 h-3" />
+              <span>Client</span>
+            </span>
+            <span>•</span>
+            <span className="text-xs text-gray-500">
+              {new Date(document.createdAt).toLocaleDateString()}
+            </span>
           </div>
         </div>
       </div>
