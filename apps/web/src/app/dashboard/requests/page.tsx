@@ -1491,29 +1491,16 @@ function DocumentsSection({
       </div>
 
       {/* Documents List */}
-      {documentsLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-600">Loading documents...</span>
+      <div className="space-y-3">
+        {allDocuments.map((doc) => (
+          <DocumentCard key={doc.id} document={doc} />
+        ))}
+        {allDocuments.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No documents uploaded yet.
           </div>
-        </div>
-      ) : documentsError ? (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{documentsError}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {allDocuments.map((doc) => (
-            <DocumentCard key={doc.id} document={doc} />
-          ))}
-          {allDocuments.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No documents uploaded yet.
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
