@@ -391,7 +391,7 @@ function DocumentCard({ document }: { document: Document }) {
                 const response = await fetch(getApiUrl(`/api/v1/documents/${document.id}/download`));
                 const data = await response.json();
                 if (data.success && data.data.url) {
-                  const link = document.createElement('a');
+                  const link = window.document.createElement('a');
                   link.href = data.data.url;
                   link.download = document.fileName;
                   link.click();
