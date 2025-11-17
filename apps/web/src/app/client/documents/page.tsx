@@ -365,13 +365,71 @@ function DocumentCard({ document }: { document: Document }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch(getApiUrl(`/api/v1/documents/${document.id}/download`));
+                const data = await response.json();
+                if (data.success && data.data.url) {
+                  window.open(data.data.url, '_blank');
+                } else {
+                  alert('Failed to get document URL');
+                }
+              } catch (error) {
+                console.error('Error fetching document:', error);
+                alert('Failed to load document');
+              }
+            }}
+            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="View document"
+          >
             <Eye className="w-4 h-4" />
           </button>
-          <button className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch(getApiUrl(`/api/v1/documents/${document.id}/download`));
+                const data = await response.json();
+                if (data.success && data.data.url) {
+                  const link = document.createElement('a');
+                  link.href = data.data.url;
+                  link.download = document.fileName;
+                  link.click();
+                } else {
+                  alert('Failed to get document URL');
+                }
+              } catch (error) {
+                console.error('Error downloading document:', error);
+                alert('Failed to download document');
+              }
+            }}
+            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            title="Download document"
+          >
             <Download className="w-4 h-4" />
           </button>
-          <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <button
+            onClick={async () => {
+              if (!confirm('Are you sure you want to delete this document?')) return;
+              try {
+                const response = await fetch(getApiUrl(`/api/v1/documents/${document.id}`), {
+                  method: 'DELETE'
+                });
+                const data = await response.json();
+                if (data.success) {
+                  alert('Document deleted successfully');
+                  window.location.reload();
+                } else {
+                  alert('Failed to delete document');
+                }
+              } catch (error) {
+                console.error('Error deleting document:', error);
+                alert('Failed to delete document');
+              }
+            }}
+            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete document"
+          >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>

@@ -544,15 +544,26 @@ export default function DriverJobDetailPage() {
                       <p className="text-xs text-gray-500">{new Date(doc.createdAt).toLocaleDateString('en-LK')}</p>
                     </div>
                   </div>
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(getApiUrl(`/api/v1/documents/${doc.id}/download`));
+                        const data = await response.json();
+                        if (data.success && data.data.url) {
+                          window.open(data.data.url, '_blank');
+                        } else {
+                          alert('Failed to get document URL');
+                        }
+                      } catch (error) {
+                        console.error('Error fetching document:', error);
+                        alert('Failed to load document');
+                      }
+                    }}
                     className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium"
                   >
                     <ExternalLink className="w-4 h-4" />
                     View
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
