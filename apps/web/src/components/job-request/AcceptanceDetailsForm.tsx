@@ -287,8 +287,8 @@ export default function AcceptanceDetailsForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold text-gray-900">Complete Job Details</h2>
             <button
@@ -312,7 +312,7 @@ export default function AcceptanceDetailsForm({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
           {/* Route Selection - CRITICAL REQUIRED FIELD */}
           <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
@@ -820,7 +820,7 @@ export default function AcceptanceDetailsForm({
           </div>
         </form>
 
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
+        <div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex justify-end gap-3">
             <button
               type="button"
