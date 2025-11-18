@@ -167,7 +167,7 @@ export class DocumentsController {
   })
   @ApiResponse({ status: 404, description: 'Document not found' })
   async getDocument(
-    @Param('id', ParseUUIDPipe) documentId: string,
+    @Param('id') documentId: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
     return this.documentsService.getDocument(documentId, companyId);
@@ -202,7 +202,7 @@ export class DocumentsController {
   })
   @ApiResponse({ status: 404, description: 'Document not found' })
   async getDocumentUrl(
-    @Param('id', ParseUUIDPipe) documentId: string,
+    @Param('id') documentId: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
     @Query('expires') expiresIn?: number,
   ) {
@@ -238,7 +238,7 @@ export class DocumentsController {
   })
   @ApiResponse({ status: 404, description: 'Document not found' })
   async getOcrResults(
-    @Param('id', ParseUUIDPipe) documentId: string,
+    @Param('id') documentId: string,
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
   ) {
     return this.documentsService.getOcrResults(documentId, companyId);
