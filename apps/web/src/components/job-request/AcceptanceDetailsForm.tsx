@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X } from 'lucide-react';
+import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route } from 'lucide-react';
 import { getApiUrl } from '../../lib/api-config';
 
 interface AcceptanceDetailsFormProps {
@@ -19,7 +19,13 @@ export default function AcceptanceDetailsForm({
   onCancel,
   isProcessing = false
 }: AcceptanceDetailsFormProps) {
+  const [routes, setRoutes] = useState<Array<{id: string; label: string}>>([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
+
   const [formData, setFormData] = useState({
+    // Route selection (REQUIRED)
+    routeId: request.routeId || '',
+
     // Job ID will be generated automatically
     releaseOrderUrl: request.releaseOrderUrl || '',
 
@@ -59,6 +65,34 @@ export default function AcceptanceDetailsForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Fetch routes on component mount
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      if (!companyId) return;
+
+      setLoadingRoutes(true);
+      try {
+        const clientParam = request.clientId ? `&clientId=${request.clientId}` : '';
+        const response = await fetch(getApiUrl(`/api/v1/routes?companyId=${companyId}${clientParam}`));
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const routeOptions = result.data.map((route: any) => ({
+            id: route.id,
+            label: `${route.code} - ${route.origin} → ${route.destination}`
+          }));
+          setRoutes(routeOptions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch routes:', error);
+      } finally {
+        setLoadingRoutes(false);
+      }
+    };
+
+    fetchRoutes();
+  }, [companyId, request.clientId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -108,6 +142,9 @@ export default function AcceptanceDetailsForm({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+
+    // Route selection validation (CRITICAL)
+    if (!formData.routeId) newErrors.routeId = 'Please select a route';
 
     // Required fields validation
     if (!formData.loadingLocation) newErrors.loadingLocation = 'Loading location is required';
@@ -169,6 +206,43 @@ export default function AcceptanceDetailsForm({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* Route Selection - CRITICAL REQUIRED FIELD */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Route className="w-5 h-5" />
+              Route Selection
+            </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Route <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="routeId"
+                value={formData.routeId}
+                onChange={handleChange}
+                disabled={loadingRoutes || isProcessing}
+                className={`w-full px-3 py-2 border ${errors.routeId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              >
+                <option value="">
+                  {loadingRoutes ? 'Loading routes...' : '-- Select a route --'}
+                </option>
+                {routes.map((route) => (
+                  <option key={route.id} value={route.id}>
+                    {route.label}
+                  </option>
+                ))}
+              </select>
+              {errors.routeId && (
+                <p className="mt-1 text-sm text-red-600">{errors.routeId}</p>
+              )}
+              {routes.length === 0 && !loadingRoutes && (
+                <p className="mt-2 text-sm text-yellow-600">
+                  ⚠️ No routes available. Please create a route first.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Release Order Upload */}
           <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">

@@ -642,8 +642,6 @@ function RequestDetailView({
 }) {
   const { companyId } = useCompany();
   const [reviewNotes, setReviewNotes] = useState(request.reviewNotes || '');
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [actionType, setActionType] = useState<'accept' | 'decline' | null>(null);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -652,7 +650,6 @@ function RequestDetailView({
   const [drivers, setDrivers] = useState<Array<{id: string; label: string}>>([]);
   const [containers, setContainers] = useState<Array<{id: string; label: string}>>([]);
   const [routes, setRoutes] = useState<Array<{id: string; label: string}>>([]);
-  const [selectedRouteId, setSelectedRouteId] = useState(request.routeId || '');
   const [assignmentData, setAssignmentData] = useState({
     vehicleId: '',
     driverId: '',
@@ -717,14 +714,8 @@ function RequestDetailView({
       return;
     }
 
-    if (!selectedRouteId) {
-      setError('Please select a route before accepting');
-      return;
-    }
-
-    // Show the details form instead of directly processing
+    // Directly show the AcceptanceDetailsForm (which includes route selection)
     setShowDetailsForm(true);
-    setShowReviewModal(false);
   };
 
   const handleDetailsComplete = async (details: any) => {
@@ -733,14 +724,13 @@ function RequestDetailView({
     setAcceptanceDetails(details);
 
     try {
-      // First, update the job request with the selected route and additional details
+      // First, update the job request with the route and additional details
       const updateResponse = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId,
-          routeId: selectedRouteId,
-          ...details
+          ...details // includes routeId from the form
         })
       });
 
@@ -771,7 +761,6 @@ function RequestDetailView({
           ...result.data.jobRequest,
           jobId: result.data.job.id
         });
-        setShowReviewModal(false);
         setShowDetailsForm(false);
         alert(`Job request accepted! Job ${result.data.job.id} created successfully.`);
       } else {
@@ -785,13 +774,14 @@ function RequestDetailView({
     }
   };
 
-  const handleDecline = async () => {
+  const handleDecline = async (notes?: string) => {
     if (!companyId) {
       setError('Company ID is required');
       return;
     }
 
-    if (!reviewNotes.trim()) {
+    const declineNotes = notes || reviewNotes;
+    if (!declineNotes.trim()) {
       setError('Please provide a reason for declining');
       return;
     }
@@ -806,7 +796,7 @@ function RequestDetailView({
         body: JSON.stringify({
           companyId,
           reviewedBy: 'Admin User', // TODO: Get from auth context
-          reviewNotes
+          reviewNotes: declineNotes
         })
       });
 
@@ -817,7 +807,6 @@ function RequestDetailView({
           ...request,
           ...result.data
         });
-        setShowReviewModal(false);
         alert('Job request declined successfully.');
       } else {
         setError(result.message || 'Failed to decline job request');
@@ -948,14 +937,6 @@ function RequestDetailView({
     }
   };
 
-  const handleSubmitReview = () => {
-    if (actionType === 'accept') {
-      handleAccept();
-    } else if (actionType === 'decline') {
-      handleDecline();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       <div className="container mx-auto px-4 py-8">
@@ -981,8 +962,10 @@ function RequestDetailView({
                 <>
                   <button
                     onClick={() => {
-                      setActionType('decline');
-                      setShowReviewModal(true);
+                      const reason = window.prompt('Please provide a reason for declining this request:');
+                      if (reason && reason.trim()) {
+                        handleDecline(reason.trim());
+                      }
                     }}
                     className="px-4 py-2 border border-red-300 text-red-700 rounded-lg font-semibold hover:bg-red-50 transition-colors flex items-center"
                   >
@@ -990,11 +973,7 @@ function RequestDetailView({
                     Decline
                   </button>
                   <button
-                    onClick={() => {
-                      setActionType('accept');
-                      setShowReviewModal(true);
-                      loadAssignmentOptions(); // Load routes and other options
-                    }}
+                    onClick={handleAccept}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center"
                   >
                     <Check className="w-4 h-4 mr-2" />
@@ -1325,96 +1304,6 @@ function RequestDetailView({
             </div>
           </div>
         </div>
-
-        {/* Review Modal */}
-        {showReviewModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-md"
-            >
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                {actionType === 'accept' ? 'Accept Request' : 'Decline Request'}
-              </h3>
-
-              {actionType === 'accept' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Route <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={selectedRouteId}
-                    onChange={(e) => setSelectedRouteId(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">-- Select a route --</option>
-                    {routes.map((route) => (
-                      <option key={route.id} value={route.id}>
-                        {route.label}
-                      </option>
-                    ))}
-                  </select>
-                  {routes.length === 0 && (
-                    <p className="mt-2 text-sm text-yellow-600">
-                      ⚠️ No routes available. Please create a route first.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Review Notes {actionType === 'decline' && <span className="text-red-600">*</span>}
-                </label>
-                <textarea
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={actionType === 'accept' ? 'Optional notes about the acceptance...' : 'Please provide a reason for declining...'}
-                  required={actionType === 'decline'}
-                />
-              </div>
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => {
-                    setShowReviewModal(false);
-                    setError(null);
-                  }}
-                  disabled={processing}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitReview}
-                  disabled={processing || (actionType === 'decline' && !reviewNotes.trim()) || (actionType === 'accept' && !selectedRouteId)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
-                    actionType === 'accept'
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
-                >
-                  {processing ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>{actionType === 'accept' ? 'Accepting...' : 'Declining...'}</span>
-                    </div>
-                  ) : (
-                    actionType === 'accept' ? 'Accept & Create Job' : 'Decline Request'
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
 
         {/* Acceptance Details Form */}
         {showDetailsForm && companyId && (
