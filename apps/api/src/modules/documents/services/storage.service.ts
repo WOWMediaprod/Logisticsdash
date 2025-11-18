@@ -119,20 +119,33 @@ export class StorageService {
 
   async getSignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
     try {
+      // Log the input URL for debugging
+      this.logger.log(`Generating signed URL for: ${fileUrl}`);
+
       const filePath = this.extractPathFromUrl(fileUrl);
+      this.logger.log(`Extracted file path: ${filePath}`);
+      this.logger.log(`Using bucket: ${this.bucketName}`);
 
       const { data, error } = await this.supabase.storage
         .from(this.bucketName)
         .createSignedUrl(filePath, expiresIn);
 
       if (error) {
-        this.logger.error(`Supabase signed URL error: ${error.message}`, error);
+        this.logger.error(`Supabase signed URL error: ${JSON.stringify(error)}`, error);
+        this.logger.error(`Failed for fileUrl: ${fileUrl}, extracted path: ${filePath}`);
         throw new Error(`Signed URL generation failed: ${error.message}`);
       }
 
+      if (!data || !data.signedUrl) {
+        this.logger.error(`No signed URL returned for path: ${filePath}`);
+        throw new Error('Signed URL generation returned no URL');
+      }
+
+      this.logger.log(`Successfully generated signed URL`);
       return data.signedUrl;
     } catch (error) {
       this.logger.error(`Failed to generate signed URL: ${error.message}`, error.stack);
+      this.logger.error(`Original fileUrl: ${fileUrl}`);
       throw new Error(`Signed URL generation failed: ${error.message}`);
     }
   }
@@ -176,16 +189,61 @@ export class StorageService {
 
   private extractPathFromUrl(fileUrl: string): string {
     try {
-      const url = new URL(fileUrl);
-      // Extract path after /storage/v1/object/public/{bucket}/
-      const pathParts = url.pathname.split(`/object/public/${this.bucketName}/`);
-      if (pathParts.length > 1) {
-        return pathParts[1];
+      // Log for debugging
+      this.logger.log(`Extracting path from URL: ${fileUrl}`);
+
+      // If it's already just a path (doesn't start with http), return as-is
+      if (!fileUrl.startsWith('http')) {
+        this.logger.log(`Not a URL, treating as path: ${fileUrl}`);
+        return fileUrl;
       }
-      // Fallback: remove leading slash
-      return url.pathname.substring(1);
+
+      const url = new URL(fileUrl);
+
+      // Handle Supabase public URLs
+      // Format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+      const publicPattern = `/storage/v1/object/public/${this.bucketName}/`;
+      if (url.pathname.includes(publicPattern)) {
+        const pathParts = url.pathname.split(publicPattern);
+        if (pathParts.length > 1) {
+          const extractedPath = pathParts[1];
+          this.logger.log(`Extracted path from public URL: ${extractedPath}`);
+          return extractedPath;
+        }
+      }
+
+      // Handle Supabase signed URLs (they might have different format)
+      // Format: https://[project].supabase.co/storage/v1/object/sign/[bucket]/[path]
+      const signedPattern = `/storage/v1/object/sign/${this.bucketName}/`;
+      if (url.pathname.includes(signedPattern)) {
+        const pathParts = url.pathname.split(signedPattern);
+        if (pathParts.length > 1) {
+          const extractedPath = pathParts[1].split('?')[0]; // Remove query params
+          this.logger.log(`Extracted path from signed URL: ${extractedPath}`);
+          return extractedPath;
+        }
+      }
+
+      // Handle legacy format or other patterns
+      // If URL contains the bucket name anywhere, extract after it
+      if (url.pathname.includes(this.bucketName)) {
+        const parts = url.pathname.split(this.bucketName + '/');
+        if (parts.length > 1) {
+          const extractedPath = parts[1];
+          this.logger.log(`Extracted path using bucket name: ${extractedPath}`);
+          return extractedPath;
+        }
+      }
+
+      // Last fallback: remove leading slash from pathname
+      const fallbackPath = url.pathname.startsWith('/')
+        ? url.pathname.substring(1)
+        : url.pathname;
+      this.logger.log(`Using fallback path extraction: ${fallbackPath}`);
+      return fallbackPath;
     } catch (error) {
       // If not a valid URL, assume it's already a path
+      this.logger.log(`URL parsing failed, treating as path: ${fileUrl}`);
       return fileUrl;
     }
   }
