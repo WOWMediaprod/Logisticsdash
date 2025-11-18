@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route, FileText, Download, Eye, Building2, Plus } from 'lucide-react';
+import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route, FileText, Download, Eye, Building2 } from 'lucide-react';
 import { getApiUrl } from '../../lib/api-config';
-import { getCompanies, addCompany, getDefaultCompany, type BillingCompany } from '../../lib/companies-storage';
+import { getCompanies, getDefaultCompany, type BillingCompany } from '../../lib/companies-storage';
 
 interface AcceptanceDetailsFormProps {
   request: any;
@@ -24,15 +24,6 @@ export default function AcceptanceDetailsForm({
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [companies, setCompanies] = useState<BillingCompany[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
-  const [showNewCompanyForm, setShowNewCompanyForm] = useState(false);
-  const [newCompanyData, setNewCompanyData] = useState({
-    name: '',
-    address: '',
-    phone: '',
-    email: '',
-    taxId: '',
-  });
-  const [newCompanyErrors, setNewCompanyErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     // Route selection (REQUIRED)
@@ -227,64 +218,6 @@ export default function AcceptanceDetailsForm({
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const handleNewCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewCompanyData(prev => ({ ...prev, [name]: value }));
-    setNewCompanyErrors(prev => ({ ...prev, [name]: '' }));
-  };
-
-  const validateNewCompany = () => {
-    const errors: Record<string, string> = {};
-    if (!newCompanyData.name.trim()) {
-      errors.name = 'Company name is required';
-    }
-    setNewCompanyErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleCreateCompany = () => {
-    if (!validateNewCompany()) return;
-
-    try {
-      const newCompany = addCompany({
-        ...newCompanyData,
-        isDefault: companies.length === 0, // First company becomes default
-      });
-
-      // Update companies list
-      const updatedCompanies = getCompanies();
-      setCompanies(updatedCompanies);
-
-      // Auto-select the newly created company
-      setFormData(prev => ({ ...prev, companyId: newCompany.id }));
-
-      // Reset form
-      setNewCompanyData({
-        name: '',
-        address: '',
-        phone: '',
-        email: '',
-        taxId: '',
-      });
-      setShowNewCompanyForm(false);
-    } catch (error) {
-      console.error('Failed to create company:', error);
-      alert('Failed to create company. Please try again.');
-    }
-  };
-
-  const handleCancelNewCompany = () => {
-    setShowNewCompanyForm(false);
-    setNewCompanyData({
-      name: '',
-      address: '',
-      phone: '',
-      email: '',
-      taxId: '',
-    });
-    setNewCompanyErrors({});
   };
 
   const validateForm = () => {
@@ -829,165 +762,45 @@ export default function AcceptanceDetailsForm({
 
           {/* Company Selection */}
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Company Selection
-              </span>
-              {!showNewCompanyForm && (
-                <button
-                  type="button"
-                  onClick={() => setShowNewCompanyForm(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Company Selection
+            </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Company <span className="text-red-500">*</span>
+              </label>
+              {loadingCompanies ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  Loading companies...
+                </div>
+              ) : companies.length === 0 ? (
+                <div className="w-full px-3 py-2 border border-blue-300 bg-blue-50 rounded-lg text-blue-800">
+                  No companies found. Please add companies in Resource Management before accepting jobs.
+                </div>
+              ) : (
+                <select
+                  name="companyId"
+                  value={formData.companyId}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.companyId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                   disabled={isProcessing}
                 >
-                  <Plus className="w-4 h-4" />
-                  New Company
-                </button>
+                  <option value="">Select a company...</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} {company.isDefault ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
               )}
-            </h3>
-
-            {showNewCompanyForm ? (
-              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Create New Company</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={newCompanyData.name}
-                      onChange={handleNewCompanyChange}
-                      className={`w-full px-3 py-2 border ${newCompanyErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      placeholder="e.g., IWF Logistics"
-                      disabled={isProcessing}
-                    />
-                    {newCompanyErrors.name && (
-                      <p className="mt-1 text-sm text-red-600">{newCompanyErrors.name}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={newCompanyData.address}
-                      onChange={handleNewCompanyChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Company address"
-                      disabled={isProcessing}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={newCompanyData.phone}
-                        onChange={handleNewCompanyChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="+1 (555) 000-0000"
-                        disabled={isProcessing}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={newCompanyData.email}
-                        onChange={handleNewCompanyChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="contact@company.com"
-                        disabled={isProcessing}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tax ID / Business Registration
-                    </label>
-                    <input
-                      type="text"
-                      name="taxId"
-                      value={newCompanyData.taxId}
-                      onChange={handleNewCompanyChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Tax ID or registration number"
-                      disabled={isProcessing}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleCancelNewCompany}
-                      className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-                      disabled={isProcessing}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCreateCompany}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      disabled={isProcessing}
-                    >
-                      Create & Select
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Company <span className="text-red-500">*</span>
-                </label>
-                {loadingCompanies ? (
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                    Loading companies...
-                  </div>
-                ) : companies.length === 0 ? (
-                  <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-800">
-                    No companies found. Click "New Company" above to create one for billing purposes.
-                  </div>
-                ) : (
-                  <select
-                    name="companyId"
-                    value={formData.companyId}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border ${errors.companyId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    disabled={isProcessing}
-                  >
-                    <option value="">Select a company...</option>
-                    {companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name} {company.isDefault ? '(Default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {errors.companyId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.companyId}</p>
-                )}
-                <p className="mt-2 text-sm text-gray-500">
-                  This company will appear on billing documents for this job.
-                </p>
-              </div>
-            )}
+              {errors.companyId && (
+                <p className="mt-1 text-sm text-red-600">{errors.companyId}</p>
+              )}
+              <p className="mt-2 text-sm text-gray-500">
+                This company will appear on billing documents for this job. Manage companies in Resource Management.
+              </p>
+            </div>
           </div>
         </form>
 

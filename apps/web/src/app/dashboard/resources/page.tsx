@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
-import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft, Star } from 'lucide-react';
 import { getApiUrl } from '../../../lib/api-config';
+import { getCompanies, addCompany, updateCompany, deleteCompany, setDefaultCompany, type BillingCompany } from '../../../lib/companies-storage';
 
-type TabType = 'containers' | 'vehicles' | 'drivers' | 'routes' | 'clients';
+type TabType = 'containers' | 'vehicles' | 'drivers' | 'routes' | 'clients' | 'companies';
 
 // Helper to get singular form of tab name
 const getSingularName = (tab: TabType): string => {
+  if (tab === 'companies') return 'company';
   return tab.slice(0, -1); // Remove 's' for most cases
 };
 
@@ -69,6 +71,7 @@ export default function ResourcesPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [companies, setCompanies] = useState<BillingCompany[]>([]);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -82,10 +85,18 @@ export default function ResourcesPage() {
   }, [companyId, activeTab]);
 
   const loadData = async () => {
-    if (!companyId) return;
+    if (!companyId && activeTab !== 'companies') return;
     setLoading(true);
 
     try {
+      // Companies are loaded from localStorage
+      if (activeTab === 'companies') {
+        const savedCompanies = getCompanies();
+        setCompanies(savedCompanies);
+        setLoading(false);
+        return;
+      }
+
       let endpoint = '';
       // TODO: Get userId from auth context
       const userId = 'temp-user-id';
@@ -153,6 +164,17 @@ export default function ResourcesPage() {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
+      // Companies are stored in localStorage
+      if (activeTab === 'companies') {
+        const success = deleteCompany(id);
+        if (success) {
+          loadData();
+        } else {
+          alert('Failed to delete company');
+        }
+        return;
+      }
+
       const endpoint = `/api/v1/${activeTab}/${id}?companyId=${companyId}`;
       const response = await fetch(getApiUrl(endpoint), { method: 'DELETE' });
       const result = await response.json();
@@ -168,6 +190,15 @@ export default function ResourcesPage() {
     }
   };
 
+  const handleSetDefault = (id: string) => {
+    const success = setDefaultCompany(id);
+    if (success) {
+      loadData();
+    } else {
+      alert('Failed to set default company');
+    }
+  };
+
   const handleSave = () => {
     setShowModal(false);
     loadData();
@@ -179,6 +210,7 @@ export default function ResourcesPage() {
     { id: 'drivers' as TabType, label: 'Drivers', icon: User },
     { id: 'routes' as TabType, label: 'Routes', icon: RouteIcon },
     { id: 'clients' as TabType, label: 'Clients', icon: Building2 },
+    { id: 'companies' as TabType, label: 'Companies', icon: Building2 },
   ];
 
   return (
@@ -194,7 +226,7 @@ export default function ResourcesPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Resource Management</h1>
-          <p className="text-gray-600">Manage your containers, vehicles, drivers, routes, and clients</p>
+          <p className="text-gray-600">Manage your containers, vehicles, drivers, routes, clients, and companies</p>
         </div>
         <button
           onClick={handleAdd}
@@ -270,6 +302,14 @@ export default function ResourcesPage() {
                 clients={clients}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+              />
+            )}
+            {activeTab === 'companies' && (
+              <CompaniesTable
+                companies={companies}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSetDefault={handleSetDefault}
               />
             )}
           </>
@@ -612,6 +652,33 @@ function ResourceModal({
     setError(null);
 
     try {
+      // Companies are stored in localStorage
+      if (type === 'companies') {
+        if (mode === 'add') {
+          addCompany({
+            name: formData.name,
+            address: formData.address || '',
+            phone: formData.phone || '',
+            email: formData.email || '',
+            taxId: formData.taxId || '',
+            isDefault: formData.isDefault || false,
+          });
+          alert('Company created successfully!');
+        } else {
+          updateCompany(item.id, {
+            name: formData.name,
+            address: formData.address || '',
+            phone: formData.phone || '',
+            email: formData.email || '',
+            taxId: formData.taxId || '',
+            isDefault: formData.isDefault || false,
+          });
+          alert('Company updated successfully!');
+        }
+        onSave();
+        return;
+      }
+
       const endpoint = mode === 'add'
         ? `/api/v1/${type}`
         : `/api/v1/${type}/${item.id}`;
@@ -660,6 +727,7 @@ function ResourceModal({
           {type === 'vehicles' && <VehicleForm formData={formData} setFormData={setFormData} />}
           {type === 'drivers' && <DriverForm formData={formData} setFormData={setFormData} />}
           {type === 'routes' && <RouteForm formData={formData} setFormData={setFormData} companyId={companyId} />}
+          {type === 'companies' && <CompanyForm formData={formData} setFormData={setFormData} />}
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -1007,6 +1075,148 @@ function RouteForm({ formData, setFormData, companyId }: { formData: any; setFor
           className="mr-2"
         />
         <label className="text-sm font-medium text-gray-700">Active</label>
+      </div>
+    </>
+  );
+}
+
+function CompaniesTable({
+  companies,
+  onEdit,
+  onDelete,
+  onSetDefault,
+}: {
+  companies: BillingCompany[];
+  onEdit: (item: BillingCompany) => void;
+  onDelete: (id: string) => void;
+  onSetDefault: (id: string) => void;
+}) {
+  if (companies.length === 0) {
+    return <div className="text-center py-8 text-gray-500">No companies found. Click "Add company" to create one.</div>;
+  }
+
+  return (
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-200">
+          <th className="text-left py-3 px-4">Name</th>
+          <th className="text-left py-3 px-4">Address</th>
+          <th className="text-left py-3 px-4">Phone</th>
+          <th className="text-left py-3 px-4">Email</th>
+          <th className="text-left py-3 px-4">Tax ID</th>
+          <th className="text-left py-3 px-4">Default</th>
+          <th className="text-right py-3 px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {companies.map((company) => (
+          <tr key={company.id} className="border-b border-gray-100 hover:bg-gray-50">
+            <td className="py-3 px-4 font-medium">{company.name}</td>
+            <td className="py-3 px-4">{company.address || '-'}</td>
+            <td className="py-3 px-4">{company.phone || '-'}</td>
+            <td className="py-3 px-4">{company.email || '-'}</td>
+            <td className="py-3 px-4">{company.taxId || '-'}</td>
+            <td className="py-3 px-4">
+              {company.isDefault ? (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
+                  <Star className="w-3 h-3 mr-1 fill-current" />
+                  Default
+                </span>
+              ) : (
+                <button
+                  onClick={() => onSetDefault(company.id)}
+                  className="text-gray-400 hover:text-yellow-600"
+                  title="Set as default"
+                >
+                  <Star className="w-4 h-4" />
+                </button>
+              )}
+            </td>
+            <td className="py-3 px-4 text-right">
+              <button
+                onClick={() => onEdit(company)}
+                className="text-blue-600 hover:text-blue-800 mr-3"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDelete(company.id)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function CompanyForm({ formData, setFormData }: { formData: any; setFormData: (data: any) => void }) {
+  return (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+        <input
+          type="text"
+          value={formData.name || ''}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          required
+          placeholder="e.g., IWF Logistics"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <input
+          type="text"
+          value={formData.address || ''}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          placeholder="Company address"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <input
+            type="tel"
+            value={formData.phone || ''}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="+1 (555) 000-0000"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input
+            type="email"
+            value={formData.email || ''}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="contact@company.com"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID / Business Registration</label>
+        <input
+          type="text"
+          value={formData.taxId || ''}
+          onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          placeholder="Tax ID or registration number"
+        />
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={formData.isDefault || false}
+          onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+          className="mr-2"
+        />
+        <label className="text-sm font-medium text-gray-700">Set as default company</label>
       </div>
     </>
   );
