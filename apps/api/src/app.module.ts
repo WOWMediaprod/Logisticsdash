@@ -19,6 +19,7 @@ import { TrackingV2Module } from './modules/tracking-v2/tracking-v2.module';
 import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
 import { WaypointsModule } from './modules/waypoints/waypoints.module';
 import { GeocodingModule } from './modules/geocoding/geocoding.module';
+import { CompaniesModule } from './modules/companies/companies.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { GeocodingModule } from './modules/geocoding/geocoding.module';
     DriverStatsModule,
     WaypointsModule,
     GeocodingModule,
+    CompaniesModule,
     // AuthModule,
     // EconomicsModule,
     // MaintenanceModule,

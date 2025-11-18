@@ -30,6 +30,7 @@ model Company {
   sessions       DriverSession[]
   earnings       DriverEarning[]
   trackingStates TrackingState[]
+  userCompanies  UserCompany[]
 
   @@index([name])
   @@map("companies")
@@ -52,10 +53,29 @@ model User {
   jobUpdates               JobUpdate[]
   notificationPreferences  NotificationSettings?
   triggeredMaintenanceAlerts MaintenanceAlert[]
+  userCompanies            UserCompany[]
 
   @@index([companyId])
   @@index([email])
   @@map("users")
+}
+
+model UserCompany {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("ADMIN")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+  @@map("user_companies")
 }
 
 model Vehicle {

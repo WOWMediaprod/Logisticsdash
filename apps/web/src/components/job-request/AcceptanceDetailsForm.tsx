@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route } from 'lucide-react';
+import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route, FileText, Download, Eye, Building2 } from 'lucide-react';
 import { getApiUrl } from '../../lib/api-config';
 
 interface AcceptanceDetailsFormProps {
@@ -21,10 +21,15 @@ export default function AcceptanceDetailsForm({
 }: AcceptanceDetailsFormProps) {
   const [routes, setRoutes] = useState<Array<{id: string; label: string}>>([]);
   const [loadingRoutes, setLoadingRoutes] = useState(true);
+  const [companies, setCompanies] = useState<Array<{id: string; name: string; isDefault: boolean}>>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
 
   const [formData, setFormData] = useState({
     // Route selection (REQUIRED)
     routeId: request.routeId || '',
+
+    // Company selection (REQUIRED)
+    companyId: companyId || '',
 
     // Job ID will be generated automatically
     releaseOrderUrl: request.releaseOrderUrl || '',
@@ -65,6 +70,8 @@ export default function AcceptanceDetailsForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [existingReleaseOrder, setExistingReleaseOrder] = useState<any>(null);
+  const [showReplaceUpload, setShowReplaceUpload] = useState(false);
 
   // Fetch routes on component mount
   useEffect(() => {
@@ -93,6 +100,47 @@ export default function AcceptanceDetailsForm({
 
     fetchRoutes();
   }, [companyId, request.clientId]);
+
+  // Fetch companies for the user
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setLoadingCompanies(true);
+      try {
+        // TODO: Get userId from auth context
+        const userId = 'temp-user-id';
+        const response = await fetch(getApiUrl(`/api/v1/companies?userId=${userId}`));
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setCompanies(result.data);
+
+          // Auto-select default company if no company is selected
+          const defaultCompany = result.data.find((c: any) => c.isDefault);
+          if (defaultCompany && !formData.companyId) {
+            setFormData(prev => ({ ...prev, companyId: defaultCompany.id }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch companies:', error);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // Find existing release order document
+  useEffect(() => {
+    if (request.attachedDocuments && request.attachedDocuments.length > 0) {
+      const releaseOrder = request.attachedDocuments.find(
+        (doc: any) => doc.type === 'RELEASE_ORDER' || doc.category === 'RELEASE_ORDER'
+      );
+      if (releaseOrder) {
+        setExistingReleaseOrder(releaseOrder);
+      }
+    }
+  }, [request.attachedDocuments]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -140,11 +188,53 @@ export default function AcceptanceDetailsForm({
     }
   };
 
+  const handleViewDocument = async (documentId: string) => {
+    try {
+      const response = await fetch(getApiUrl(`/api/v1/documents/${documentId}/download`));
+      const result = await response.json();
+      if (result.success && result.data.url) {
+        window.open(result.data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      alert('Failed to view document');
+    }
+  };
+
+  const handleDownloadDocument = async (documentId: string, fileName: string) => {
+    try {
+      const response = await fetch(getApiUrl(`/api/v1/documents/${documentId}/download`));
+      const result = await response.json();
+      if (result.success && result.data.url) {
+        const link = document.createElement('a');
+        link.href = result.data.url;
+        link.download = fileName;
+        link.click();
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  const handleReplaceDocument = () => {
+    setShowReplaceUpload(true);
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     // Route selection validation (CRITICAL)
     if (!formData.routeId) newErrors.routeId = 'Please select a route';
+
+    // Company selection validation (REQUIRED)
+    if (!formData.companyId) newErrors.companyId = 'Please select a company';
 
     // Required fields validation
     if (!formData.loadingLocation) newErrors.loadingLocation = 'Loading location is required';
@@ -203,6 +293,14 @@ export default function AcceptanceDetailsForm({
           <p className="mt-2 text-sm text-gray-600">
             Please provide the following information to complete the job acceptance process.
           </p>
+          <div className="mt-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-900">Job Request ID:</span>
+              <code className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-mono text-sm">
+                {request.id}
+              </code>
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
@@ -254,18 +352,80 @@ export default function AcceptanceDetailsForm({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Release Order Document
                 </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={uploadingFile || isProcessing}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {formData.releaseOrderUrl && (
-                    <span className="text-sm text-green-600">✓ Uploaded</span>
-                  )}
-                </div>
+
+                {/* Show existing document if available and not replacing */}
+                {existingReleaseOrder && !showReplaceUpload ? (
+                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <FileText className="w-10 h-10 text-blue-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {existingReleaseOrder.fileName || 'Release Order Document'}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {existingReleaseOrder.fileSize ? formatFileSize(existingReleaseOrder.fileSize) : 'Unknown size'}
+                            {existingReleaseOrder.createdAt && (
+                              <span className="ml-2">
+                                • Uploaded {new Date(existingReleaseOrder.createdAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleViewDocument(existingReleaseOrder.id)}
+                          className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
+                          title="View document"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(existingReleaseOrder.id, existingReleaseOrder.fileName)}
+                          className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
+                          title="Download document"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleReplaceDocument}
+                          className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                        >
+                          Replace
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Show upload input if no document exists or user wants to replace */
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        onChange={handleFileUpload}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        disabled={uploadingFile || isProcessing}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      {formData.releaseOrderUrl && (
+                        <span className="text-sm text-green-600">✓ Uploaded</span>
+                      )}
+                    </div>
+                    {showReplaceUpload && existingReleaseOrder && (
+                      <button
+                        type="button"
+                        onClick={() => setShowReplaceUpload(false)}
+                        className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        ← Cancel replacement
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -604,6 +764,49 @@ export default function AcceptanceDetailsForm({
                 disabled={isProcessing}
                 placeholder="Any additional notes or instructions..."
               />
+            </div>
+          </div>
+
+          {/* Company Selection */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Company Selection
+            </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Company <span className="text-red-500">*</span>
+              </label>
+              {loadingCompanies ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  Loading companies...
+                </div>
+              ) : companies.length === 0 ? (
+                <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-800">
+                  No companies found. Please add a company in Resource Management.
+                </div>
+              ) : (
+                <select
+                  name="companyId"
+                  value={formData.companyId}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.companyId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                >
+                  <option value="">Select a company...</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} {company.isDefault ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {errors.companyId && (
+                <p className="mt-1 text-sm text-red-600">{errors.companyId}</p>
+              )}
+              <p className="mt-2 text-sm text-gray-500">
+                This job will be assigned to the selected company. You can manage companies in the Resource Management section.
+              </p>
             </div>
           </div>
         </form>
