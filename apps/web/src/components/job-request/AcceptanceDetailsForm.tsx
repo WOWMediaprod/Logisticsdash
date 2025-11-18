@@ -111,7 +111,7 @@ export default function AcceptanceDetailsForm({
         const response = await fetch(getApiUrl(`/api/v1/companies?userId=${userId}`));
         const result = await response.json();
 
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.length > 0) {
           setCompanies(result.data);
 
           // Auto-select default company if no company is selected
@@ -119,16 +119,25 @@ export default function AcceptanceDetailsForm({
           if (defaultCompany && !formData.companyId) {
             setFormData(prev => ({ ...prev, companyId: defaultCompany.id }));
           }
+        } else {
+          // Fallback: Use logged-in user's company from context
+          if (companyId && !formData.companyId) {
+            setFormData(prev => ({ ...prev, companyId }));
+          }
         }
       } catch (error) {
         console.error('Failed to fetch companies:', error);
+        // Fallback: Use logged-in user's company from context
+        if (companyId && !formData.companyId) {
+          setFormData(prev => ({ ...prev, companyId }));
+        }
       } finally {
         setLoadingCompanies(false);
       }
     };
 
     fetchCompanies();
-  }, []);
+  }, [companyId]);
 
   // Find existing release order document
   useEffect(() => {
@@ -782,8 +791,8 @@ export default function AcceptanceDetailsForm({
                   Loading companies...
                 </div>
               ) : companies.length === 0 ? (
-                <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-800">
-                  No companies found. Please add a company in Resource Management.
+                <div className="w-full px-3 py-2 border border-blue-300 bg-blue-50 rounded-lg text-blue-800">
+                  Using your default company. You can manage companies in Resource Management.
                 </div>
               ) : (
                 <select
