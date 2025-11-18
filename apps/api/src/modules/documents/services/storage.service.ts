@@ -126,9 +126,13 @@ export class StorageService {
       this.logger.log(`Extracted file path: ${filePath}`);
       this.logger.log(`Using bucket: ${this.bucketName}`);
 
+      // Ensure expiresIn is valid (>= 1) as required by Supabase
+      const validExpiresIn = expiresIn && expiresIn >= 1 ? expiresIn : 3600;
+      this.logger.log(`Using expiresIn: ${validExpiresIn} seconds`);
+
       const { data, error } = await this.supabase.storage
         .from(this.bucketName)
-        .createSignedUrl(filePath, expiresIn);
+        .createSignedUrl(filePath, validExpiresIn);
 
       if (error) {
         this.logger.error(`Supabase signed URL error: ${JSON.stringify(error)}`, error);

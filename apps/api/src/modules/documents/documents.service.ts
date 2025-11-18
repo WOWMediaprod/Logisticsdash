@@ -212,13 +212,16 @@ export class DocumentsService {
       throw new NotFoundException('Document not found');
     }
 
-    const signedUrl = await this.storageService.getSignedUrl(document.fileUrl, expiresIn);
+    // Ensure expiresIn has a valid default value (1 hour)
+    const validExpiresIn = expiresIn || 3600;
+
+    const signedUrl = await this.storageService.getSignedUrl(document.fileUrl, validExpiresIn);
 
     return {
       success: true,
       data: {
         url: signedUrl,
-        expiresAt: new Date(Date.now() + expiresIn * 1000),
+        expiresAt: new Date(Date.now() + validExpiresIn * 1000),
         fileName: document.fileName,
         mimeType: document.mimeType,
       },
