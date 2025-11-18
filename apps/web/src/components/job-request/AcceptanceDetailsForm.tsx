@@ -1,0 +1,559 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X } from 'lucide-react';
+import { getApiUrl } from '../../lib/api-config';
+
+interface AcceptanceDetailsFormProps {
+  request: any;
+  companyId: string;
+  onComplete: (data: any) => void;
+  onCancel: () => void;
+  isProcessing?: boolean;
+}
+
+export default function AcceptanceDetailsForm({
+  request,
+  companyId,
+  onComplete,
+  onCancel,
+  isProcessing = false
+}: AcceptanceDetailsFormProps) {
+  const [formData, setFormData] = useState({
+    // Job ID will be generated automatically
+    releaseOrderUrl: request.releaseOrderUrl || '',
+
+    // Loading information
+    loadingLocation: request.loadingLocation || '',
+    loadingLocationLat: request.loadingLocationLat || null,
+    loadingLocationLng: request.loadingLocationLng || null,
+    loadingContactName: request.loadingContactName || '',
+    loadingContactPhone: request.loadingContactPhone || '',
+    loadingDate: request.loadingDate ? new Date(request.loadingDate).toISOString().split('T')[0] : '',
+    loadingTime: request.loadingTime || '',
+
+    // Container reservation
+    containerReservation: request.containerReservation || false,
+    containerNumber: request.containerNumber || '',
+    sealNumber: request.sealNumber || '',
+    containerYardLocation: request.containerYardLocation || '',
+    containerYardLocationLat: request.containerYardLocationLat || null,
+    containerYardLocationLng: request.containerYardLocationLng || null,
+
+    // Cargo details
+    cargoDescription: request.cargoDescription || '',
+    cargoWeight: request.cargoWeight || '',
+    cargoWeightUnit: request.cargoWeightUnit || 'kg',
+
+    // BL Cutoff
+    blCutoffRequired: request.blCutoffRequired || false,
+    blCutoffDateTime: request.blCutoffDateTime ? new Date(request.blCutoffDateTime).toISOString().slice(0, 16) : '',
+
+    // Tracking and visibility
+    locationSharingEnabled: request.locationSharingEnabled !== false, // Default true
+    heldUpFreeTime: request.heldUpFreeTime || '24',
+
+    // Additional fields from request
+    specialInstructions: request.specialInstructions || '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+
+    // Clear error for this field
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    const formDataFile = new FormData();
+    formDataFile.append('file', file);
+    formDataFile.append('type', 'RELEASE_ORDER');
+    formDataFile.append('jobId', ''); // No job ID yet
+
+    try {
+      const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
+        method: 'POST',
+        body: formDataFile,
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setFormData(prev => ({
+          ...prev,
+          releaseOrderUrl: result.data.fileUrl
+        }));
+      } else {
+        alert('Failed to upload release order');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload release order');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Required fields validation
+    if (!formData.loadingLocation) newErrors.loadingLocation = 'Loading location is required';
+    if (!formData.loadingContactName) newErrors.loadingContactName = 'Loading contact name is required';
+    if (!formData.loadingContactPhone) newErrors.loadingContactPhone = 'Loading contact phone is required';
+    if (!formData.loadingDate) newErrors.loadingDate = 'Loading date is required';
+    if (!formData.loadingTime) newErrors.loadingTime = 'Loading time is required';
+    if (!formData.cargoDescription) newErrors.cargoDescription = 'Cargo description is required';
+
+    // Conditional validations
+    if (formData.containerReservation) {
+      if (!formData.containerNumber) newErrors.containerNumber = 'Container number is required when reservation is enabled';
+      if (!formData.containerYardLocation) newErrors.containerYardLocation = 'Container yard location is required';
+    }
+
+    if (formData.blCutoffRequired && !formData.blCutoffDateTime) {
+      newErrors.blCutoffDateTime = 'BL cutoff date and time is required when enabled';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    // Prepare data for submission
+    const submitData = {
+      ...formData,
+      loadingDate: formData.loadingDate ? new Date(formData.loadingDate).toISOString() : null,
+      blCutoffDateTime: formData.blCutoffDateTime ? new Date(formData.blCutoffDateTime).toISOString() : null,
+      cargoWeight: formData.cargoWeight ? parseFloat(formData.cargoWeight) : null,
+    };
+
+    onComplete(submitData);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900">Complete Job Details</h2>
+            <button
+              onClick={onCancel}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isProcessing}
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-gray-600">
+            Please provide the following information to complete the job acceptance process.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* Release Order Upload */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Release Order
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Release Order Document
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    disabled={uploadingFile || isProcessing}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {formData.releaseOrderUrl && (
+                    <span className="text-sm text-green-600">✓ Uploaded</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Information */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Loading Information
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Loading Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="loadingLocation"
+                  value={formData.loadingLocation}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.loadingLocation ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.loadingLocation && (
+                  <p className="mt-1 text-sm text-red-600">{errors.loadingLocation}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="loadingContactName"
+                  value={formData.loadingContactName}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.loadingContactName ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.loadingContactName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.loadingContactName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="loadingContactPhone"
+                  value={formData.loadingContactPhone}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.loadingContactPhone ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.loadingContactPhone && (
+                  <p className="mt-1 text-sm text-red-600">{errors.loadingContactPhone}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Loading Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="loadingDate"
+                  value={formData.loadingDate}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.loadingDate ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.loadingDate && (
+                  <p className="mt-1 text-sm text-red-600">{errors.loadingDate}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Loading Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  name="loadingTime"
+                  value={formData.loadingTime}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${errors.loadingTime ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.loadingTime && (
+                  <p className="mt-1 text-sm text-red-600">{errors.loadingTime}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Container Reservation */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Container Reservation
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="containerReservation"
+                  name="containerReservation"
+                  checked={formData.containerReservation}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={isProcessing}
+                />
+                <label htmlFor="containerReservation" className="text-sm font-medium text-gray-700">
+                  Container Reservation Required
+                </label>
+              </div>
+
+              {formData.containerReservation && (
+                <div className="grid grid-cols-2 gap-4 pl-7">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Container Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="containerNumber"
+                      value={formData.containerNumber}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 border ${errors.containerNumber ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                      disabled={isProcessing}
+                    />
+                    {errors.containerNumber && (
+                      <p className="mt-1 text-sm text-red-600">{errors.containerNumber}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Seal Number
+                    </label>
+                    <input
+                      type="text"
+                      name="sealNumber"
+                      value={formData.sealNumber}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={isProcessing}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Container Yard Location <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="containerYardLocation"
+                      value={formData.containerYardLocation}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 border ${errors.containerYardLocation ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                      disabled={isProcessing}
+                    />
+                    {errors.containerYardLocation && (
+                      <p className="mt-1 text-sm text-red-600">{errors.containerYardLocation}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Cargo Details */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Cargo Details
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cargo Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="cargoDescription"
+                  value={formData.cargoDescription}
+                  onChange={handleChange}
+                  rows={3}
+                  className={`w-full px-3 py-2 border ${errors.cargoDescription ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                  disabled={isProcessing}
+                />
+                {errors.cargoDescription && (
+                  <p className="mt-1 text-sm text-red-600">{errors.cargoDescription}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cargo Weight
+                </label>
+                <input
+                  type="number"
+                  name="cargoWeight"
+                  value={formData.cargoWeight}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isProcessing}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Weight Unit
+                </label>
+                <select
+                  name="cargoWeightUnit"
+                  value={formData.cargoWeightUnit}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isProcessing}
+                >
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="ton">Tons</option>
+                  <option value="lb">Pounds (lb)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* BL Cutoff */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              BL Cutoff
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="blCutoffRequired"
+                  name="blCutoffRequired"
+                  checked={formData.blCutoffRequired}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={isProcessing}
+                />
+                <label htmlFor="blCutoffRequired" className="text-sm font-medium text-gray-700">
+                  BL Cutoff Required
+                </label>
+              </div>
+
+              {formData.blCutoffRequired && (
+                <div className="pl-7">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    BL Cutoff Date & Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="blCutoffDateTime"
+                    value={formData.blCutoffDateTime}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${errors.blCutoffDateTime ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    disabled={isProcessing}
+                  />
+                  {errors.blCutoffDateTime && (
+                    <p className="mt-1 text-sm text-red-600">{errors.blCutoffDateTime}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tracking and Visibility */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Tracking & Visibility
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location Sharing
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="locationSharingEnabled"
+                    name="locationSharingEnabled"
+                    checked={formData.locationSharingEnabled}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={isProcessing}
+                  />
+                  <label htmlFor="locationSharingEnabled" className="text-sm text-gray-700">
+                    Enable location details sharing
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Held Up Free Time
+                </label>
+                <select
+                  name="heldUpFreeTime"
+                  value={formData.heldUpFreeTime}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isProcessing}
+                >
+                  <option value="12">12 Hours</option>
+                  <option value="24">24 Hours</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Special Instructions */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Additional Information
+            </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Special Instructions
+              </label>
+              <textarea
+                name="specialInstructions"
+                value={formData.specialInstructions}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isProcessing}
+                placeholder="Any additional notes or instructions..."
+              />
+            </div>
+          </div>
+        </form>
+
+        <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              disabled={isProcessing}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Complete & Create Job'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

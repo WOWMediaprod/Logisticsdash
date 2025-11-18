@@ -687,6 +687,10 @@ model JobRequest {
   // Additional notes
   specialInstructions       String?
 
+  // Tracking and visibility
+  locationSharingEnabled    Boolean              @default(true)
+  heldUpFreeTime            String?              @default("24") // "12" or "24" hours
+
   // Review and status
   status                    JobRequestStatus     @default(PENDING)
   reviewedBy                String?

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { getApiUrl } from '../../../lib/api-config';
+import AcceptanceDetailsForm from '../../../components/job-request/AcceptanceDetailsForm';
 import {
   ArrowLeft,
   Search,
@@ -663,6 +664,8 @@ function RequestDetailView({
   const [showAssignConfirmation, setShowAssignConfirmation] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [showDetailsForm, setShowDetailsForm] = useState(false);
+  const [acceptanceDetails, setAcceptanceDetails] = useState<any>(null);
 
   // Fetch fresh request details when component mounts
   useEffect(() => {
@@ -719,23 +722,31 @@ function RequestDetailView({
       return;
     }
 
+    // Show the details form instead of directly processing
+    setShowDetailsForm(true);
+    setShowReviewModal(false);
+  };
+
+  const handleDetailsComplete = async (details: any) => {
     setProcessing(true);
     setError(null);
+    setAcceptanceDetails(details);
 
     try {
-      // First, update the job request with the selected route
+      // First, update the job request with the selected route and additional details
       const updateResponse = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId,
-          routeId: selectedRouteId
+          routeId: selectedRouteId,
+          ...details
         })
       });
 
       const updateResult = await updateResponse.json();
       if (!updateResult.success) {
-        setError('Failed to update route. Please try again.');
+        setError('Failed to update request details. Please try again.');
         setProcessing(false);
         return;
       }
@@ -761,6 +772,7 @@ function RequestDetailView({
           jobId: result.data.job.id
         });
         setShowReviewModal(false);
+        setShowDetailsForm(false);
         alert(`Job request accepted! Job ${result.data.job.id} created successfully.`);
       } else {
         setError(result.message || 'Failed to accept job request');
@@ -1402,6 +1414,17 @@ function RequestDetailView({
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Acceptance Details Form */}
+        {showDetailsForm && companyId && (
+          <AcceptanceDetailsForm
+            request={request}
+            companyId={companyId}
+            onComplete={handleDetailsComplete}
+            onCancel={() => setShowDetailsForm(false)}
+            isProcessing={processing}
+          />
         )}
 
         {/* Assignment Confirmation Dialog */}

@@ -227,5 +227,16 @@ export class CreateJobRequestDto {
   @ApiProperty({ description: 'Special requirements/instructions', required: false })
   @IsOptional()
   @IsString()
-  specialRequirements?: string;
+  specialInstructions?: string;
+
+  // Tracking and Visibility
+  @ApiProperty({ description: 'Enable location sharing', default: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  locationSharingEnabled?: boolean;
+
+  @ApiProperty({ description: 'Held up free time (12 or 24 hours)', default: '24', required: false })
+  @IsOptional()
+  @IsString()
+  heldUpFreeTime?: string;
 }

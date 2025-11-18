@@ -78,7 +78,9 @@ export class JobRequestsService {
         deliveryContactPhone: createJobRequestDto.deliveryContactPhone,
 
         // Additional notes
-        specialInstructions: createJobRequestDto.specialRequirements,
+        specialInstructions: createJobRequestDto.specialInstructions,
+        locationSharingEnabled: createJobRequestDto.locationSharingEnabled,
+        heldUpFreeTime: createJobRequestDto.heldUpFreeTime,
       },
       include: {
         client: true,
@@ -279,7 +281,9 @@ export class JobRequestsService {
         deliveryContactPhone: updateJobRequestDto.deliveryContactPhone,
 
         // Additional notes
-        specialInstructions: updateJobRequestDto.specialRequirements,
+        specialInstructions: updateJobRequestDto.specialInstructions,
+        locationSharingEnabled: updateJobRequestDto.locationSharingEnabled,
+        heldUpFreeTime: updateJobRequestDto.heldUpFreeTime,
       },
       include: {
         client: true,

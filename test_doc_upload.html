@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload Test - Supabase Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .test-section h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .document-item {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .document-item img {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading {
+            color: #2196F3;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Document Upload Test - Supabase Storage</h1>
+
+        <!-- Configuration Section -->
+        <div class="test-section">
+            <h2>1. Configuration</h2>
+            <div class="input-group">
+                <label>API Base URL:</label>
+                <input type="text" id="apiUrl" value="https://logistics-api-d93v.onrender.com/api/v1" placeholder="e.g., http://localhost:3000/api/v1">
+            </div>
+            <div class="input-group">
+                <label>Company ID:</label>
+                <input type="text" id="companyId" value="cmfaboij1t000dv_165b0be88f810880210521a44004df9c" placeholder="Your company ID">
+            </div>
+            <div class="input-group">
+                <label>Job Request ID (optional):</label>
+                <input type="text" id="jobRequestId" placeholder="Leave empty to test all documents">
+            </div>
+        </div>
+
+        <!-- Test 1: Fetch All Documents -->
+        <div class="test-section">
+            <h2>2. Test: Fetch All Documents from Database</h2>
+            <button onclick="fetchAllDocuments()">Fetch All Documents</button>
+            <div id="allDocsResults" class="results"></div>
+        </div>
+
+        <!-- Test 2: Fetch Job Request with Documents -->
+        <div class="test-section">
+            <h2>3. Test: Fetch Job Request with Attached Documents</h2>
+            <button onclick="fetchJobRequestDocuments()">Fetch Job Request Documents</button>
+            <div id="jobRequestResults" class="results"></div>
+        </div>
+
+        <!-- Test 3: Test Supabase Storage URLs -->
+        <div class="test-section">
+            <h2>4. Test: Direct Supabase Storage Access</h2>
+            <div class="input-group">
+                <label>Test Document URL (from fileUrl field):</label>
+                <input type="text" id="testDocUrl" placeholder="Paste a fileUrl from the documents above">
+            </div>
+            <button onclick="testStorageUrl()">Test Storage URL</button>
+            <div id="storageResults" class="results"></div>
+        </div>
+
+        <!-- Test 4: List Recent Job Requests -->
+        <div class="test-section">
+            <h2>5. Test: List Recent Job Requests</h2>
+            <button onclick="fetchJobRequests()">Fetch Recent Job Requests</button>
+            <div id="jobRequestsListResults" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        function getApiUrl() {
+            return document.getElementById('apiUrl').value.trim();
+        }
+
+        function getCompanyId() {
+            return document.getElementById('companyId').value.trim();
+        }
+
+        function getJobRequestId() {
+            return document.getElementById('jobRequestId').value.trim();
+        }
+
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = '<p class="loading">Loading...</p>';
+        }
+
+        function showSuccess(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<p class="success">${message}</p>`;
+        }
+
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<p class="error">Error: ${message}</p>`;
+        }
+
+        async function fetchAllDocuments() {
+            const resultDiv = 'allDocsResults';
+            showLoading(resultDiv);
+
+            const apiUrl = getApiUrl();
+            const companyId = getCompanyId();
+
+            if (!companyId) {
+                showError(resultDiv, 'Please enter a Company ID');
+                return;
+            }
+
+            try {
+                const url = `${apiUrl}/documents?companyId=${companyId}`;
+                console.log('Fetching from:', url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Documents response:', data);
+
+                if (data.success && data.data && data.data.length > 0) {
+                    let html = `<p class="success">Found ${data.data.length} documents</p>`;
+
+                    data.data.forEach((doc, index) => {
+                        html += `
+                            <div class="document-item">
+                                <strong>Document #${index + 1}</strong><br>
+                                <strong>ID:</strong> ${doc.id}<br>
+                                <strong>File Name:</strong> ${doc.fileName}<br>
+                                <strong>MIME Type:</strong> ${doc.mimeType}<br>
+                                <strong>File URL:</strong> <a href="${doc.fileUrl}" target="_blank">${doc.fileUrl}</a><br>
+                                <strong>Job Request ID:</strong> ${doc.jobRequestId || 'Not linked'}<br>
+                                <strong>Job ID:</strong> ${doc.jobId || 'Not linked'}<br>
+                                <strong>Created:</strong> ${new Date(doc.createdAt).toLocaleString()}<br>
+                                ${doc.mimeType && doc.mimeType.startsWith('image/') ?
+                                    `<img src="${doc.fileUrl}" alt="${doc.fileName}" onerror="this.style.display='none'">` : ''}
+                            </div>
+                        `;
+                    });
+
+                    document.getElementById(resultDiv).innerHTML = html;
+                } else if (data.success && data.data && data.data.length === 0) {
+                    showError(resultDiv, 'No documents found in database');
+                } else {
+                    showError(resultDiv, JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(resultDiv, error.message);
+            }
+        }
+
+        async function fetchJobRequestDocuments() {
+            const resultDiv = 'jobRequestResults';
+            showLoading(resultDiv);
+
+            const apiUrl = getApiUrl();
+            const companyId = getCompanyId();
+            const jobRequestId = getJobRequestId();
+
+            if (!companyId) {
+                showError(resultDiv, 'Please enter a Company ID');
+                return;
+            }
+
+            if (!jobRequestId) {
+                showError(resultDiv, 'Please enter a Job Request ID');
+                return;
+            }
+
+            try {
+                const url = `${apiUrl}/job-requests/${jobRequestId}?companyId=${companyId}`;
+                console.log('Fetching job request from:', url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Job request response:', data);
+
+                if (data.success && data.data) {
+                    const jobRequest = data.data;
+                    let html = `<p class="success">Job Request Found: ${jobRequest.id}</p>`;
+                    html += `<strong>Title:</strong> ${jobRequest.title || 'N/A'}<br>`;
+                    html += `<strong>Status:</strong> ${jobRequest.status}<br>`;
+                    html += `<strong>Client:</strong> ${jobRequest.client?.name || 'N/A'}<br><br>`;
+
+                    if (jobRequest.attachedDocuments && jobRequest.attachedDocuments.length > 0) {
+                        html += `<h3 class="success">✅ Found ${jobRequest.attachedDocuments.length} Attached Documents</h3>`;
+
+                        jobRequest.attachedDocuments.forEach((doc, index) => {
+                            html += `
+                                <div class="document-item">
+                                    <strong>Document #${index + 1}</strong><br>
+                                    <strong>ID:</strong> ${doc.id}<br>
+                                    <strong>File Name:</strong> ${doc.fileName}<br>
+                                    <strong>MIME Type:</strong> ${doc.mimeType}<br>
+                                    <strong>File URL:</strong> <a href="${doc.fileUrl}" target="_blank">${doc.fileUrl}</a><br>
+                                    <strong>Created:</strong> ${new Date(doc.createdAt).toLocaleString()}<br>
+                                    ${doc.mimeType && doc.mimeType.startsWith('image/') ?
+                                        `<img src="${doc.fileUrl}" alt="${doc.fileName}" onerror="this.style.display='none'">` : ''}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += `<p class="error">❌ No documents attached to this job request</p>`;
+                        html += `<pre>${JSON.stringify(jobRequest, null, 2)}</pre>`;
+                    }
+
+                    document.getElementById(resultDiv).innerHTML = html;
+                } else {
+                    showError(resultDiv, JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(resultDiv, error.message);
+            }
+        }
+
+        async function testStorageUrl() {
+            const resultDiv = 'storageResults';
+            showLoading(resultDiv);
+
+            const testUrl = document.getElementById('testDocUrl').value.trim();
+
+            if (!testUrl) {
+                showError(resultDiv, 'Please enter a document URL to test');
+                return;
+            }
+
+            try {
+                console.log('Testing storage URL:', testUrl);
+
+                const response = await fetch(testUrl, { method: 'HEAD' });
+
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    const contentLength = response.headers.get('content-length');
+
+                    let html = `<p class="success">✅ Storage URL is accessible!</p>`;
+                    html += `<strong>Status:</strong> ${response.status} ${response.statusText}<br>`;
+                    html += `<strong>Content-Type:</strong> ${contentType}<br>`;
+                    html += `<strong>Content-Length:</strong> ${contentLength ? `${(contentLength / 1024).toFixed(2)} KB` : 'Unknown'}<br><br>`;
+
+                    if (contentType && contentType.startsWith('image/')) {
+                        html += `<h3>Preview:</h3><img src="${testUrl}" alt="Document" style="max-width: 500px;">`;
+                    } else {
+                        html += `<a href="${testUrl}" target="_blank">Open Document</a>`;
+                    }
+
+                    document.getElementById(resultDiv).innerHTML = html;
+                } else {
+                    showError(resultDiv, `Storage URL returned ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(resultDiv, error.message);
+            }
+        }
+
+        async function fetchJobRequests() {
+            const resultDiv = 'jobRequestsListResults';
+            showLoading(resultDiv);
+
+            const apiUrl = getApiUrl();
+            const companyId = getCompanyId();
+
+            if (!companyId) {
+                showError(resultDiv, 'Please enter a Company ID');
+                return;
+            }
+
+            try {
+                const url = `${apiUrl}/job-requests?companyId=${companyId}&limit=20`;
+                console.log('Fetching job requests from:', url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Job requests response:', data);
+
+                if (data.success && data.data && data.data.length > 0) {
+                    let html = `<p class="success">Found ${data.data.length} job requests (showing ${data.meta?.limit || 'all'})</p>`;
+
+                    data.data.forEach((request, index) => {
+                        const docCount = request.attachedDocuments?.length || 0;
+                        html += `
+                            <div class="document-item">
+                                <strong>Request #${index + 1}</strong><br>
+                                <strong>ID:</strong> ${request.id}<br>
+                                <strong>Title:</strong> ${request.title || 'No title'}<br>
+                                <strong>Status:</strong> ${request.status}<br>
+                                <strong>Client:</strong> ${request.client?.name || 'N/A'}<br>
+                                <strong>Documents:</strong> <span style="color: ${docCount > 0 ? 'green' : 'red'}">${docCount} document(s)</span><br>
+                                <strong>Created:</strong> ${new Date(request.createdAt).toLocaleString()}<br>
+                                <button onclick="document.getElementById('jobRequestId').value='${request.id}'; window.scrollTo(0, 0);">Use This ID</button>
+                            </div>
+                        `;
+                    });
+
+                    document.getElementById(resultDiv).innerHTML = html;
+                } else if (data.success && data.data && data.data.length === 0) {
+                    showError(resultDiv, 'No job requests found');
+                } else {
+                    showError(resultDiv, JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(resultDiv, error.message);
+            }
+        }
+
+        // Auto-populate API URL - Use production by default
+        window.onload = function() {
+            // Always use production API
+            document.getElementById('apiUrl').value = 'https://logistics-api-d93v.onrender.com/api/v1';
+        };
+    </script>
+</body>
+</html>
