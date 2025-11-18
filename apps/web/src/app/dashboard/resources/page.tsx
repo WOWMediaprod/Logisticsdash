@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
-import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft } from 'lucide-react';
 import { getApiUrl } from '../../../lib/api-config';
-import { getCompanies, addCompany, updateCompany, deleteCompany, setDefaultCompany, type BillingCompany } from '../../../lib/companies-storage';
+import { getCompanies, addCompany, updateCompany, deleteCompany, type BillingCompany } from '../../../lib/companies-storage';
 
 type TabType = 'containers' | 'vehicles' | 'drivers' | 'routes' | 'clients' | 'companies';
 
@@ -190,15 +190,6 @@ export default function ResourcesPage() {
     }
   };
 
-  const handleSetDefault = (id: string) => {
-    const success = setDefaultCompany(id);
-    if (success) {
-      loadData();
-    } else {
-      alert('Failed to set default company');
-    }
-  };
-
   const handleSave = () => {
     setShowModal(false);
     loadData();
@@ -309,7 +300,6 @@ export default function ResourcesPage() {
                 companies={companies}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                onSetDefault={handleSetDefault}
               />
             )}
           </>
@@ -661,7 +651,7 @@ function ResourceModal({
             phone: formData.phone || '',
             email: formData.email || '',
             taxId: formData.taxId || '',
-            isDefault: formData.isDefault || false,
+            isDefault: false, // No default concept anymore
           });
           alert('Company created successfully!');
         } else {
@@ -671,7 +661,7 @@ function ResourceModal({
             phone: formData.phone || '',
             email: formData.email || '',
             taxId: formData.taxId || '',
-            isDefault: formData.isDefault || false,
+            isDefault: false, // No default concept anymore
           });
           alert('Company updated successfully!');
         }
@@ -1084,12 +1074,10 @@ function CompaniesTable({
   companies,
   onEdit,
   onDelete,
-  onSetDefault,
 }: {
   companies: BillingCompany[];
   onEdit: (item: BillingCompany) => void;
   onDelete: (id: string) => void;
-  onSetDefault: (id: string) => void;
 }) {
   if (companies.length === 0) {
     return <div className="text-center py-8 text-gray-500">No companies found. Click "Add company" to create one.</div>;
@@ -1104,7 +1092,6 @@ function CompaniesTable({
           <th className="text-left py-3 px-4">Phone</th>
           <th className="text-left py-3 px-4">Email</th>
           <th className="text-left py-3 px-4">Tax ID</th>
-          <th className="text-left py-3 px-4">Default</th>
           <th className="text-right py-3 px-4">Actions</th>
         </tr>
       </thead>
@@ -1116,22 +1103,6 @@ function CompaniesTable({
             <td className="py-3 px-4">{company.phone || '-'}</td>
             <td className="py-3 px-4">{company.email || '-'}</td>
             <td className="py-3 px-4">{company.taxId || '-'}</td>
-            <td className="py-3 px-4">
-              {company.isDefault ? (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
-                  <Star className="w-3 h-3 mr-1 fill-current" />
-                  Default
-                </span>
-              ) : (
-                <button
-                  onClick={() => onSetDefault(company.id)}
-                  className="text-gray-400 hover:text-yellow-600"
-                  title="Set as default"
-                >
-                  <Star className="w-4 h-4" />
-                </button>
-              )}
-            </td>
             <td className="py-3 px-4 text-right">
               <button
                 onClick={() => onEdit(company)}
@@ -1208,15 +1179,6 @@ function CompanyForm({ formData, setFormData }: { formData: any; setFormData: (d
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           placeholder="Tax ID or registration number"
         />
-      </div>
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          checked={formData.isDefault || false}
-          onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-          className="mr-2"
-        />
-        <label className="text-sm font-medium text-gray-700">Set as default company</label>
       </div>
     </>
   );

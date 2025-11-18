@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Package, Clock, AlertCircle, Upload, X, Route, FileText, Download, Eye, Building2 } from 'lucide-react';
 import { getApiUrl } from '../../lib/api-config';
-import { getCompanies, getDefaultCompany, type BillingCompany } from '../../lib/companies-storage';
+import { getCompanies, type BillingCompany } from '../../lib/companies-storage';
 
 interface AcceptanceDetailsFormProps {
   request: any;
@@ -109,19 +109,17 @@ export default function AcceptanceDetailsForm({
       const savedCompanies = getCompanies();
       setCompanies(savedCompanies);
 
-      // Auto-select default company if no company is selected
-      if (!formData.companyId) {
-        const defaultCompany = getDefaultCompany();
-        if (defaultCompany) {
-          setFormData(prev => ({ ...prev, companyId: defaultCompany.id }));
-        }
+      // If no companies exist in localStorage, use user's company from context
+      if (savedCompanies.length === 0 && companyId) {
+        setFormData(prev => ({ ...prev, companyId }));
       }
+      // If companies exist, don't auto-select - require manual selection
     } catch (error) {
       console.error('Failed to load companies:', error);
     } finally {
       setLoadingCompanies(false);
     }
-  }, []);
+  }, [companyId]);
 
   // Find existing release order document
   useEffect(() => {
@@ -776,7 +774,7 @@ export default function AcceptanceDetailsForm({
                 </div>
               ) : companies.length === 0 ? (
                 <div className="w-full px-3 py-2 border border-blue-300 bg-blue-50 rounded-lg text-blue-800">
-                  No companies found. Please add companies in Resource Management before accepting jobs.
+                  Using your company as default. You can add additional billing companies in Resource Management.
                 </div>
               ) : (
                 <select
@@ -789,7 +787,7 @@ export default function AcceptanceDetailsForm({
                   <option value="">Select a company...</option>
                   {companies.map((company) => (
                     <option key={company.id} value={company.id}>
-                      {company.name} {company.isDefault ? '(Default)' : ''}
+                      {company.name}
                     </option>
                   ))}
                 </select>
