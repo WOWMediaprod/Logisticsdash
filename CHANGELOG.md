@@ -2,6 +2,154 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-17] - Document Viewing Security Enhancement & Build Fixes
+
+### 🎯 **Session Focus**: Fix Document Access with Signed URLs for Private Storage
+
+**Status**: ✅ **Production Deployed** - Document viewing now works with private Supabase buckets
+**Achievement**: Resolved "Bucket not found" errors by implementing signed URL authentication
+**Note**: All document viewing now uses secure, time-limited signed URLs
+
+### Fixed
+
+#### **1. Document Viewing "Bucket not found" Error (404)**
+- **Problem**: Documents uploaded by clients couldn't be viewed, returning 404 "Bucket not found"
+- **Root Cause**: Frontend was directly accessing `fileUrl` (public URL format) but Supabase bucket is PRIVATE
+  - Private buckets require signed URLs for access
+  - Public URL format: `https://[project].supabase.co/storage/v1/object/public/logistics-documents/[path]`
+  - Frontend was bypassing the signed URL endpoint
+- **Fix**: Updated all document viewing to use `/api/v1/documents/:id/download` endpoint
+  - **Dashboard Job Details** (`apps/web/src/app/dashboard/jobs/[id]/page.tsx:592`)
+  - **Driver Portal** (`apps/web/src/app/driver/jobs/[jobId]/page.tsx:548`)
+  - **Dashboard Requests** (`apps/web/src/app/dashboard/requests/page.tsx:1628,1637`)
+  - **Client Documents** (`apps/web/src/app/client/documents/page.tsx:368-376`)
+- **Result**: Documents now load correctly using secure signed URLs (1-hour expiration)
+- **Commits**: `d60177f`
+
+#### **2. TypeScript Build Error - createElement Type Conflict**
+- **Problem**: Vercel build failing with "Property 'createElement' does not exist on type 'Document'"
+- **Root Cause**: Parameter named `document` shadowing global browser `document` object
+  - TypeScript interpreted `document.createElement` as calling method on app's Document type
+- **Fix**: Changed `document.createElement` to `window.document.createElement`
+  - Updated in client documents page and dashboard requests page
+- **Result**: TypeScript compilation successful, no type errors
+- **Commit**: `9eb51c0`
+
+#### **3. Render Backend Build Failure - npm/pnpm Incompatibility**
+- **Problem**: Render backend deployment failing with npm errors
+- **Root Cause**: Render configured to use `npm install` but project is pnpm workspace/monorepo
+  - `render.yaml` had: `buildCommand: cd apps/api && npm install && npx prisma generate && npm run build`
+  - Project structure requires pnpm for workspace dependencies
+- **Fix**: Updated `apps/api/render.yaml` to install and use pnpm
+  - Install pnpm globally: `npm install -g pnpm`
+  - Use pnpm commands: `pnpm install`, `pnpm run build`, `pnpm run prisma:deploy`
+- **Result**: Backend builds successfully on Render with correct package manager
+- **Commit**: `0e5f1f4`
+
+### Enhanced
+
+#### **Secure Document Access Pattern**
+- **Signed URL Flow**:
+  1. User clicks View/Download button
+  2. Frontend calls `GET /api/v1/documents/:id/download`
+  3. Backend generates signed URL valid for 1 hour (configurable)
+  4. Signed URL returned to frontend
+  5. Document opens in new tab or downloads with correct filename
+- **Security Benefits**:
+  - API key never exposed to browser
+  - Time-limited access (URLs expire after 1 hour)
+  - Works with private Supabase buckets (RLS policies)
+  - Backend validates document ownership before generating URL
+
+#### **Document Actions Implemented**
+- **View Button**: Opens document in new browser tab using signed URL
+- **Download Button**: Triggers file download with proper filename
+  - Uses `window.document.createElement('a')` to create download link
+  - Sets `download` attribute with original filename
+  - Programmatically triggers click event
+- **Delete Button** (Client Documents): Confirms deletion and refreshes list
+
+### Files Modified
+
+**Frontend:**
+- `apps/web/src/app/dashboard/jobs/[id]/page.tsx` (Signed URL for document viewing)
+- `apps/web/src/app/driver/jobs/[jobId]/page.tsx` (Signed URL for driver portal)
+- `apps/web/src/app/dashboard/requests/page.tsx` (View and download with signed URLs)
+- `apps/web/src/app/client/documents/page.tsx` (Implemented missing onClick handlers)
+
+**Backend:**
+- `apps/api/render.yaml` (Updated build commands to use pnpm)
+
+### Deployment Status
+- ✅ **Vercel Frontend**: Auto-deployed with document viewing fixes
+- ✅ **Render Backend**: Successfully deployed with pnpm build configuration
+- ✅ **Commits**:
+  - `d60177f` - "Fix document viewing by using signed URLs for private Supabase bucket"
+  - `9eb51c0` - "Fix TypeScript error: Use window.document instead of document"
+  - `0e5f1f4` - "Fix Render build: Use pnpm instead of npm"
+
+### Testing Results
+- ✅ **Document Viewing**: Eye icon successfully opens documents in new tab
+- ✅ **Document Download**: Download button triggers file download with correct name
+- ✅ **Dashboard Integration**: Documents viewable from job details, driver portal, requests
+- ✅ **Client Portal**: Document cards now have working view/download/delete buttons
+- ✅ **Signed URLs**: Time-limited URLs working correctly with private bucket
+- ✅ **Build Success**: Both Vercel and Render deployments successful
+
+### Technical Improvements
+
+#### **Signed URL Generation (Backend)**
+```typescript
+// apps/api/src/modules/documents/documents.controller.ts:176-210
+const { data, error } = await this.storageService.getSignedUrl(
+  document.fileUrl,
+  expiresIn
+);
+// Returns time-limited signed URL
+```
+
+#### **Frontend Document Access Pattern**
+```typescript
+const response = await fetch(getApiUrl(`/api/v1/documents/${docId}/download`));
+const data = await response.json();
+if (data.success && data.data.url) {
+  window.open(data.data.url, '_blank'); // View
+  // OR
+  const link = window.document.createElement('a');
+  link.href = data.data.url;
+  link.download = fileName;
+  link.click(); // Download
+}
+```
+
+#### **Render Build Configuration**
+```yaml
+# apps/api/render.yaml
+buildCommand: npm install -g pnpm && cd apps/api && pnpm install && pnpm run build
+startCommand: cd apps/api && pnpm run prisma:deploy && pnpm run start:prod
+```
+
+### Developer Notes
+- **Signed URLs Required**: Private Supabase buckets MUST use signed URLs, public URLs return 404
+- **TypeScript Shadowing**: Avoid parameter names that conflict with global objects (document, window, etc.)
+- **Monorepo Builds**: Ensure deployment platforms use correct package manager (pnpm for workspaces)
+- **URL Expiration**: Default signed URL expiration is 3600 seconds (1 hour), configurable via query param
+- **Backend Endpoint**: `/api/v1/documents/:id/download?expires=3600` generates signed URLs
+
+### Known Limitations
+- **URL Expiration**: Signed URLs expire after 1 hour, users must regenerate for extended viewing
+- **Download Attribute**: May not work consistently across all browsers (especially Safari)
+- **Client-side Download**: Uses programmatic link click, blocked by some popup blockers
+
+### Future Enhancements
+1. **Configurable Expiration**: Add UI to set custom signed URL expiration times
+2. **URL Caching**: Cache signed URLs in frontend state to reduce API calls
+3. **Inline Preview**: Add inline document preview modal instead of opening in new tab
+4. **Batch Download**: Support downloading multiple documents as ZIP archive
+5. **Access Logs**: Track document access for audit trail and analytics
+
+---
+
 ## [2025-10-23] - Admin & Client Dashboard UX Improvements
 
 ### 🎯 **Session Focus**: Enhanced Job Request Workflow & Invoice Management
