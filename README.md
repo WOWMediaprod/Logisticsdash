@@ -23,10 +23,13 @@ logistics-platform/
 - **Job Request Management**: Multi-step wizard form for clients to submit shipping requests
 - **Driver Tracking**: Real-time GPS tracking with geofencing
 - **Document Management**: Upload and OCR processing for shipping documents (Release Orders, Bills of Lading, etc.)
-- **Route Management**: Optimize routes with waypoints and ETAs
+- **Waypoint Management**: Geofences with auto-status updates and ETA tracking
 - **Real-time Notifications**: WebSocket-based updates for job status changes
 
 ### Recent Additions (Nov 2025)
+- ✅ **Route Model Removal**: Simplified job creation by removing redundant route selection
+- ✅ **Waypoint-Based Navigation**: Waypoints now serve as primary system for geofencing and tracking
+- ✅ **0 Hours Free Time Option**: Clients can specify zero free time for held up containers
 - ✅ **Client Job Request Portal**: 5-step wizard with conditional fields
 - ✅ **Split Contact Fields**: Separate name and phone inputs for better data quality
 - ✅ **WhatsApp Image Upload**: Support for WhatsApp images with special character handling

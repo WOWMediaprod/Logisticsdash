@@ -2,6 +2,50 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-19] - Route Model Removal & UX Improvements
+
+### 🎯 **Session Focus**: Remove Redundant Route Selection Workflow
+
+**Status**: ✅ **Complete** - Routes completely removed from system, waypoints now primary navigation method
+
+### Removed
+
+#### **1. Route Selection Workflow (Complete System Removal)**
+- **Rationale**: Routes were redundant as clients provide pickup/drop locations and admins manage waypoints for navigation
+- **Scope**: Complete removal across backend API, frontend UI, and database
+- **Changes Made**:
+  - Deleted entire `routes` module from backend (`apps/api/src/modules/routes/`)
+  - Removed `Route` and `RouteWaypoint` database models from Prisma schema
+  - Created migration: `20251119_remove_routes_feature` to drop route tables from database
+  - Removed `routeId` field from Job, JobRequest, and RateCard models
+  - Updated 32 files across backend and frontend to remove route references
+- **Backend Impact**:
+  - Removed route includes from 13 service files (bills, documents, driver-auth, driver-stats, tracking, tracking-v2, etc.)
+  - Updated job creation DTOs to exclude routeId
+  - Jobs now created directly with client-provided locations
+  - Seed data updated to not create routes
+- **Frontend Impact**:
+  - Removed route selection dropdown from job creation workflow
+  - Removed route information displays from job details pages
+  - Jobs now identified by ID instead of route endpoints
+  - WaypointManagement component no longer requires routeId prop
+  - All route-related UI sections replaced with waypoint system
+- **Testing**:
+  - Backend API builds successfully (0 TypeScript errors)
+  - Frontend builds successfully (0 TypeScript errors)
+  - All 32 modified files verified for compilation
+
+#### **2. Added 0 Hours Option to Held Up Free Time**
+- **Enhancement**: Clients can now specify 0 hours free time for held up containers
+- **Location**: `apps/web/src/components/job-request/AcceptanceDetailsForm.tsx`
+- **Options Available**: 0 Hours, 12 Hours, 24 Hours
+- **Impact**: Provides flexibility for time-sensitive container returns
+
+### Migration Required
+- **Database**: Run `pnpm db:migrate` or `npx prisma migrate deploy` on production to drop route tables
+- **Seed Data**: Existing seed scripts updated; re-run `pnpm db:seed` for fresh test data
+- **Commits**: `d086435`, `8c9d8b1`
+
 ## [2025-11-17] - Document Viewing Security Enhancement & Build Fixes
 
 ### 🎯 **Session Focus**: Fix Document Access with Signed URLs for Private Storage
