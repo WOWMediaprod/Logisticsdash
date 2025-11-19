@@ -23,6 +23,6 @@ import { DriverAuthModule } from '../driver-auth/driver-auth.module';
   ],
   providers: [TrackingV2Gateway, TrackingV2Service, PrismaService],
   controllers: [TrackingV2Controller],
-  exports: [TrackingV2Service],
+  exports: [TrackingV2Service, TrackingV2Gateway],
 })
 export class TrackingV2Module {}

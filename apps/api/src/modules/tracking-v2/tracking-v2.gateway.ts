@@ -344,4 +344,103 @@ export class TrackingV2Gateway implements OnGatewayInit, OnGatewayConnection, On
       this.server.to(socketId).emit(event, data);
     }
   }
+
+  /**
+   * Broadcast job amendment to all relevant parties
+   */
+  broadcastJobAmendment(amendment: {
+    jobId: string;
+    companyId: string;
+    driverId?: string;
+    clientId?: string;
+    changes: Array<{ field: string; oldValue: any; newValue: any }>;
+    amendedBy: string;
+    amendmentReason: string;
+  }) {
+    const { jobId, companyId, driverId, clientId, changes, amendedBy, amendmentReason } = amendment;
+
+    // Broadcast to company dashboard (admin/dispatcher)
+    this.broadcastToCompany(companyId, 'job:amended', {
+      jobId,
+      changes,
+      amendedBy,
+      amendmentReason,
+      timestamp: new Date(),
+    });
+
+    // Broadcast to specific job room
+    this.broadcastToJob(jobId, 'job:amended', {
+      changes,
+      amendedBy,
+      amendmentReason,
+      timestamp: new Date(),
+    });
+
+    // Broadcast to driver if assigned
+    if (driverId) {
+      const driverRelevantFields = ['Pickup Time', 'Delivery Time', 'Priority', 'Special Notes', 'Container', 'Vehicle'];
+      const driverChanges = changes.filter((c) => driverRelevantFields.includes(c.field));
+
+      if (driverChanges.length > 0) {
+        this.broadcastToDriver(driverId, 'job:amended:driver', {
+          jobId,
+          changes: driverChanges,
+          summary: `Job updated: ${driverChanges.map((c) => c.field).join(', ')} changed`,
+          timestamp: new Date(),
+        });
+      }
+    }
+
+    // Broadcast to client if exists
+    if (clientId) {
+      const clientRelevantFields = ['Delivery Time', 'ETA', 'Priority'];
+      const clientChanges = changes.filter((c) => clientRelevantFields.includes(c.field));
+
+      if (clientChanges.length > 0) {
+        this.server.to(`client:${clientId}`).emit('job:amended:client', {
+          jobId,
+          changes: clientChanges,
+          summary: `Job updated: ${clientChanges.map((c) => c.field).join(', ')} updated`,
+          timestamp: new Date(),
+        });
+      }
+    }
+
+    this.logger.log(`Job amendment broadcasted for job ${jobId}`);
+  }
+
+  /**
+   * Broadcast notification to a specific user/driver/client
+   */
+  broadcastNotification(notification: {
+    recipientId: string;
+    recipientType: 'USER' | 'DRIVER' | 'CLIENT';
+    type: string;
+    title: string;
+    message: string;
+    actionUrl?: string;
+  }) {
+    const { recipientId, recipientType, type, title, message, actionUrl } = notification;
+
+    const event = 'notification:new';
+    const data = {
+      type,
+      title,
+      message,
+      actionUrl,
+      timestamp: new Date(),
+    };
+
+    // Send to appropriate room based on recipient type
+    if (recipientType === 'DRIVER') {
+      this.broadcastToDriver(recipientId, event, data);
+    } else if (recipientType === 'CLIENT') {
+      this.server.to(`client:${recipientId}`).emit(event, data);
+    } else {
+      // USER (admin/dispatcher)
+      this.server.to(`user:${recipientId}`).emit(event, data);
+    }
+
+    this.logger.log(`Notification broadcasted to ${recipientType} ${recipientId}`);
+  }
 }

@@ -176,6 +176,24 @@ export default function JobDetailPage() {
     containerId: "",
   });
 
+  const [amendmentModalOpen, setAmendmentModalOpen] = useState(false);
+  const [amendmentData, setAmendmentData] = useState({
+    pickupTs: "",
+    dropTs: "",
+    etaTs: "",
+    priority: "",
+    specialNotes: "",
+    clientId: "",
+    containerId: "",
+    vehicleId: "",
+    amendmentReason: "",
+    notifyDriver: true,
+    notifyClient: true,
+  });
+  const [amendmentHistory, setAmendmentHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [submittingAmendment, setSubmittingAmendment] = useState(false);
+
   useEffect(() => {
     if (!companyId || !jobId) {
       setLoading(false);
@@ -356,6 +374,130 @@ export default function JobDetailPage() {
     }
   };
 
+  const openAmendmentModal = async () => {
+    if (!job) return;
+
+    // Pre-populate with current job data
+    setAmendmentData({
+      pickupTs: job.pickupTs ? new Date(job.pickupTs).toISOString().slice(0, 16) : "",
+      dropTs: job.dropTs ? new Date(job.dropTs).toISOString().slice(0, 16) : "",
+      etaTs: job.etaTs ? new Date(job.etaTs).toISOString().slice(0, 16) : "",
+      priority: job.priority || "",
+      specialNotes: job.specialNotes || "",
+      clientId: job.client?.id || "",
+      containerId: job.container?.id || "",
+      vehicleId: job.vehicle?.id || "",
+      amendmentReason: "",
+      notifyDriver: true,
+      notifyClient: true,
+    });
+
+    // Load options if needed
+    await loadAssignmentOptions();
+
+    // Fetch amendment history
+    await fetchAmendmentHistory();
+
+    setAmendmentModalOpen(true);
+  };
+
+  const fetchAmendmentHistory = async () => {
+    if (!companyId || !jobId) return;
+
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(
+        getApiUrl(`/api/v1/jobs/${jobId}/history?companyId=${companyId}`),
+        { headers: { 'Accept': 'application/json' } }
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setAmendmentHistory(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch amendment history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleSubmitAmendment = async () => {
+    if (!job || !companyId || !amendmentData.amendmentReason.trim()) {
+      alert("Please provide a reason for the amendment");
+      return;
+    }
+
+    setSubmittingAmendment(true);
+    try {
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${job.id}/amend`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyId,
+          pickupTs: amendmentData.pickupTs || undefined,
+          dropTs: amendmentData.dropTs || undefined,
+          etaTs: amendmentData.etaTs || undefined,
+          priority: amendmentData.priority || undefined,
+          specialNotes: amendmentData.specialNotes || undefined,
+          clientId: amendmentData.clientId || undefined,
+          containerId: amendmentData.containerId || undefined,
+          vehicleId: amendmentData.vehicleId || undefined,
+          amendmentReason: amendmentData.amendmentReason,
+          amendedBy: "admin-user", // TODO: Get from auth context
+          notifyDriver: amendmentData.notifyDriver,
+          notifyClient: amendmentData.notifyClient,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update job with amended data
+        setJob(result.data.job);
+
+        // Refresh amendment history
+        await fetchAmendmentHistory();
+
+        // Close modal
+        setAmendmentModalOpen(false);
+
+        // Reset form
+        setAmendmentData({
+          pickupTs: "",
+          dropTs: "",
+          etaTs: "",
+          priority: "",
+          specialNotes: "",
+          clientId: "",
+          containerId: "",
+          vehicleId: "",
+          amendmentReason: "",
+          notifyDriver: true,
+          notifyClient: true,
+        });
+
+        alert("Job amended successfully! Notifications sent.");
+      } else {
+        alert(`Failed to amend job: ${result.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Failed to submit amendment", err);
+      alert("Failed to submit amendment");
+    } finally {
+      setSubmittingAmendment(false);
+    }
+  };
+
+  // Helper: check if job can be amended
+  const canAmendJob = useMemo(() => {
+    if (!job) return false;
+    const nonAmendableStatuses = ["COMPLETED", "CANCELLED"];
+    return !nonAmendableStatuses.includes(job.status);
+  }, [job]);
+
 
   if (!companyId) {
     return (
@@ -487,6 +629,17 @@ export default function JobDetailPage() {
                 >
                   {job.driver ? 'Driver Assigned' : 'Assign to driver'}
                 </motion.button>
+
+                {canAmendJob && (
+                  <motion.button
+                    onClick={openAmendmentModal}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-4 py-2 rounded-lg font-semibold transition-all bg-orange-600 text-white hover:bg-orange-700"
+                  >
+                    Amend Job
+                  </motion.button>
+                )}
               </div>
             </motion.div>
 
@@ -852,6 +1005,244 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {amendmentModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4 overflow-y-auto py-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass p-6 rounded-2xl w-full max-w-2xl space-y-4 my-8"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-gray-900">Amend Job</h3>
+              <button
+                onClick={() => setAmendmentModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-sm text-orange-800">
+                <strong>Note:</strong> Changes will be notified to relevant parties (driver/client) and tracked in the amendment history.
+              </p>
+            </div>
+
+            {!submittingAmendment && (
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Priority
+                    <select
+                      value={amendmentData.priority}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, priority: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Keep current</option>
+                      <option value="LOW">Low</option>
+                      <option value="NORMAL">Normal</option>
+                      <option value="HIGH">High</option>
+                      <option value="URGENT">Urgent</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Container
+                    <select
+                      value={amendmentData.containerId}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, containerId: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      disabled={["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                    >
+                      <option value="">Keep current</option>
+                      {containers.map((container) => (
+                        <option key={container.id} value={container.id}>
+                          {container.label}
+                        </option>
+                      ))}
+                    </select>
+                    {["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                      <p className="text-xs text-gray-500 mt-1">Cannot change container after loading</p>
+                    )}
+                  </label>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Vehicle
+                    <select
+                      value={amendmentData.vehicleId}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, vehicleId: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      disabled={["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                    >
+                      <option value="">Keep current</option>
+                      {vehicles.map((vehicle) => (
+                        <option key={vehicle.id} value={vehicle.id}>
+                          {vehicle.label}
+                        </option>
+                      ))}
+                    </select>
+                    {["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                      <p className="text-xs text-gray-500 mt-1">Cannot change vehicle after transit starts</p>
+                    )}
+                  </label>
+
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Client
+                    <select
+                      value={amendmentData.clientId}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, clientId: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Keep current</option>
+                      {/* TODO: Load clients if needed */}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Pickup Time
+                    <input
+                      type="datetime-local"
+                      value={amendmentData.pickupTs}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, pickupTs: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      disabled={["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                    />
+                    {["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                      <p className="text-xs text-gray-500 mt-1">Cannot change after loading</p>
+                    )}
+                  </label>
+
+                  <label className="block text-sm font-semibold text-gray-700">
+                    ETA
+                    <input
+                      type="datetime-local"
+                      value={amendmentData.etaTs}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, etaTs: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Delivery Time
+                    <input
+                      type="datetime-local"
+                      value={amendmentData.dropTs}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, dropTs: e.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    />
+                  </label>
+                </div>
+
+                <label className="block text-sm font-semibold text-gray-700">
+                  Special Notes
+                  <textarea
+                    value={amendmentData.specialNotes}
+                    onChange={(e) => setAmendmentData((prev) => ({ ...prev, specialNotes: e.target.value }))}
+                    className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    rows={3}
+                    placeholder="Update special notes or instructions..."
+                  />
+                </label>
+
+                <label className="block text-sm font-semibold text-gray-700">
+                  Amendment Reason *
+                  <textarea
+                    value={amendmentData.amendmentReason}
+                    onChange={(e) => setAmendmentData((prev) => ({ ...prev, amendmentReason: e.target.value }))}
+                    className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    rows={2}
+                    placeholder="Required: Why are you amending this job?"
+                    required
+                  />
+                </label>
+
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={amendmentData.notifyDriver}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, notifyDriver: e.target.checked }))}
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">Notify Driver</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={amendmentData.notifyClient}
+                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, notifyClient: e.target.checked }))}
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">Notify Client</span>
+                  </label>
+                </div>
+
+                {/* Amendment History */}
+                {amendmentHistory.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Amendment History</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {amendmentHistory.map((amendment: any) => (
+                        <div key={amendment.id} className="p-2 bg-gray-50 rounded-lg text-xs">
+                          <p className="font-semibold text-gray-900">{amendment.amendmentReason}</p>
+                          <p className="text-gray-600">By: {amendment.amendedBy} · {formatDateTime(amendment.createdAt)}</p>
+                          {amendment.changes && (
+                            <div className="mt-1 text-gray-500">
+                              {Object.entries(amendment.changes as Record<string, any>).map(([key, value]) => (
+                                <p key={key}>• {key}: {JSON.stringify(value)}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {submittingAmendment && (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-gray-600">Submitting amendment...</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button
+                onClick={() => setAmendmentModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+                disabled={submittingAmendment}
+              >
+                Cancel
+              </button>
+              <motion.button
+                onClick={handleSubmitAmendment}
+                whileHover={{ scale: submittingAmendment || !amendmentData.amendmentReason.trim() ? 1 : 1.02 }}
+                whileTap={{ scale: submittingAmendment || !amendmentData.amendmentReason.trim() ? 1 : 0.98 }}
+                disabled={submittingAmendment || !amendmentData.amendmentReason.trim()}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm text-white transition-all ${
+                  submittingAmendment || !amendmentData.amendmentReason.trim()
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-orange-600 hover:bg-orange-700"
+                }`}
+              >
+                Submit Amendment
+              </motion.button>
+            </div>
           </motion.div>
         </div>
       )}

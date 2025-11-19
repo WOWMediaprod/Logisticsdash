@@ -15,6 +15,7 @@ import { QrCodeService } from "./services/qr-code.service";
 import { CreateJobDto } from "./dto/create-job.dto";
 import { UpdateJobDto } from "./dto/update-job.dto";
 import { JobQueryDto } from "./dto/job-query.dto";
+import { AmendJobDto } from "./dto/amend-job.dto";
 
 @ApiTags("Jobs")
 @Controller("jobs")
@@ -98,6 +99,30 @@ export class JobsController {
     }
     const { companyId, ...rest } = statusDto;
     return this.jobsService.updateStatus(id, companyId, rest);
+  }
+
+  @Patch(":id/amend")
+  @ApiOperation({ summary: "Amend job with change tracking and notifications" })
+  @ApiResponse({ status: 200, description: "Job amended successfully" })
+  amendJob(
+    @Param("id") id: string,
+    @Body() amendDto: AmendJobDto & { companyId?: string }
+  ) {
+    if (!amendDto.companyId) {
+      throw new BadRequestException("companyId is required");
+    }
+    const { companyId, ...rest } = amendDto;
+    return this.jobsService.amendJob(id, companyId, rest);
+  }
+
+  @Get(":id/history")
+  @ApiOperation({ summary: "Get job amendment history" })
+  @ApiResponse({ status: 200, description: "Job history retrieved successfully" })
+  getJobHistory(@Param("id") id: string, @Query("companyId") companyId: string) {
+    if (!companyId) {
+      throw new BadRequestException("companyId is required");
+    }
+    return this.jobsService.getJobHistory(id, companyId);
   }
 
   @Get(":id/qr/trip-pack")

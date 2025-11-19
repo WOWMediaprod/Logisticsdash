@@ -19,6 +19,7 @@ import { DriverStatsModule } from './modules/driver-stats/driver-stats.module';
 import { WaypointsModule } from './modules/waypoints/waypoints.module';
 import { GeocodingModule } from './modules/geocoding/geocoding.module';
 import { CompaniesModule } from './modules/companies/companies.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { CompaniesModule } from './modules/companies/companies.module';
     WaypointsModule,
     GeocodingModule,
     CompaniesModule,
+    NotificationsModule,
     // AuthModule,
     // EconomicsModule,
     // MaintenanceModule,

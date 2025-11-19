@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api-config';
+import DriverNotifications from '@/components/DriverNotifications';
 
 interface Job {
   id: string;
@@ -176,6 +177,15 @@ export default function DriverDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Real-time notifications */}
+      {driver && (
+        <DriverNotifications
+          driverId={driver.id}
+          companyId={driver.companyId}
+          token={driver.token}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">

@@ -7,9 +7,10 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
-import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink, X } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink, X, History } from "lucide-react";
 import WaypointManager from "../../../../components/WaypointManager";
 import RouteProgressTimeline from "../../../../components/RouteProgressTimeline";
+import ClientNotifications from "../../../../components/ClientNotifications";
 import { getApiUrl } from "../../../../lib/api-config";
 
 // Dynamically import Leaflet components to avoid SSR issues
@@ -128,6 +129,8 @@ export default function ClientJobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [waypoints, setWaypoints] = useState<any[]>([]);
+  const [amendmentHistory, setAmendmentHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const mapRef = useRef<any>(null);
   const [L, setL] = useState<any>(null);
@@ -183,8 +186,9 @@ export default function ClientJobDetailPage() {
           // Verify this job belongs to the client
           if (data.data.clientId === clientId) {
             setJob(data.data);
-            // Fetch waypoints after job is loaded
+            // Fetch waypoints and amendment history after job is loaded
             fetchWaypoints(data.data.id);
+            fetchAmendmentHistory(data.data.id);
           } else {
             setError("You don't have access to this job");
           }
@@ -208,6 +212,21 @@ export default function ClientJobDetailPage() {
         }
       } catch (err) {
         console.error("Failed to fetch waypoints", err);
+      }
+    };
+
+    const fetchAmendmentHistory = async (jobId: string) => {
+      try {
+        setHistoryLoading(true);
+        const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}/history?companyId=${companyId}`));
+        const data = await response.json();
+        if (data.success) {
+          setAmendmentHistory(data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch amendment history", err);
+      } finally {
+        setHistoryLoading(false);
       }
     };
 
@@ -263,6 +282,14 @@ export default function ClientJobDetailPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      {/* Real-time notifications */}
+      {clientId && companyId && (
+        <ClientNotifications
+          clientId={clientId}
+          companyId={companyId}
+        />
+      )}
+
       <div className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -415,6 +442,54 @@ export default function ClientJobDetailPage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
               <WaypointManager jobId={job.id} readOnly={true} />
             </motion.div>
+
+            {/* Amendment History */}
+            {amendmentHistory.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <History className="w-5 h-5 text-orange-600" />
+                  Job Update History
+                </h2>
+                <div className="space-y-3">
+                  {historyLoading ? (
+                    <div className="text-center py-4">
+                      <div className="w-6 h-6 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-sm text-gray-600 mt-2">Loading history...</p>
+                    </div>
+                  ) : (
+                    amendmentHistory.map((amendment: any) => (
+                      <div key={amendment.id} className="p-4 bg-orange-50/50 rounded-xl border border-orange-100">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900 mb-1">{amendment.amendmentReason}</p>
+                            <p className="text-xs text-gray-600 mb-2">
+                              Updated by {amendment.amendedBy} • {formatDateTime(amendment.createdAt)}
+                            </p>
+                            {amendment.changes && Object.keys(amendment.changes).length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs font-semibold text-gray-700">Changes:</p>
+                                {Object.entries(amendment.changes as Record<string, any>).map(([key, value]: [string, any]) => (
+                                  <div key={key} className="text-xs text-gray-600 bg-white/50 rounded px-2 py-1">
+                                    <strong>{key}:</strong>{' '}
+                                    {value.oldValue !== undefined && (
+                                      <>
+                                        <span className="line-through text-gray-400">{String(value.oldValue || 'None')}</span>
+                                        {' → '}
+                                      </>
+                                    )}
+                                    <span className="font-semibold">{String(value.newValue)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Sidebar */}
