@@ -201,6 +201,27 @@ model Job {
   lastKnownLat    Decimal?           @db.Decimal(10, 8)
   lastKnownLng    Decimal?           @db.Decimal(11, 8)
   lastKnownAddress String?
+
+  // Job Request Details (copied from JobRequest when job is created)
+  releaseOrderUrl           String?
+  loadingLocation           String?
+  loadingLocationLat        Float?
+  loadingLocationLng        Float?
+  loadingContactName        String?
+  loadingContactPhone       String?
+  containerNumber           String?
+  sealNumber                String?
+  containerYardLocation     String?
+  cargoDescription          String?
+  cargoWeight               Decimal?           @db.Decimal(10, 2)
+  blCutoffRequired          Boolean            @default(false)
+  blCutoffDateTime          DateTime?
+  wharfName                 String?
+  wharfContact              String?
+  deliveryAddress           String?
+  deliveryContactName       String?
+  deliveryContactPhone      String?
+
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   bill            Bill?

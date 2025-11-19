@@ -77,6 +77,25 @@ type JobDetail = {
   driver?: DriverInfo;
   vehicle?: VehicleInfo;
   statusEvents?: StatusEvent[];
+  // Job Request Details
+  releaseOrderUrl?: string;
+  loadingLocation?: string;
+  loadingLocationLat?: number;
+  loadingLocationLng?: number;
+  loadingContactName?: string;
+  loadingContactPhone?: string;
+  containerNumber?: string;
+  sealNumber?: string;
+  containerYardLocation?: string;
+  cargoDescription?: string;
+  cargoWeight?: number;
+  blCutoffRequired?: boolean;
+  blCutoffDateTime?: string;
+  wharfName?: string;
+  wharfContact?: string;
+  deliveryAddress?: string;
+  deliveryContactName?: string;
+  deliveryContactPhone?: string;
 };
 
 type OptionItem = {
@@ -193,6 +212,23 @@ export default function JobDetailPage() {
     driverId: "",
     trackingEnabled: undefined as boolean | undefined,
     shareTrackingLink: "",
+    // Job Request Details
+    releaseOrderUrl: "",
+    loadingLocation: "",
+    loadingContactName: "",
+    loadingContactPhone: "",
+    containerNumber: "",
+    sealNumber: "",
+    containerYardLocation: "",
+    cargoDescription: "",
+    cargoWeight: undefined as number | undefined,
+    blCutoffRequired: undefined as boolean | undefined,
+    blCutoffDateTime: "",
+    wharfName: "",
+    wharfContact: "",
+    deliveryAddress: "",
+    deliveryContactName: "",
+    deliveryContactPhone: "",
     amendmentReason: "",
     notifyDriver: true,
     notifyClient: true,
@@ -411,6 +447,23 @@ export default function JobDetailPage() {
       driverId: job.driver?.id || "",
       trackingEnabled: job.trackingEnabled,
       shareTrackingLink: job.shareTrackingLink || "",
+      // Job Request Details
+      releaseOrderUrl: job.releaseOrderUrl || "",
+      loadingLocation: job.loadingLocation || "",
+      loadingContactName: job.loadingContactName || "",
+      loadingContactPhone: job.loadingContactPhone || "",
+      containerNumber: job.containerNumber || "",
+      sealNumber: job.sealNumber || "",
+      containerYardLocation: job.containerYardLocation || "",
+      cargoDescription: job.cargoDescription || "",
+      cargoWeight: job.cargoWeight,
+      blCutoffRequired: job.blCutoffRequired,
+      blCutoffDateTime: job.blCutoffDateTime ? new Date(job.blCutoffDateTime).toISOString().slice(0, 16) : "",
+      wharfName: job.wharfName || "",
+      wharfContact: job.wharfContact || "",
+      deliveryAddress: job.deliveryAddress || "",
+      deliveryContactName: job.deliveryContactName || "",
+      deliveryContactPhone: job.deliveryContactPhone || "",
       amendmentReason: "",
       notifyDriver: true,
       notifyClient: true,
@@ -474,6 +527,23 @@ export default function JobDetailPage() {
           driverId: amendmentData.driverId || undefined,
           trackingEnabled: amendmentData.trackingEnabled,
           shareTrackingLink: amendmentData.shareTrackingLink || undefined,
+          // Job Request Details
+          releaseOrderUrl: amendmentData.releaseOrderUrl || undefined,
+          loadingLocation: amendmentData.loadingLocation || undefined,
+          loadingContactName: amendmentData.loadingContactName || undefined,
+          loadingContactPhone: amendmentData.loadingContactPhone || undefined,
+          containerNumber: amendmentData.containerNumber || undefined,
+          sealNumber: amendmentData.sealNumber || undefined,
+          containerYardLocation: amendmentData.containerYardLocation || undefined,
+          cargoDescription: amendmentData.cargoDescription || undefined,
+          cargoWeight: amendmentData.cargoWeight,
+          blCutoffRequired: amendmentData.blCutoffRequired,
+          blCutoffDateTime: amendmentData.blCutoffDateTime || undefined,
+          wharfName: amendmentData.wharfName || undefined,
+          wharfContact: amendmentData.wharfContact || undefined,
+          deliveryAddress: amendmentData.deliveryAddress || undefined,
+          deliveryContactName: amendmentData.deliveryContactName || undefined,
+          deliveryContactPhone: amendmentData.deliveryContactPhone || undefined,
           amendmentReason: amendmentData.amendmentReason,
           amendedBy: "admin-user", // TODO: Get from auth context
           notifyDriver: amendmentData.notifyDriver,
@@ -508,6 +578,23 @@ export default function JobDetailPage() {
           driverId: "",
           trackingEnabled: undefined,
           shareTrackingLink: "",
+          // Job Request Details
+          releaseOrderUrl: "",
+          loadingLocation: "",
+          loadingContactName: "",
+          loadingContactPhone: "",
+          containerNumber: "",
+          sealNumber: "",
+          containerYardLocation: "",
+          cargoDescription: "",
+          cargoWeight: undefined,
+          blCutoffRequired: undefined,
+          blCutoffDateTime: "",
+          wharfName: "",
+          wharfContact: "",
+          deliveryAddress: "",
+          deliveryContactName: "",
+          deliveryContactPhone: "",
           amendmentReason: "",
           notifyDriver: true,
           notifyClient: true,
@@ -641,6 +728,81 @@ export default function JobDetailPage() {
                 <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                   <p className="text-sm font-semibold text-yellow-700">Special notes</p>
                   <p className="text-sm text-yellow-800 mt-1 whitespace-pre-line">{job.specialNotes}</p>
+                </div>
+              )}
+
+              {/* Shipment Details Section */}
+              {(job.releaseOrderUrl || job.loadingLocation || job.containerNumber || job.cargoDescription || job.wharfName || job.deliveryAddress) && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <h3 className="text-sm font-bold text-blue-900 mb-3">Shipment Details</h3>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    {job.releaseOrderUrl && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Release Order</p>
+                        <a href={job.releaseOrderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">
+                          View Document
+                        </a>
+                      </div>
+                    )}
+
+                    {job.loadingLocation && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Loading Location</p>
+                        <p className="text-blue-800">{job.loadingLocation}</p>
+                        {job.loadingContactName && (
+                          <p className="text-blue-700 text-xs mt-1">
+                            Contact: {job.loadingContactName}
+                            {job.loadingContactPhone && ` (${job.loadingContactPhone})`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {job.containerNumber && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Container Details</p>
+                        <p className="text-blue-800">Number: {job.containerNumber}</p>
+                        {job.sealNumber && <p className="text-blue-800 text-xs">Seal: {job.sealNumber}</p>}
+                        {job.containerYardLocation && <p className="text-blue-700 text-xs mt-1">Yard: {job.containerYardLocation}</p>}
+                      </div>
+                    )}
+
+                    {job.cargoDescription && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Cargo</p>
+                        <p className="text-blue-800">{job.cargoDescription}</p>
+                        {job.cargoWeight && <p className="text-blue-700 text-xs mt-1">Weight: {job.cargoWeight} kg</p>}
+                      </div>
+                    )}
+
+                    {job.blCutoffRequired && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">BL Cutoff</p>
+                        <p className="text-blue-800">{job.blCutoffDateTime ? formatDateTime(job.blCutoffDateTime) : 'Required'}</p>
+                      </div>
+                    )}
+
+                    {job.wharfName && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Wharf</p>
+                        <p className="text-blue-800">{job.wharfName}</p>
+                        {job.wharfContact && <p className="text-blue-700 text-xs mt-1">Contact: {job.wharfContact}</p>}
+                      </div>
+                    )}
+
+                    {job.deliveryAddress && (
+                      <div>
+                        <p className="text-blue-600 font-semibold">Delivery Location</p>
+                        <p className="text-blue-800">{job.deliveryAddress}</p>
+                        {job.deliveryContactName && (
+                          <p className="text-blue-700 text-xs mt-1">
+                            Contact: {job.deliveryContactName}
+                            {job.deliveryContactPhone && ` (${job.deliveryContactPhone})`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1284,6 +1446,189 @@ export default function JobDetailPage() {
                         placeholder="e.g., abc123xyz"
                       />
                       <p className="text-xs text-gray-500 mt-1">Share this code for public tracking</p>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Shipment Details Section */}
+                <div className="pb-3 border-b">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Shipment Details</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Release Order URL
+                      <input
+                        type="url"
+                        value={amendmentData.releaseOrderUrl}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, releaseOrderUrl: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="https://..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Loading Location
+                      <input
+                        type="text"
+                        value={amendmentData.loadingLocation}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, loadingLocation: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Loading address..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Loading Contact Name
+                      <input
+                        type="text"
+                        value={amendmentData.loadingContactName}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, loadingContactName: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Contact name..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Loading Contact Phone
+                      <input
+                        type="tel"
+                        value={amendmentData.loadingContactPhone}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, loadingContactPhone: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Phone number..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Container Number
+                      <input
+                        type="text"
+                        value={amendmentData.containerNumber}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, containerNumber: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Container no..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Seal Number
+                      <input
+                        type="text"
+                        value={amendmentData.sealNumber}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, sealNumber: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Seal no..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Container Yard Location
+                      <input
+                        type="text"
+                        value={amendmentData.containerYardLocation}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, containerYardLocation: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Yard location..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Cargo Weight (kg)
+                      <input
+                        type="number"
+                        value={amendmentData.cargoWeight ?? ""}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, cargoWeight: e.target.value ? Number(e.target.value) : undefined }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Weight in kg..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700 md:col-span-2">
+                      Cargo Description
+                      <textarea
+                        value={amendmentData.cargoDescription}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, cargoDescription: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        rows={2}
+                        placeholder="Cargo details..."
+                      />
+                    </label>
+
+                    <label className="flex items-center space-x-3 p-3 border border-gray-300 rounded-xl bg-white cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={amendmentData.blCutoffRequired === true}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, blCutoffRequired: e.target.checked }))}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="block text-sm font-semibold text-gray-700">BL Cutoff Required</span>
+                        <span className="block text-xs text-gray-500">Mark if BL cutoff date is required</span>
+                      </div>
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      BL Cutoff Date/Time
+                      <input
+                        type="datetime-local"
+                        value={amendmentData.blCutoffDateTime}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, blCutoffDateTime: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Wharf Name
+                      <input
+                        type="text"
+                        value={amendmentData.wharfName}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, wharfName: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Wharf name..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Wharf Contact
+                      <input
+                        type="text"
+                        value={amendmentData.wharfContact}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, wharfContact: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Contact info..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Delivery Address
+                      <input
+                        type="text"
+                        value={amendmentData.deliveryAddress}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, deliveryAddress: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Delivery address..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Delivery Contact Name
+                      <input
+                        type="text"
+                        value={amendmentData.deliveryContactName}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, deliveryContactName: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Contact name..."
+                      />
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Delivery Contact Phone
+                      <input
+                        type="tel"
+                        value={amendmentData.deliveryContactPhone}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, deliveryContactPhone: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="Phone number..."
+                      />
                     </label>
                   </div>
                 </div>

@@ -369,6 +369,26 @@ export class JobRequestsService {
         pickupTs: jobRequest.requestedPickupTs,
         etaTs: jobRequest.requestedDeliveryTs, // Changed from requestedDropTs
         specialNotes: jobRequest.specialInstructions || jobRequest.description, // Changed from specialRequirements
+
+        // Copy JobRequest details
+        releaseOrderUrl: jobRequest.releaseOrderUrl,
+        loadingLocation: jobRequest.loadingLocation,
+        loadingLocationLat: jobRequest.loadingLocationLat,
+        loadingLocationLng: jobRequest.loadingLocationLng,
+        loadingContactName: jobRequest.loadingContactName,
+        loadingContactPhone: jobRequest.loadingContactPhone,
+        containerNumber: jobRequest.containerNumber,
+        sealNumber: jobRequest.sealNumber,
+        containerYardLocation: jobRequest.containerYardLocation,
+        cargoDescription: jobRequest.cargoDescription,
+        cargoWeight: jobRequest.cargoWeight,
+        blCutoffRequired: jobRequest.blCutoffRequired,
+        blCutoffDateTime: jobRequest.blCutoffDateTime,
+        wharfName: jobRequest.wharfName,
+        wharfContact: jobRequest.wharfContact,
+        deliveryAddress: jobRequest.deliveryAddress,
+        deliveryContactName: jobRequest.deliveryContactName,
+        deliveryContactPhone: jobRequest.deliveryContactPhone,
       },
       include: {
         client: true,

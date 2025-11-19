@@ -89,6 +89,25 @@ type JobDetail = {
     paidAt?: string;
     createdAt: string;
   };
+  // Job Request Details
+  releaseOrderUrl?: string;
+  loadingLocation?: string;
+  loadingLocationLat?: number;
+  loadingLocationLng?: number;
+  loadingContactName?: string;
+  loadingContactPhone?: string;
+  containerNumber?: string;
+  sealNumber?: string;
+  containerYardLocation?: string;
+  cargoDescription?: string;
+  cargoWeight?: number;
+  blCutoffRequired?: boolean;
+  blCutoffDateTime?: string;
+  wharfName?: string;
+  wharfContact?: string;
+  deliveryAddress?: string;
+  deliveryContactName?: string;
+  deliveryContactPhone?: string;
 };
 
 const statusColors: Record<string, string> = {
@@ -519,6 +538,82 @@ export default function ClientJobDetailPage() {
                 </div>
               )}
             </motion.div>
+
+            {/* Shipment Details Section */}
+            {(job.releaseOrderUrl || job.loadingLocation || job.containerNumber || job.cargoDescription || job.wharfName || job.deliveryAddress) && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Shipment Details</h2>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  {job.releaseOrderUrl && (
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-blue-600 font-semibold mb-1">Release Order</p>
+                      <a href={job.releaseOrderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline flex items-center gap-1">
+                        View Document
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  {job.loadingLocation && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-700 font-semibold mb-1">Loading Location</p>
+                      <p className="text-gray-900">{job.loadingLocation}</p>
+                      {job.loadingContactName && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          Contact: {job.loadingContactName}
+                          {job.loadingContactPhone && ` (${job.loadingContactPhone})`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {job.containerNumber && (
+                    <div className="bg-purple-50 rounded-lg p-3">
+                      <p className="text-purple-700 font-semibold mb-1">Container Details</p>
+                      <p className="text-gray-900">Number: {job.containerNumber}</p>
+                      {job.sealNumber && <p className="text-gray-700 text-xs">Seal: {job.sealNumber}</p>}
+                      {job.containerYardLocation && <p className="text-gray-600 text-xs mt-1">Yard: {job.containerYardLocation}</p>}
+                    </div>
+                  )}
+
+                  {job.cargoDescription && (
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-green-700 font-semibold mb-1">Cargo</p>
+                      <p className="text-gray-900">{job.cargoDescription}</p>
+                      {job.cargoWeight && <p className="text-gray-600 text-xs mt-1">Weight: {job.cargoWeight} kg</p>}
+                    </div>
+                  )}
+
+                  {job.blCutoffRequired && (
+                    <div className="bg-orange-50 rounded-lg p-3">
+                      <p className="text-orange-700 font-semibold mb-1">BL Cutoff</p>
+                      <p className="text-gray-900">{job.blCutoffDateTime ? formatDateTime(job.blCutoffDateTime) : 'Required'}</p>
+                    </div>
+                  )}
+
+                  {job.wharfName && (
+                    <div className="bg-cyan-50 rounded-lg p-3">
+                      <p className="text-cyan-700 font-semibold mb-1">Wharf</p>
+                      <p className="text-gray-900">{job.wharfName}</p>
+                      {job.wharfContact && <p className="text-gray-600 text-xs mt-1">Contact: {job.wharfContact}</p>}
+                    </div>
+                  )}
+
+                  {job.deliveryAddress && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-700 font-semibold mb-1">Delivery Location</p>
+                      <p className="text-gray-900">{job.deliveryAddress}</p>
+                      {job.deliveryContactName && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          Contact: {job.deliveryContactName}
+                          {job.deliveryContactPhone && ` (${job.deliveryContactPhone})`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             {/* Live Tracking Map */}
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
