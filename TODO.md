@@ -2,6 +2,19 @@
 
 ## ✅ COMPLETED FEATURES (Nov 2025)
 
+### Complete Shipment Details Integration (Completed Nov 19, 2025 - Session 4)
+- ✅ 17 new fields added to Job model (release order, loading location, container details, cargo, BL cutoff, wharf, delivery info)
+- ✅ Job creation logic updated to copy all JobRequest fields
+- ✅ CreateJobDto updated with all 17 fields
+- ✅ AmendJobDto updated with all 17 fields
+- ✅ Admin job details page shows "Shipment Details" section
+- ✅ Client job details page shows "Shipment Details" section with color-coded cards
+- ✅ Amendment modal includes complete shipment details form
+- ✅ All fields amendable with proper validation
+- ✅ Full TypeScript compilation (0 errors)
+- **Commit**: `d9864c5`
+- **Documentation**: See CHANGELOG.md for detailed changes
+
 ### Real-Time Client Job Portal (Completed Nov 19, 2025 - Session 3)
 - ✅ WebSocket integration in client job details page
 - ✅ Live GPS location updates on map without refresh

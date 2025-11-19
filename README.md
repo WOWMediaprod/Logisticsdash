@@ -27,6 +27,14 @@ logistics-platform/
 - **Real-time Notifications**: WebSocket-based updates for job status changes
 
 ### Recent Additions (Nov 2025)
+- ✅ **Complete Shipment Details Integration**: All job request details now stored and visible in job portal
+  - 17 fields from JobRequest copied to Job model on creation
+  - Release orders, loading/delivery locations with contacts
+  - Container details (number, seal, yard location)
+  - Cargo information (description, weight)
+  - BL cutoff dates and wharf information
+  - Fully amendable through admin job amendment modal
+  - Color-coded display in client portal
 - ✅ **Real-Time Client Job Portal**: Clients see all job updates instantly without manual refresh
   - Live GPS location tracking on map
   - Instant status change notifications
@@ -335,4 +343,4 @@ Built with:
 ---
 
 **Last Updated**: November 19, 2025
-**Version**: 2.1.0 - Job Amendment System Complete
+**Version**: 2.2.0 - Complete Shipment Details Integration

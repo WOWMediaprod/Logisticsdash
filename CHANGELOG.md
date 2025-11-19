@@ -2,6 +2,136 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-19] - Complete Shipment Details Integration (Session 4)
+
+### 🎯 **Session Focus**: Display All Job Request Details in Job Portal
+
+**Status**: ✅ **Complete** - Full shipment details now visible to both admins and clients
+
+**Objective**: Make all shipment information (release orders, loading/delivery locations, container details, cargo, BL cutoff, wharf) directly accessible from job details without needing to reference job requests.
+
+### Added
+
+#### **1. Job Model Enhancement**
+- **17 New Fields Added to Job Model** (Prisma schema):
+  - Release Order URL
+  - Loading Location (address + coordinates)
+  - Loading Contact (name + phone)
+  - Container Details (number, seal, yard location)
+  - Cargo Information (description, weight)
+  - BL Cutoff (required flag + datetime)
+  - Wharf Information (name, contact)
+  - Delivery Location (address + coordinates)
+  - Delivery Contact (name + phone)
+- **Location**: `apps/api/prisma/schema.prisma:464-481`
+- **Rationale**: Jobs are now self-contained with all shipment info; no need to reference JobRequest after creation
+
+#### **2. Data Migration Logic**
+- **Updated `acceptAndCreateJob()` in JobRequestsService**:
+  - Copies all 17 fields from JobRequest to Job when converting
+  - Ensures no data loss during job creation
+  - Job becomes the authoritative source after creation
+- **Location**: `apps/api/src/modules/job-requests/job-requests.service.ts:374-391`
+
+#### **3. API Support**
+- **CreateJobDto**: Added all 17 fields with proper validation decorators
+- **AmendJobDto**: Added all 17 fields for job amendments
+- **Location**:
+  - `apps/api/src/modules/jobs/dto/create-job.dto.ts:43-132`
+  - `apps/api/src/modules/jobs/dto/amend-job.dto.ts:71-160`
+
+#### **4. Admin Dashboard Enhancement**
+- **New "Shipment Details" Section** in job details page:
+  - Displays all 17 fields in organized 2-column grid
+  - Shows Release Order, Loading/Delivery locations with contacts
+  - Container info (number, seal, yard location)
+  - Cargo details (description, weight)
+  - BL Cutoff date/time
+  - Wharf information
+  - All displayed conditionally (only shows if data exists)
+- **Location**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx:666-739`
+
+#### **5. Client Portal Enhancement**
+- **New "Shipment Details" Section** in client job view:
+  - Same fields as admin, but color-coded for better UX
+  - Shows release order with external link
+  - Container details in purple cards
+  - Cargo in green, BL Cutoff in orange
+  - Wharf in cyan, Delivery in gray
+  - Responsive grid layout
+- **Location**: `apps/web/src/app/client/jobs/[id]/page.tsx:542-616`
+
+#### **6. Amendment Modal Extension**
+- **Complete "Shipment Details" Section** in amendment modal:
+  - All 17 fields amendable by admins
+  - Input types match field requirements (text, number, datetime, checkbox, textarea)
+  - Organized 2-column grid for better UX
+  - Integrated with amendment notification system
+- **Location**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx:1453-1634`
+
+### Database Schema
+
+**New Job Fields**:
+```typescript
+releaseOrderUrl?: string
+loadingLocation?: string
+loadingLocationLat?: number
+loadingLocationLng?: number
+loadingContactName?: string
+loadingContactPhone?: string
+containerNumber?: string
+sealNumber?: string
+containerYardLocation?: string
+cargoDescription?: string
+cargoWeight?: Decimal
+blCutoffRequired?: boolean
+blCutoffDateTime?: DateTime
+wharfName?: string
+wharfContact?: string
+deliveryAddress?: string
+deliveryContactName?: string
+deliveryContactPhone?: string
+```
+
+### Files Modified
+
+**Backend**:
+- `apps/api/prisma/schema.prisma` - Added 17 fields to Job model
+- `apps/api/src/modules/job-requests/job-requests.service.ts` - Updated job creation to copy fields
+- `apps/api/src/modules/jobs/dto/create-job.dto.ts` - Added fields with validators
+- `apps/api/src/modules/jobs/dto/amend-job.dto.ts` - Added fields for amendments
+
+**Frontend**:
+- `apps/web/src/app/dashboard/jobs/[id]/page.tsx` - Added shipment details display + amendment form
+- `apps/web/src/app/client/jobs/[id]/page.tsx` - Added shipment details display
+
+### Commits
+
+- `d9864c5` - "feat: add complete shipment details to Job model and UI"
+
+### Testing & Validation
+
+- ✅ TypeScript compilation successful (0 errors)
+- ✅ All fields properly typed across backend and frontend
+- ✅ Amendment modal form fully functional
+- ✅ Shipment details sections conditionally render
+
+### User Experience Impact
+
+**Before**: Job details were incomplete; users had to check JobRequest separately for full shipment info
+
+**After**: All shipment information directly visible in job details page for both admins and clients
+
+### Technical Decisions
+
+**Why Add Fields to Job Model?**
+1. **Data Independence**: Jobs don't depend on JobRequest existing after creation
+2. **Performance**: Single query for all job info vs multiple queries/JOINs
+3. **Consistency**: Matches existing amendment system pattern
+4. **Future-Proof**: Works for jobs created via any method, not just JobRequests
+
+---
+
 ## [2025-11-19] - Real-Time Client Job Portal Updates (Session 3)
 
 ### 🎯 **Session Focus**: Enable Real-Time Synchronization for Client Portal
