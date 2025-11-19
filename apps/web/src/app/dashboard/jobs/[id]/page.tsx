@@ -68,6 +68,8 @@ type JobDetail = {
   pickupTs?: string;
   etaTs?: string;
   dropTs?: string;
+  trackingEnabled?: boolean;
+  shareTrackingLink?: string;
   createdAt: string;
   updatedAt: string;
   client?: RelatedEntity;
@@ -182,14 +184,20 @@ export default function JobDetailPage() {
     dropTs: "",
     etaTs: "",
     priority: "",
+    jobType: "",
+    status: "",
     specialNotes: "",
     clientId: "",
     containerId: "",
     vehicleId: "",
+    driverId: "",
+    trackingEnabled: undefined as boolean | undefined,
+    shareTrackingLink: "",
     amendmentReason: "",
     notifyDriver: true,
     notifyClient: true,
   });
+  const [clients, setClients] = useState<OptionItem[]>([]);
   const [amendmentHistory, setAmendmentHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [submittingAmendment, setSubmittingAmendment] = useState(false);
@@ -269,16 +277,18 @@ export default function JobDetailPage() {
     }
 
     try {
-      const [vehiclesRes, driversRes, containersRes] = await Promise.all([
+      const [vehiclesRes, driversRes, containersRes, clientsRes] = await Promise.all([
         fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/clients?companyId=${companyId}`)),
       ]);
 
-      const [vehiclesData, driversData, containersData] = await Promise.all([
+      const [vehiclesData, driversData, containersData, clientsData] = await Promise.all([
         vehiclesRes.json(),
         driversRes.json(),
         containersRes.json(),
+        clientsRes.json(),
       ]);
 
       if (vehiclesData.success) {
@@ -304,6 +314,15 @@ export default function JobDetailPage() {
           containersData.data.map((item: any) => ({
             id: item.id,
             label: `${item.iso} - ${item.size} (${item.owner})${item.checkOk ? "" : " [check pending]"}`,
+          }))
+        );
+      }
+
+      if (clientsData.success) {
+        setClients(
+          clientsData.data.map((item: any) => ({
+            id: item.id,
+            label: item.code ? `${item.name} (${item.code})` : item.name,
           }))
         );
       }
@@ -383,10 +402,15 @@ export default function JobDetailPage() {
       dropTs: job.dropTs ? new Date(job.dropTs).toISOString().slice(0, 16) : "",
       etaTs: job.etaTs ? new Date(job.etaTs).toISOString().slice(0, 16) : "",
       priority: job.priority || "",
+      jobType: job.jobType || "",
+      status: job.status || "",
       specialNotes: job.specialNotes || "",
       clientId: job.client?.id || "",
       containerId: job.container?.id || "",
       vehicleId: job.vehicle?.id || "",
+      driverId: job.driver?.id || "",
+      trackingEnabled: job.trackingEnabled,
+      shareTrackingLink: job.shareTrackingLink || "",
       amendmentReason: "",
       notifyDriver: true,
       notifyClient: true,
@@ -441,10 +465,15 @@ export default function JobDetailPage() {
           dropTs: amendmentData.dropTs || undefined,
           etaTs: amendmentData.etaTs || undefined,
           priority: amendmentData.priority || undefined,
+          jobType: amendmentData.jobType || undefined,
+          status: amendmentData.status || undefined,
           specialNotes: amendmentData.specialNotes || undefined,
           clientId: amendmentData.clientId || undefined,
           containerId: amendmentData.containerId || undefined,
           vehicleId: amendmentData.vehicleId || undefined,
+          driverId: amendmentData.driverId || undefined,
+          trackingEnabled: amendmentData.trackingEnabled,
+          shareTrackingLink: amendmentData.shareTrackingLink || undefined,
           amendmentReason: amendmentData.amendmentReason,
           amendedBy: "admin-user", // TODO: Get from auth context
           notifyDriver: amendmentData.notifyDriver,
@@ -470,10 +499,15 @@ export default function JobDetailPage() {
           dropTs: "",
           etaTs: "",
           priority: "",
+          jobType: "",
+          status: "",
           specialNotes: "",
           clientId: "",
           containerId: "",
           vehicleId: "",
+          driverId: "",
+          trackingEnabled: undefined,
+          shareTrackingLink: "",
           amendmentReason: "",
           notifyDriver: true,
           notifyClient: true,
@@ -1036,78 +1070,157 @@ export default function JobDetailPage() {
 
             {!submittingAmendment && (
               <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Priority
-                    <select
-                      value={amendmentData.priority}
-                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, priority: e.target.value }))}
-                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                    >
-                      <option value="">Keep current</option>
-                      <option value="LOW">Low</option>
-                      <option value="NORMAL">Normal</option>
-                      <option value="HIGH">High</option>
-                      <option value="URGENT">Urgent</option>
-                    </select>
-                  </label>
+                {/* Core Details Section */}
+                <div className="pb-3 border-b">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Core Details</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Job Type
+                      <select
+                        value={amendmentData.jobType}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, jobType: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={["IN_TRANSIT", "AT_PICKUP", "LOADED", "AT_DELIVERY"].includes(job.status)}
+                      >
+                        <option value="">Keep current</option>
+                        <option value="ONE_WAY">One Way</option>
+                        <option value="ROUND_TRIP">Round Trip</option>
+                        <option value="MULTI_STOP">Multi Stop</option>
+                        <option value="EXPORT">Export</option>
+                        <option value="IMPORT">Import</option>
+                      </select>
+                      {["IN_TRANSIT", "AT_PICKUP", "LOADED", "AT_DELIVERY"].includes(job.status) && (
+                        <p className="text-xs text-gray-500 mt-1">Cannot change type after transit starts</p>
+                      )}
+                    </label>
 
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Container
-                    <select
-                      value={amendmentData.containerId}
-                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, containerId: e.target.value }))}
-                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                      disabled={["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
-                    >
-                      <option value="">Keep current</option>
-                      {containers.map((container) => (
-                        <option key={container.id} value={container.id}>
-                          {container.label}
-                        </option>
-                      ))}
-                    </select>
-                    {["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
-                      <p className="text-xs text-gray-500 mt-1">Cannot change container after loading</p>
-                    )}
-                  </label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Priority
+                      <select
+                        value={amendmentData.priority}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, priority: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      >
+                        <option value="">Keep current</option>
+                        <option value="LOW">Low</option>
+                        <option value="NORMAL">Normal</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                      </select>
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Status <span className="text-orange-600">(Admin Override)</span>
+                      <select
+                        value={amendmentData.status}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, status: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-orange-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-orange-50"
+                      >
+                        <option value="">Keep current</option>
+                        <option value="CREATED">Created</option>
+                        <option value="ASSIGNED">Assigned</option>
+                        <option value="IN_TRANSIT">In Transit</option>
+                        <option value="AT_PICKUP">At Pickup</option>
+                        <option value="LOADED">Loaded</option>
+                        <option value="AT_DELIVERY">At Delivery</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                        <option value="ON_HOLD">On Hold</option>
+                      </select>
+                      <p className="text-xs text-orange-600 mt-1">⚠️ Use with caution</p>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Vehicle
-                    <select
-                      value={amendmentData.vehicleId}
-                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, vehicleId: e.target.value }))}
-                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                      disabled={["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
-                    >
-                      <option value="">Keep current</option>
-                      {vehicles.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.label}
-                        </option>
-                      ))}
-                    </select>
-                    {["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
-                      <p className="text-xs text-gray-500 mt-1">Cannot change vehicle after transit starts</p>
-                    )}
-                  </label>
+                {/* Assignments Section */}
+                <div className="pb-3 border-b">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Assignments</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Driver
+                      <select
+                        value={amendmentData.driverId}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, driverId: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={["AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                      >
+                        <option value="">Keep current</option>
+                        {drivers.map((driver) => (
+                          <option key={driver.id} value={driver.id}>
+                            {driver.label}
+                          </option>
+                        ))}
+                      </select>
+                      {["AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                        <p className="text-xs text-gray-500 mt-1">Cannot reassign driver at this stage</p>
+                      )}
+                    </label>
 
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Client
-                    <select
-                      value={amendmentData.clientId}
-                      onChange={(e) => setAmendmentData((prev) => ({ ...prev, clientId: e.target.value }))}
-                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                    >
-                      <option value="">Keep current</option>
-                      {/* TODO: Load clients if needed */}
-                    </select>
-                  </label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Client
+                      <select
+                        value={amendmentData.clientId}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, clientId: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      >
+                        <option value="">Keep current</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 mt-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Vehicle
+                      <select
+                        value={amendmentData.vehicleId}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, vehicleId: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                      >
+                        <option value="">Keep current</option>
+                        {vehicles.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>
+                            {vehicle.label}
+                          </option>
+                        ))}
+                      </select>
+                      {["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                        <p className="text-xs text-gray-500 mt-1">Cannot change vehicle after transit starts</p>
+                      )}
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Container
+                      <select
+                        value={amendmentData.containerId}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, containerId: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                      >
+                        <option value="">Keep current</option>
+                        {containers.map((container) => (
+                          <option key={container.id} value={container.id}>
+                            {container.label}
+                          </option>
+                        ))}
+                      </select>
+                      {["LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                        <p className="text-xs text-gray-500 mt-1">Cannot change container after loading</p>
+                      )}
+                    </label>
+                  </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                {/* Schedule Section */}
+                <div className="pb-3 border-b">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Schedule</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
                   <label className="block text-sm font-semibold text-gray-700">
                     Pickup Time
                     <input
@@ -1141,10 +1254,45 @@ export default function JobDetailPage() {
                       className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
                     />
                   </label>
+                  </div>
                 </div>
 
-                <label className="block text-sm font-semibold text-gray-700">
-                  Special Notes
+                {/* Tracking Configuration Section */}
+                <div className="pb-3 border-b">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Tracking Configuration</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <label className="flex items-center space-x-3 p-3 border border-gray-300 rounded-xl bg-white cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={amendmentData.trackingEnabled === true}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, trackingEnabled: e.target.checked }))}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="block text-sm font-semibold text-gray-700">Enable GPS Tracking</span>
+                        <span className="block text-xs text-gray-500">Real-time location updates from driver</span>
+                      </div>
+                    </label>
+
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Public Tracking Link
+                      <input
+                        type="text"
+                        value={amendmentData.shareTrackingLink}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, shareTrackingLink: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        placeholder="e.g., abc123xyz"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Share this code for public tracking</p>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Notes & Reason Section */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Notes & Reason</h4>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Special Notes
                   <textarea
                     value={amendmentData.specialNotes}
                     onChange={(e) => setAmendmentData((prev) => ({ ...prev, specialNotes: e.target.value }))}
@@ -1209,6 +1357,7 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             )}
 

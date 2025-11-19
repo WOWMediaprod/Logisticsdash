@@ -322,12 +322,16 @@ export class JobsService {
     if (amendDto.clientId !== undefined) updatedData.clientId = amendDto.clientId;
     if (amendDto.containerId !== undefined) updatedData.containerId = amendDto.containerId;
     if (amendDto.vehicleId !== undefined) updatedData.vehicleId = amendDto.vehicleId;
+    if (amendDto.driverId !== undefined) updatedData.driverId = amendDto.driverId;
     if (amendDto.jobType !== undefined) updatedData.jobType = amendDto.jobType;
+    if (amendDto.status !== undefined) updatedData.status = amendDto.status;
     if (amendDto.priority !== undefined) updatedData.priority = amendDto.priority;
     if (amendDto.specialNotes !== undefined) updatedData.specialNotes = amendDto.specialNotes;
     if (amendDto.pickupTs !== undefined) updatedData.pickupTs = new Date(amendDto.pickupTs);
     if (amendDto.dropTs !== undefined) updatedData.dropTs = new Date(amendDto.dropTs);
     if (amendDto.etaTs !== undefined) updatedData.etaTs = new Date(amendDto.etaTs);
+    if (amendDto.trackingEnabled !== undefined) updatedData.trackingEnabled = amendDto.trackingEnabled;
+    if (amendDto.shareTrackingLink !== undefined) updatedData.shareTrackingLink = amendDto.shareTrackingLink;
 
     const updatedJob = await this.prisma.job.update({
       where: { id },
@@ -438,13 +442,13 @@ export class JobsService {
     const restrictions: Record<JobStatus, string[]> = {
       [JobStatus.CREATED]: [], // All fields allowed
       [JobStatus.ASSIGNED]: [], // All fields allowed
-      [JobStatus.IN_TRANSIT]: ['containerId', 'vehicleId'], // Cannot change these during transit
-      [JobStatus.AT_PICKUP]: ['containerId', 'pickupTs'], // Cannot change container or pickup time at pickup
-      [JobStatus.LOADED]: ['containerId', 'vehicleId', 'pickupTs'], // Cannot change these after loading
-      [JobStatus.AT_DELIVERY]: ['containerId', 'vehicleId', 'pickupTs', 'dropTs'], // Very limited changes
-      [JobStatus.DELIVERED]: Object.keys(amendDto), // No amendments allowed after delivery
-      [JobStatus.COMPLETED]: Object.keys(amendDto), // No amendments allowed
-      [JobStatus.CANCELLED]: Object.keys(amendDto), // No amendments allowed
+      [JobStatus.IN_TRANSIT]: ['containerId', 'vehicleId', 'jobType'], // Cannot change these during transit
+      [JobStatus.AT_PICKUP]: ['containerId', 'pickupTs', 'jobType'], // Cannot change container, pickup time, or type at pickup
+      [JobStatus.LOADED]: ['containerId', 'vehicleId', 'pickupTs', 'jobType'], // Cannot change these after loading
+      [JobStatus.AT_DELIVERY]: ['containerId', 'vehicleId', 'pickupTs', 'dropTs', 'jobType', 'driverId'], // Very limited changes
+      [JobStatus.DELIVERED]: Object.keys(amendDto).filter(k => k !== 'status'), // Only status can be changed (admin override)
+      [JobStatus.COMPLETED]: Object.keys(amendDto).filter(k => k !== 'status'), // Only status can be changed
+      [JobStatus.CANCELLED]: Object.keys(amendDto).filter(k => k !== 'status'), // Only status can be changed
       [JobStatus.ON_HOLD]: [], // All fields allowed while on hold
     };
 
@@ -472,12 +476,16 @@ export class JobsService {
       clientId: 'Client',
       containerId: 'Container',
       vehicleId: 'Vehicle',
+      driverId: 'Driver',
       jobType: 'Job Type',
+      status: 'Status',
       priority: 'Priority',
       specialNotes: 'Special Notes',
       pickupTs: 'Pickup Time',
       dropTs: 'Delivery Time',
       etaTs: 'ETA',
+      trackingEnabled: 'GPS Tracking',
+      shareTrackingLink: 'Tracking Link',
     };
 
     Object.keys(amendDto).forEach((key) => {
@@ -507,7 +515,7 @@ export class JobsService {
    * Get changes relevant to driver
    */
   private getDriverRelevantChanges(changes: any[]) {
-    const relevantFields = ['Pickup Time', 'Delivery Time', 'Priority', 'Special Notes', 'Container', 'Vehicle'];
+    const relevantFields = ['Pickup Time', 'Delivery Time', 'Priority', 'Special Notes', 'Container', 'Vehicle', 'Driver', 'Job Type', 'Status'];
     return changes.filter((c) => relevantFields.includes(c.field));
   }
 
