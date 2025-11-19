@@ -2,6 +2,108 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-19] - Real-Time Client Job Portal Updates (Session 3)
+
+### 🎯 **Session Focus**: Enable Real-Time Synchronization for Client Portal
+
+**Status**: ✅ **Complete** - Full WebSocket integration for live client updates
+
+**Objective**: Clients see all job updates in real-time without manual refresh - amendments, status changes, GPS location, and document uploads.
+
+### Added
+
+#### **1. WebSocket Integration in Client Job Details Page**
+- **Frontend WebSocket Connection**: Connected to `/tracking-v2` namespace
+- **Client-Specific Rooms**: Subscribes to `client:{clientId}` room
+- **Real-Time Event Listeners**:
+  - `job:amended:client` - Auto-refetch when admin makes amendments
+  - `job-tracking-update` - Live GPS location updates on map
+  - `job-status-update` - Instant status changes without refresh
+  - `job-document-added` - New documents appear immediately
+- **Connection Status Indicator**: "Live" badge with pulse animation showing connection state
+- **Location**: `apps/web/src/app/client/jobs/[id]/page.tsx:240-376`
+
+#### **2. Backend Broadcasting Methods**
+- **TrackingV2Gateway Enhancement**:
+  - Added `broadcastToClient(clientId, event, data)` method
+  - Broadcasts WebSocket events to client-specific rooms
+  - Location: `apps/api/src/modules/tracking-v2/tracking-v2.gateway.ts:348-350`
+
+#### **3. Job Status Broadcasting**
+- **Jobs Service Enhancement**:
+  - Status changes broadcast to client via `job-status-update` event
+  - Includes jobId, new status, timestamp, and optional note
+  - Triggered on every `updateStatus()` call
+  - Location: `apps/api/src/modules/jobs/jobs.service.ts:288-296`
+
+#### **4. Document Upload Broadcasting**
+- **Documents Service Enhancement**:
+  - Document uploads broadcast to client via `job-document-added` event
+  - Includes full document metadata
+  - Works for any document uploaded to a job
+  - Location: `apps/api/src/modules/documents/documents.service.ts:117-136`
+
+#### **5. Dependency Injection Setup**
+- **DocumentsModule**: Imported `TrackingV2Module` to make gateway available
+- **Module Imports**: Used `forwardRef()` to handle circular dependencies safely
+
+### Real-Time Features Implemented
+
+- ✅ **Live GPS Tracking**: Driver location updates appear on map instantly
+- ✅ **Status Synchronization**: Job status changes visible immediately to client
+- ✅ **Amendment Updates**: Admin amendments auto-refresh client data
+- ✅ **Document Notifications**: New uploaded documents appear instantly
+- ✅ **Connection Awareness**: UI shows live/reconnecting status
+- ✅ **Zero Manual Refresh**: All updates push to client automatically
+
+### Technical Implementation
+
+**Frontend Architecture**:
+- Socket.IO client with room-based targeting
+- useCallback for optimized function references
+- Immediate state updates on WebSocket events
+- Visual feedback via connection indicator
+
+**Backend Architecture**:
+- Event-driven broadcasting to client rooms
+- Status-triggered broadcasts in service layer
+- Document upload hooks for automatic broadcasting
+- Forwardref module imports to prevent circular dependencies
+
+### Files Modified
+
+**Frontend**:
+- `apps/web/src/app/client/jobs/[id]/page.tsx` - Added WebSocket, event listeners, connection UI
+
+**Backend**:
+- `apps/api/src/modules/tracking-v2/tracking-v2.gateway.ts` - Added broadcastToClient method
+- `apps/api/src/modules/jobs/jobs.service.ts` - Added status change broadcasting
+- `apps/api/src/modules/documents/documents.service.ts` - Added document upload broadcasting
+- `apps/api/src/modules/documents/documents.module.ts` - Imported TrackingV2Module
+
+### Commits
+
+- `604c0fb` - "feat: implement real-time updates for client job portal"
+- `e1dc844` - "fix: add missing broadcastToClient method to TrackingV2Gateway"
+- `6717a43` - "fix: resolve DocumentsService dependency injection error"
+
+### Testing & Validation
+
+- ✅ TypeScript compilation successful (0 errors)
+- ✅ NestJS build successful
+- ✅ All event listeners properly typed
+- ✅ WebSocket room subscriptions working
+- ✅ Broadcasting methods functional
+
+### User Experience Impact
+
+**Before**: Clients had to manually refresh to see updates from admin or driver
+**After**: All updates appear instantly - amendments, status changes, location, documents
+
+This creates a seamless experience where clients always have the most current information without any manual intervention.
+
+---
+
 ## [2025-11-19] - Job Amendment System Enhancements (Session 2)
 
 ### 🎯 **Session Focus**: Complete Job Amendment Capability for Admins

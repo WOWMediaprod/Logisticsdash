@@ -27,6 +27,13 @@ logistics-platform/
 - **Real-time Notifications**: WebSocket-based updates for job status changes
 
 ### Recent Additions (Nov 2025)
+- ✅ **Real-Time Client Job Portal**: Clients see all job updates instantly without manual refresh
+  - Live GPS location tracking on map
+  - Instant status change notifications
+  - Amendment synchronization
+  - Document upload notifications
+  - Connection status indicator ("Live" badge)
+  - Zero manual refresh required
 - ✅ **Complete Job Amendment System**: Admins can now amend all aspects of jobs with intelligent status-based validation
   - Driver reassignment with smart restrictions
   - Job type amendment with transit-state protection

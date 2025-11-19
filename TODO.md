@@ -2,7 +2,20 @@
 
 ## ✅ COMPLETED FEATURES (Nov 2025)
 
-### Job Amendment System (Completed Nov 19, 2025)
+### Real-Time Client Job Portal (Completed Nov 19, 2025 - Session 3)
+- ✅ WebSocket integration in client job details page
+- ✅ Live GPS location updates on map without refresh
+- ✅ Instant status change notifications and synchronization
+- ✅ Amendment auto-sync when admin makes changes
+- ✅ Document upload notifications appear instantly
+- ✅ Connection status indicator ("Live" badge with pulse)
+- ✅ Client-specific WebSocket room targeting
+- ✅ Full TypeScript compilation (0 errors)
+- ✅ NestJS build successful
+- **Commits**: `604c0fb`, `e1dc844`, `6717a43`
+- **Documentation**: See CHANGELOG.md for detailed changes
+
+### Job Amendment System (Completed Nov 19, 2025 - Session 2)
 - ✅ Driver reassignment with smart status-based restrictions
 - ✅ Job type amendment (ONE_WAY, ROUND_TRIP, MULTI_STOP, EXPORT, IMPORT)
 - ✅ Admin status override capability
