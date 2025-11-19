@@ -83,7 +83,6 @@ export class DriverAuthService {
       where: { id: driver.currentJobId },
       include: {
         client: true,
-        route: true,
         vehicle: true,
         container: true,
       },
@@ -279,7 +278,6 @@ export class DriverAuthService {
       take: 10,
       include: {
         client: true,
-        route: true,
         earnings: {
           where: { driverId },
         },

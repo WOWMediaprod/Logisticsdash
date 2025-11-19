@@ -67,7 +67,6 @@ async function clearData() {
       prisma.driver.count(),
       prisma.vehicle.count(),
       prisma.container.count(),
-      prisma.route.count(),
     ]);
 
     console.log(`   Companies: ${counts[0]}`);
@@ -75,7 +74,6 @@ async function clearData() {
     console.log(`   Drivers: ${counts[2]}`);
     console.log(`   Vehicles: ${counts[3]}`);
     console.log(`   Containers: ${counts[4]}`);
-    console.log(`   Routes: ${counts[5]}`);
   } catch (error) {
     console.error('❌ Error clearing data:', error);
     throw error;

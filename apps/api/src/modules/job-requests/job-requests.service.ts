@@ -13,7 +13,6 @@ export class JobRequestsService {
       data: {
         companyId: createJobRequestDto.companyId,
         clientId: createJobRequestDto.clientId,
-        routeId: createJobRequestDto.routeId,
         requestedBy: createJobRequestDto.requestedBy,
         title: createJobRequestDto.title,
         description: createJobRequestDto.description,
@@ -221,7 +220,6 @@ export class JobRequestsService {
         title: updateJobRequestDto.title,
         description: updateJobRequestDto.description,
         priority: updateJobRequestDto.priority,
-        routeId: updateJobRequestDto.routeId,
 
         // Legacy fields
         requestedPickupTs: updateJobRequestDto.requestedPickupTs
@@ -357,16 +355,11 @@ export class JobRequestsService {
       throw new Error('Cannot create job: Job request must have a client assigned. Please assign a client to this request first.');
     }
 
-    if (!jobRequest.routeId) {
-      throw new Error('Cannot create job: Job request must have a route assigned. Please assign a route to this request first.');
-    }
-
-    // Create the job from the job request using the saved routeId and jobType
+    // Create the job from the job request
     const job = await this.prisma.job.create({
       data: {
         companyId,
         clientId: jobRequest.clientId!,
-        routeId: jobRequest.routeId!,
         containerId: null, // Will be assigned later
         vehicleId: null, // Will be assigned later
         driverId: null, // Will be assigned later
@@ -379,7 +372,6 @@ export class JobRequestsService {
       },
       include: {
         client: true,
-        route: true,
       },
     });
 

@@ -140,59 +140,6 @@ async function main() {
   ]);
   console.log('✅ Vehicles created:', vehicles.length);
 
-  // Create Routes
-  const routes = await Promise.all([
-    prisma.route.upsert({
-      where: { id: 'route-001' },
-      update: {},
-      create: {
-        id: 'route-001',
-        code: 'COL-KAN',
-        origin: 'Colombo',
-        destination: 'Kandy',
-        kmEstimate: 115,
-        companyId: company.id,
-      },
-    }),
-    prisma.route.upsert({
-      where: { id: 'route-002' },
-      update: {},
-      create: {
-        id: 'route-002',
-        code: 'COL-GAL',
-        origin: 'Colombo',
-        destination: 'Galle',
-        kmEstimate: 119,
-        companyId: company.id,
-      },
-    }),
-    prisma.route.upsert({
-      where: { id: 'route-003' },
-      update: {},
-      create: {
-        id: 'route-003',
-        code: 'KAN-JAF',
-        origin: 'Kandy',
-        destination: 'Jaffna',
-        kmEstimate: 285,
-        companyId: company.id,
-      },
-    }),
-    prisma.route.upsert({
-      where: { id: 'route-004' },
-      update: {},
-      create: {
-        id: 'route-004',
-        code: 'COL-TRI',
-        origin: 'Colombo',
-        destination: 'Trincomalee',
-        kmEstimate: 257,
-        companyId: company.id,
-      },
-    }),
-  ]);
-  console.log('✅ Routes created:', routes.length);
-
   // Create Jobs
   const jobs = await Promise.all([
     prisma.job.upsert({
@@ -204,7 +151,6 @@ async function main() {
         clientId: clients[0].id,
         driverId: drivers[0].id,
         vehicleId: vehicles[0].id,
-        routeId: routes[0].id,
         companyId: company.id,
       },
     }),
@@ -217,7 +163,6 @@ async function main() {
         clientId: clients[1].id,
         driverId: drivers[1].id,
         vehicleId: vehicles[1].id,
-        routeId: routes[1].id,
         companyId: company.id,
       },
     }),
@@ -230,7 +175,6 @@ async function main() {
         clientId: clients[2].id,
         driverId: drivers[2].id,
         vehicleId: vehicles[2].id,
-        routeId: routes[2].id,
         companyId: company.id,
       },
     }),
@@ -243,7 +187,6 @@ async function main() {
         clientId: clients[0].id,
         driverId: drivers[0].id,
         vehicleId: vehicles[0].id,
-        routeId: routes[3].id,
         companyId: company.id,
       },
     }),

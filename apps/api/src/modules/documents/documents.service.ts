@@ -78,7 +78,6 @@ export class DocumentsService {
               id: true,
               status: true,
               client: { select: { name: true, code: true } },
-              route: { select: { code: true, origin: true, destination: true } },
             },
           },
           creator: {
@@ -140,7 +139,6 @@ export class DocumentsService {
             id: true,
             status: true,
             client: { select: { name: true, code: true } },
-            route: { select: { code: true, origin: true, destination: true } },
           },
         },
         creator: {
@@ -176,7 +174,6 @@ export class DocumentsService {
             id: true,
             status: true,
             client: { select: { name: true, code: true } },
-            route: { select: { code: true, origin: true, destination: true } },
           },
         },
         creator: {

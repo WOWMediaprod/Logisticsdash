@@ -92,48 +92,6 @@ async function main() {
 
   console.log('✅ Clients created');
 
-  // Create demo routes
-  const routes = await Promise.all([
-    prisma.route.upsert({
-      where: { code: 'MUM-DEL' },
-      update: {},
-      create: {
-        companyId: company.id,
-        clientId: clients[0].id,
-        code: 'MUM-DEL',
-        origin: 'Mumbai Port',
-        destination: 'Delhi ICD',
-        kmEstimate: 1450,
-      },
-    }),
-    prisma.route.upsert({
-      where: { code: 'JNPT-PUN' },
-      update: {},
-      create: {
-        companyId: company.id,
-        clientId: clients[1].id,
-        code: 'JNPT-PUN',
-        origin: 'JNPT Terminal',
-        destination: 'Pune Industrial Area',
-        kmEstimate: 150,
-      },
-    }),
-    prisma.route.upsert({
-      where: { code: 'MUM-BLR' },
-      update: {},
-      create: {
-        companyId: company.id,
-        clientId: clients[2].id,
-        code: 'MUM-BLR',
-        origin: 'Mumbai Port',
-        destination: 'Bangalore ICD',
-        kmEstimate: 840,
-      },
-    }),
-  ]);
-
-  console.log('✅ Routes created');
-
   // Create demo vehicles
   const vehicles = await Promise.all([
     prisma.vehicle.upsert({
@@ -281,7 +239,6 @@ async function main() {
       data: {
         companyId: company.id,
         clientId: clients[0].id,
-        routeId: routes[0].id,
         containerId: containers[0].id,
         vehicleId: vehicles[0].id,
         driverId: drivers[0].id,
@@ -298,7 +255,6 @@ async function main() {
       data: {
         companyId: company.id,
         clientId: clients[1].id,
-        routeId: routes[1].id,
         containerId: containers[1].id,
         vehicleId: vehicles[1].id,
         driverId: drivers[1].id,
@@ -315,7 +271,6 @@ async function main() {
       data: {
         companyId: company.id,
         clientId: clients[2].id,
-        routeId: routes[2].id,
         containerId: containers[2].id,
         status: JobStatus.CREATED,
         jobType: JobType.ONE_WAY,
@@ -328,7 +283,6 @@ async function main() {
       data: {
         companyId: company.id,
         clientId: clients[0].id,
-        routeId: routes[0].id,
         vehicleId: vehicles[2].id,
         driverId: drivers[2].id,
         assignedBy: admin.id,
@@ -391,7 +345,6 @@ async function main() {
   console.log(`   • 1 Company (${company.name})`);
   console.log(`   • 2 Users (Admin & Dispatcher)`);
   console.log(`   • 3 Clients`);
-  console.log(`   • 3 Routes`);
   console.log(`   • 3 Vehicles`);
   console.log(`   • 3 Drivers`);
   console.log(`   • 3 Containers`);

@@ -50,37 +50,6 @@ async function createTestData() {
       }
     });
 
-    // Create test routes
-    const route1 = await prisma.route.upsert({
-      where: { id: 'route-test-001' },
-      update: {},
-      create: {
-        id: 'route-test-001',
-        companyId: company.id,
-        clientId: client1.id,
-        code: 'MUM-DEL-001',
-        origin: 'Mumbai Port, Mumbai',
-        destination: 'Delhi Warehouse, Delhi',
-        kmEstimate: 1450,
-        isActive: true
-      }
-    });
-
-    const route2 = await prisma.route.upsert({
-      where: { id: 'route-test-002' },
-      update: {},
-      create: {
-        id: 'route-test-002',
-        companyId: company.id,
-        clientId: client2.id,
-        code: 'PUN-BAN-001',
-        origin: 'Pune Factory, Pune',
-        destination: 'Bangalore Hub, Bangalore',
-        kmEstimate: 850,
-        isActive: true
-      }
-    });
-
     // Create test drivers
     const driver1 = await prisma.driver.upsert({
       where: { id: 'driver-test-001' },
@@ -184,7 +153,6 @@ async function createTestData() {
         id: 'job-test-001',
         companyId: company.id,
         clientId: client1.id,
-        routeId: route1.id,
         containerId: container1.id,
         vehicleId: vehicle1.id,
         driverId: driver1.id,
@@ -202,7 +170,6 @@ async function createTestData() {
         id: 'job-test-002',
         companyId: company.id,
         clientId: client2.id,
-        routeId: route2.id,
         containerId: container2.id,
         vehicleId: vehicle2.id,
         driverId: driver2.id,
@@ -210,69 +177,6 @@ async function createTestData() {
         jobType: JobType.ONE_WAY,
         priority: Priority.NORMAL,
         specialNotes: 'Scheduled pickup at 10:00 AM'
-      }
-    });
-
-    // Create route waypoints with coordinates for ETA calculations
-    // Route 1: Mumbai to Delhi waypoints
-    await prisma.routeWaypoint.upsert({
-      where: { id: 'waypoint-mum-del-pickup' },
-      update: {},
-      create: {
-        id: 'waypoint-mum-del-pickup',
-        jobId: job1.id,
-        routeId: route1.id,
-        sequence: 1,
-        name: 'Mumbai Port Pickup',
-        lat: 19.0760,
-        lng: 72.8777,
-        type: 'PICKUP'
-      }
-    });
-
-    await prisma.routeWaypoint.upsert({
-      where: { id: 'waypoint-mum-del-delivery' },
-      update: {},
-      create: {
-        id: 'waypoint-mum-del-delivery',
-        jobId: job1.id,
-        routeId: route1.id,
-        sequence: 2,
-        name: 'Delhi Warehouse Delivery',
-        lat: 28.7041,
-        lng: 77.1025,
-        type: 'DELIVERY'
-      }
-    });
-
-    // Route 2: Pune to Bangalore waypoints
-    await prisma.routeWaypoint.upsert({
-      where: { id: 'waypoint-pun-ban-pickup' },
-      update: {},
-      create: {
-        id: 'waypoint-pun-ban-pickup',
-        jobId: job2.id,
-        routeId: route2.id,
-        sequence: 1,
-        name: 'Pune Factory Pickup',
-        lat: 18.5204,
-        lng: 73.8567,
-        type: 'PICKUP'
-      }
-    });
-
-    await prisma.routeWaypoint.upsert({
-      where: { id: 'waypoint-pun-ban-delivery' },
-      update: {},
-      create: {
-        id: 'waypoint-pun-ban-delivery',
-        jobId: job2.id,
-        routeId: route2.id,
-        sequence: 2,
-        name: 'Bangalore Hub Delivery',
-        lat: 12.9716,
-        lng: 77.5946,
-        type: 'DELIVERY'
       }
     });
 
@@ -378,7 +282,6 @@ async function createTestData() {
     console.log(`📊 Created:`);
     console.log(`  - Company: ${company.name}`);
     console.log(`  - Clients: ${client1.name}, ${client2.name}`);
-    console.log(`  - Routes: ${route1.code}, ${route2.code}`);
     console.log(`  - Drivers: ${driver1.name}, ${driver2.name}`);
     console.log(`  - Vehicles: ${vehicle1.regNo}, ${vehicle2.regNo}`);
     console.log(`  - Jobs: ${job1.id} (${job1.status}), ${job2.id} (${job2.status})`);

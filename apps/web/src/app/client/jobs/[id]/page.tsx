@@ -43,12 +43,6 @@ type JobDetail = {
     name: string;
     code: string;
   };
-  route?: {
-    code: string;
-    origin: string;
-    destination: string;
-    kmEstimate: number;
-  };
   container?: {
     id: string;
     iso: string;
@@ -310,23 +304,7 @@ export default function ClientJobDetailPage() {
                 </div>
               </div>
 
-              {/* Route Information */}
-              {job.route && (
-                <div className="bg-blue-50 rounded-xl p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-blue-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900 mb-2">Route</p>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="font-medium">{job.route.origin}</span>
-                        <span>→</span>
-                        <span className="font-medium">{job.route.destination}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">{job.route.kmEstimate} km • {job.route.code}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Route Information removed - using waypoints instead */}
 
               {/* Timeline */}
               <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -379,11 +357,6 @@ export default function ClientJobDetailPage() {
                     <div className="text-center">
                       <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600">Waiting for location update...</p>
-                      {job.route && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          {job.route.origin} → {job.route.destination}
-                        </p>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -401,8 +374,7 @@ export default function ClientJobDetailPage() {
                       <Popup>
                         <div style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                           <strong>{job.vehicle?.regNo || "Vehicle"}</strong><br />
-                          Speed: {job.lastLocation.speed} km/h<br />
-                          {job.route && `Route: ${job.route.origin} → ${job.route.destination}`}
+                          Speed: {job.lastLocation.speed} km/h
                         </div>
                       </Popup>
                     </Marker>

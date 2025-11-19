@@ -9,13 +9,7 @@ async function checkJobs() {
         id: true,
         status: true,
         client: { select: { name: true } },
-        driver: { select: { name: true } },
-        route: {
-          select: {
-            origin: true,
-            destination: true
-          }
-        }
+        driver: { select: { name: true } }
       },
       take: 10
     });
@@ -26,7 +20,6 @@ async function checkJobs() {
       console.log(`   Status: ${job.status}`);
       console.log(`   Client: ${job.client?.name || 'N/A'}`);
       console.log(`   Driver: ${job.driver?.name || 'N/A'}`);
-      console.log(`   Route: ${job.route?.origin || 'N/A'} → ${job.route?.destination || 'N/A'}`);
       console.log('');
     });
 

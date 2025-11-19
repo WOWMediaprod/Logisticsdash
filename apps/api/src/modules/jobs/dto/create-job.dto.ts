@@ -12,11 +12,6 @@ export class CreateJobDto {
   @IsString()
   clientId?: string;
 
-  @ApiProperty({ description: 'Route ID', required: false })
-  @IsOptional()
-  @IsString()
-  routeId?: string;
-
   @ApiProperty({ description: 'Container ID', required: false })
   @IsOptional()
   @IsString()

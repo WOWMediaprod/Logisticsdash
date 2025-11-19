@@ -35,13 +35,6 @@ interface Job {
     name: string;
     code: string | null;
   };
-  route?: {
-    id: string;
-    code: string;
-    origin: string;
-    destination: string;
-    kmEstimate: number | null;
-  };
   vehicle?: {
     id: string;
     regNo: string;
@@ -264,12 +257,7 @@ export default function DriverDashboardPage() {
                   <div className={`w-3 h-3 rounded-full ${PRIORITY_COLORS[currentJob.priority]} ring-4 ring-white/30`} />
                 </div>
 
-                <div className="flex items-center gap-2 text-white mb-2">
-                  <MapPin className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">{currentJob.route?.origin || 'N/A'}</span>
-                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">{currentJob.route?.destination || 'N/A'}</span>
-                </div>
+                {/* Route display removed - using waypoints instead */}
 
                 {currentJob.waypoints && currentJob.waypoints.length > 0 && (
                   <div className="flex items-center gap-2 text-white/90 text-sm">
@@ -359,10 +347,7 @@ export default function DriverDashboardPage() {
                           <span className="font-semibold text-gray-900">{job.client?.name || 'Unknown Client'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate">{job.route?.origin || 'N/A'}</span>
-                          <ArrowRight className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{job.route?.destination || 'N/A'}</span>
+                          <span className="truncate">Job ID: {job.id.substring(0, 8)}</span>
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-md text-xs font-semibold border ${STATUS_COLORS[job.status]}`}>

@@ -56,7 +56,6 @@ export class TrackingController {
               jobId: { type: 'string' },
               status: { type: 'string' },
               client: { type: 'object' },
-              route: { type: 'object' },
               driver: { type: 'object' },
               vehicle: { type: 'object' },
               lastLocation: {

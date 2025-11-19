@@ -40,7 +40,6 @@ interface JobRequest {
   id: string;
   companyId: string;
   clientId: string;
-  routeId?: string;
   requestedBy?: string;
   title: string;
   description?: string;
@@ -589,7 +588,7 @@ function RequestCard({
         <div className="flex items-start space-x-2">
           <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-gray-900">Route</p>
+            <p className="font-medium text-gray-900">Trip Path</p>
             <p className="text-gray-600 truncate">
               {request.pickupAddress?.split(',')[0] || 'Not specified'} → {request.deliveryAddress?.split(',')[0] || 'Not specified'}
             </p>
@@ -649,7 +648,6 @@ function RequestDetailView({
   const [vehicles, setVehicles] = useState<Array<{id: string; label: string}>>([]);
   const [drivers, setDrivers] = useState<Array<{id: string; label: string}>>([]);
   const [containers, setContainers] = useState<Array<{id: string; label: string}>>([]);
-  const [routes, setRoutes] = useState<Array<{id: string; label: string}>>([]);
   const [assignmentData, setAssignmentData] = useState({
     vehicleId: '',
     driverId: '',
@@ -724,13 +722,13 @@ function RequestDetailView({
     setAcceptanceDetails(details);
 
     try {
-      // First, update the job request with the route and additional details
+      // First, update the job request with additional details
       const updateResponse = await fetch(getApiUrl(`/api/v1/job-requests/${request.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId,
-          ...details // includes routeId from the form
+          ...details
         })
       });
 
@@ -819,23 +817,21 @@ function RequestDetailView({
     }
   };
 
-  // Load assignment options (drivers, vehicles, containers, routes)
+  // Load assignment options (drivers, vehicles, containers)
   const loadAssignmentOptions = async () => {
     if (!companyId) return;
 
     try {
-      const [vehiclesRes, driversRes, containersRes, routesRes] = await Promise.all([
+      const [vehiclesRes, driversRes, containersRes] = await Promise.all([
         fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
-        fetch(getApiUrl(`/api/v1/routes?companyId=${companyId}${request.clientId ? `&clientId=${request.clientId}` : ''}`)),
       ]);
 
-      const [vehiclesData, driversData, containersData, routesData] = await Promise.all([
+      const [vehiclesData, driversData, containersData] = await Promise.all([
         vehiclesRes.json(),
         driversRes.json(),
         containersRes.json(),
-        routesRes.json(),
       ]);
 
       if (vehiclesData.success) {
@@ -861,15 +857,6 @@ function RequestDetailView({
           containersData.data.map((item: any) => ({
             id: item.id,
             label: `${item.iso} - ${item.size} (${item.owner})${item.checkOk ? "" : " [check pending]"}`,
-          }))
-        );
-      }
-
-      if (routesData.success) {
-        setRoutes(
-          routesData.data.map((item: any) => ({
-            id: item.id,
-            label: `${item.origin} → ${item.destination} (${item.distance}km)`,
           }))
         );
       }
@@ -1055,9 +1042,9 @@ function RequestDetailView({
               )}
             </div>
 
-            {/* Route Information */}
+            {/* Trip Locations */}
             <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Route Information</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Trip Locations</h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
@@ -1122,7 +1109,7 @@ function RequestDetailView({
                       />
                     </div>
                     <p className="text-xs text-gray-500">
-                      Preparing trip details, route information, and documents...
+                      Preparing trip details, location information, and documents...
                     </p>
                   </div>
                 )}

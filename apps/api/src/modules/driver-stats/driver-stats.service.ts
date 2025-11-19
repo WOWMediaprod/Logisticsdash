@@ -13,7 +13,6 @@ export class DriverStatsService {
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
       include: {
-        route: true,
         vehicle: true,
       },
     });
@@ -32,7 +31,7 @@ export class DriverStatsService {
       where: { driverId },
     });
 
-    const distance = trackingState ? Number(trackingState.totalDistance) : (job.route?.kmEstimate || 0);
+    const distance = trackingState ? Number(trackingState.totalDistance) : 0;
     const baseAmount = distance * BASE_RATE_PER_KM;
 
     // Calculate bonuses
@@ -258,7 +257,6 @@ export class DriverStatsService {
         job: {
           include: {
             client: true,
-            route: true,
           },
         },
       },
@@ -269,7 +267,7 @@ export class DriverStatsService {
       jobId: earning.jobId,
       job: {
         client: earning.job.client?.name,
-        route: earning.job.route ? `${earning.job.route.origin} → ${earning.job.route.destination}` : null,
+        route: null,
         status: earning.job.status,
       },
       amount: Number(earning.totalAmount),

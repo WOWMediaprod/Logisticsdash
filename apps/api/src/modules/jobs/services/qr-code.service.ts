@@ -17,7 +17,6 @@ export class QrCodeService {
       const tripPackData = {
         jobId: jobData.id,
         client: jobData.client?.name || 'N/A',
-        route: jobData.route ? `${jobData.route.origin} → ${jobData.route.destination}` : 'N/A',
         container: jobData.container?.iso || 'N/A',
         driver: jobData.driver?.name || 'Unassigned',
         vehicle: jobData.vehicle?.regNo || 'Unassigned',

@@ -138,9 +138,6 @@ export class DriversService {
         client: {
           select: { id: true, name: true, code: true },
         },
-        route: {
-          select: { id: true, code: true, origin: true, destination: true, kmEstimate: true },
-        },
         vehicle: {
           select: { id: true, regNo: true, class: true },
         },

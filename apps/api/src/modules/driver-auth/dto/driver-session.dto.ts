@@ -52,9 +52,6 @@ export class JobSummaryDto {
   client: any;
 
   @ApiProperty()
-  route: any;
-
-  @ApiProperty()
   vehicle: any;
 
   @ApiProperty()

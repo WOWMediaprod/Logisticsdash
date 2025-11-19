@@ -21,11 +21,6 @@ export class CreateJobRequestDto {
   @IsString()
   clientId?: string;
 
-  @ApiProperty({ description: 'Route ID', required: false })
-  @IsOptional()
-  @IsString()
-  routeId?: string;
-
   @ApiProperty({ description: 'User who requested this', required: false })
   @IsOptional()
   @IsString()

@@ -24,7 +24,6 @@ model Company {
   jobRequests    JobRequest[]
   jobs           Job[]
   notifications  Notification[]
-  routes         Route[]
   users          User[]
   vehicles       Vehicle[]
   sessions       DriverSession[]
@@ -155,36 +154,11 @@ model Client {
   jobRequests JobRequest[]
   jobs        Job[]
   rateCards   RateCard[]
-  routes      Route[]
 
   @@unique([companyId, code])
   @@index([companyId])
   @@index([isActive])
   @@map("clients")
-}
-
-model Route {
-  id             String          @id @default(cuid())
-  companyId      String
-  clientId       String?
-  code           String          @unique
-  origin         String
-  destination    String
-  kmEstimate     Int?
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  jobs           Job[]
-  jobRequests    JobRequest[]
-  rateCards      RateCard[]
-  routeWaypoints RouteWaypoint[]
-  client         Client?         @relation(fields: [clientId], references: [id])
-  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@index([companyId])
-  @@index([clientId])
-  @@index([isActive])
-  @@map("routes")
 }
 
 model Container {
@@ -210,7 +184,6 @@ model Job {
   id              String             @id @default(cuid())
   companyId       String
   clientId        String?
-  routeId         String?
   containerId     String?
   vehicleId       String?
   driverId        String?
@@ -242,12 +215,10 @@ model Job {
   company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   container       Container?         @relation(fields: [containerId], references: [id])
   driver          Driver?            @relation(fields: [driverId], references: [id])
-  route           Route?             @relation(fields: [routeId], references: [id])
   vehicle         Vehicle?           @relation(fields: [vehicleId], references: [id])
   locationTracks  LocationTracking[]
   notifications   Notification[]
   pod             POD?
-  routeWaypoints  RouteWaypoint[]
   statusEvents    StatusEvent[]
   tripPack        TripPack?
   waypoints       Waypoint[]
@@ -358,28 +329,6 @@ model GeofenceEvent {
   @@index([jobId, timestamp])
   @@index([driverId, timestamp])
   @@map("geofence_events")
-}
-
-model RouteWaypoint {
-  id               String    @id @default(cuid())
-  jobId            String
-  routeId          String
-  sequence         Int
-  name             String
-  lat              Decimal   @db.Decimal(10, 8)
-  lng              Decimal   @db.Decimal(11, 8)
-  type             String    @default("CHECKPOINT")
-  estimatedArrival DateTime?
-  actualArrival    DateTime?
-  isCompleted      Boolean   @default(false)
-  metadata         Json?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  job              Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  route            Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
-
-  @@index([jobId, sequence])
-  @@map("route_waypoints")
 }
 
 model ETACalculation {
@@ -511,7 +460,6 @@ model RateCard {
   id            String   @id @default(cuid())
   companyId     String
   clientId      String?
-  routeId       String?
   containerSize String
   ratePerTrip   Decimal  @db.Decimal(12, 2)
   fuelSurcharge Decimal? @db.Decimal(12, 2)
@@ -523,11 +471,9 @@ model RateCard {
   updatedAt     DateTime @updatedAt
   client        Client?  @relation(fields: [clientId], references: [id])
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  route         Route?   @relation(fields: [routeId], references: [id])
 
   @@index([companyId])
   @@index([clientId])
-  @@index([routeId])
   @@index([containerSize])
   @@index([isActive])
   @@map("rate_cards")
@@ -648,7 +594,6 @@ model JobRequest {
   id                        String               @id @default(cuid())
   companyId                 String
   clientId                  String?
-  routeId                   String?
   requestedBy               String?
   title                     String
   description               String?
@@ -725,14 +670,12 @@ model JobRequest {
   client                    Client?              @relation(fields: [clientId], references: [id])
   company                   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   convertedToJob            Job?                 @relation(fields: [convertedToJobId], references: [id])
-  route                     Route?               @relation(fields: [routeId], references: [id])
   documents                 JobRequestDocument[]
   updates                   JobRequestUpdate[]
   attachedDocuments         Document[]
 
   @@index([companyId])
   @@index([clientId])
-  @@index([routeId])
   @@index([status])
   @@index([createdAt])
   @@index([requestedPickupTs])

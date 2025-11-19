@@ -14,13 +14,6 @@ type RelatedEntity = {
   code?: string;
 };
 
-type RouteInfo = {
-  code: string;
-  origin: string;
-  destination: string;
-  kmEstimate: number;
-};
-
 type VehicleInfo = {
   id: string;
   regNo: string;
@@ -77,9 +70,7 @@ type JobDetail = {
   dropTs?: string;
   createdAt: string;
   updatedAt: string;
-  routeId?: string;
   client?: RelatedEntity;
-  route?: RouteInfo;
   container?: ContainerInfo;
   driver?: DriverInfo;
   vehicle?: VehicleInfo;
@@ -450,12 +441,6 @@ export default function JobDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Route</p>
-                  <p className="font-semibold text-gray-900">
-                    {job.route ? `${job.route.origin} -> ${job.route.destination}` : "Not assigned"}
-                  </p>
-                </div>
-                <div>
                   <p className="text-gray-500">Container</p>
                   <p className="font-semibold text-gray-900">{job.container?.iso || "Not assigned"}</p>
                 </div>
@@ -525,11 +510,9 @@ export default function JobDetailPage() {
               </div>
             </motion.div>
 
-            {job.routeId && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
-                <WaypointManagement jobId={job.id} routeId={job.routeId} />
-              </motion.div>
-            )}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
+              <WaypointManagement jobId={job.id} />
+            </motion.div>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl space-y-6">
@@ -736,9 +719,6 @@ export default function JobDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                       <h4 className="font-semibold text-blue-900 mb-2">Trip Details to be Sent:</h4>
                       <div className="text-sm text-blue-800 space-y-1">
-                        {job.route && (
-                          <p>• Route: {job.route.origin} → {job.route.destination} ({job.route.kmEstimate} km)</p>
-                        )}
                         {job.pickupTs && <p>• Pickup: {formatDateTime(job.pickupTs)}</p>}
                         {job.etaTs && <p>• ETA: {formatDateTime(job.etaTs)}</p>}
                         {job.container && <p>• Container: {job.container.iso}</p>}
@@ -847,9 +827,6 @@ export default function JobDetailPage() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-semibold text-blue-900 mb-2">Trip Details to be Sent:</h4>
                   <div className="text-sm text-blue-800 space-y-1">
-                    {job.route && (
-                      <p>• Route: {job.route.origin} → {job.route.destination} ({job.route.kmEstimate} km)</p>
-                    )}
                     {job.pickupTs && <p>• Pickup: {formatDateTime(job.pickupTs)}</p>}
                     {job.etaTs && <p>• ETA: {formatDateTime(job.etaTs)}</p>}
                     {job.container && <p>• Container: {job.container.iso}</p>}

@@ -6,7 +6,6 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ClientsModule } from './modules/clients/clients.module';
-import { RoutesModule } from './modules/routes/routes.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { ContainersModule } from './modules/containers/containers.module';
@@ -42,7 +41,6 @@ import { CompaniesModule } from './modules/companies/companies.module';
     JobsModule,
     JobRequestsModule,
     ClientsModule,
-    RoutesModule,
     VehiclesModule,
     DriversModule,
     ContainersModule,

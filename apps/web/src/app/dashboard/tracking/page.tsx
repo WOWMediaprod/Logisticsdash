@@ -33,11 +33,6 @@ type TrackingJob = {
     name: string;
     code: string;
   };
-  route: {
-    origin: string;
-    destination: string;
-    kmEstimate: number;
-  };
   driver: {
     name: string;
     phone: string;
@@ -428,7 +423,7 @@ export default function TrackingPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-500">{job.client.name}</p>
-                        <p className="text-base font-semibold text-gray-900">{job.route.origin} → {job.route.destination}</p>
+                        <p className="text-base font-semibold text-gray-900">Job {job.jobId.substring(0, 8)}</p>
                       </div>
                       <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-900 text-white">
                         {job.status.replace(/_/g, " ")}

@@ -49,7 +49,6 @@ export class BillsService {
         job: {
           include: {
             client: true,
-            route: true,
             driver: true,
             vehicle: true,
           },
@@ -84,7 +83,6 @@ export class BillsService {
           job: {
             include: {
               client: { select: { name: true, code: true } },
-              route: { select: { code: true, origin: true, destination: true } },
               driver: { select: { name: true, phone: true } },
               vehicle: { select: { regNo: true, class: true } },
             },
@@ -113,7 +111,6 @@ export class BillsService {
         job: {
           include: {
             client: true,
-            route: true,
             driver: true,
             vehicle: true,
             waypoints: true,
@@ -159,7 +156,6 @@ export class BillsService {
         job: {
           include: {
             client: true,
-            route: true,
             driver: true,
             vehicle: true,
           },
@@ -184,7 +180,6 @@ export class BillsService {
         job: {
           include: {
             client: true,
-            route: true,
             driver: true,
             vehicle: true,
           },
@@ -208,7 +203,6 @@ export class BillsService {
         job: {
           include: {
             client: true,
-            route: true,
             driver: true,
             vehicle: true,
           },

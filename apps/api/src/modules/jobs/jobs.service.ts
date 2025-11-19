@@ -10,15 +10,14 @@ export class JobsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createJobDto: CreateJobDto) {
-    const { companyId, clientId, routeId, containerId, specialNotes, jobType } = createJobDto;
+    const { companyId, clientId, containerId, specialNotes, jobType } = createJobDto;
 
-    await this.verifyRelatedEntities(companyId, { clientId, routeId, containerId });
+    await this.verifyRelatedEntities(companyId, { clientId, containerId });
 
     const job = await this.prisma.job.create({
       data: {
         companyId,
         clientId,
-        routeId,
         containerId,
         specialNotes,
         jobType: jobType || 'ONE_WAY',
@@ -141,7 +140,6 @@ export class JobsService {
       take: 5,
       include: {
         client: true,
-        route: true,
         container: true,
         driver: true,
       },
@@ -289,18 +287,11 @@ export class JobsService {
     return { success: true, message: "Job deleted successfully" };
   }
 
-  private async verifyRelatedEntities(companyId: string, ids: { clientId?: string | null; routeId?: string | null; containerId?: string | null }) {
+  private async verifyRelatedEntities(companyId: string, ids: { clientId?: string | null; containerId?: string | null }) {
     if (ids.clientId) {
       const client = await this.prisma.client.findFirst({ where: { id: ids.clientId, companyId } });
       if (!client) {
         throw new BadRequestException("Client not found or does not belong to your company");
-      }
-    }
-
-    if (ids.routeId) {
-      const route = await this.prisma.route.findFirst({ where: { id: ids.routeId, companyId } });
-      if (!route) {
-        throw new BadRequestException("Route not found or does not belong to your company");
       }
     }
 
@@ -323,7 +314,6 @@ export class JobsService {
   private defaultJobInclude() {
     return {
       client: true,
-      route: true,
       container: true,
       vehicle: true,
       driver: true,

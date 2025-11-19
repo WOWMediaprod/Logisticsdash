@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCompany } from '../../../contexts/CompanyContext';
-import { Plus, Edit, Trash2, Truck, User, Box, Route as RouteIcon, Building2, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, User, Box, Building2, ArrowLeft } from 'lucide-react';
 import { getApiUrl } from '../../../lib/api-config';
 import { getCompanies, addCompany, updateCompany, deleteCompany, type BillingCompany } from '../../../lib/companies-storage';
 
-type TabType = 'containers' | 'vehicles' | 'drivers' | 'routes' | 'clients' | 'companies';
+type TabType = 'containers' | 'vehicles' | 'drivers' | 'clients' | 'companies';
 
 // Helper to get singular form of tab name
 const getSingularName = (tab: TabType): string => {
@@ -42,16 +42,6 @@ interface Driver {
   isActive: boolean;
 }
 
-interface Route {
-  id: string;
-  code: string;
-  origin: string;
-  destination: string;
-  kmEstimate: number | null;
-  isActive: boolean;
-  client?: { name: string; code: string } | null;
-}
-
 interface Client {
   id: string;
   name: string;
@@ -69,7 +59,6 @@ export default function ResourcesPage() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [companies, setCompanies] = useState<BillingCompany[]>([]);
 
@@ -111,9 +100,6 @@ export default function ResourcesPage() {
         case 'drivers':
           endpoint = `/api/v1/drivers?companyId=${companyId}`;
           break;
-        case 'routes':
-          endpoint = `/api/v1/routes?companyId=${companyId}`;
-          break;
         case 'clients':
           endpoint = `/api/v1/clients?companyId=${companyId}`;
           break;
@@ -132,9 +118,6 @@ export default function ResourcesPage() {
             break;
           case 'drivers':
             setDrivers(result.data);
-            break;
-          case 'routes':
-            setRoutes(result.data);
             break;
           case 'clients':
             setClients(result.data);
@@ -199,7 +182,6 @@ export default function ResourcesPage() {
     { id: 'containers' as TabType, label: 'Containers', icon: Box },
     { id: 'vehicles' as TabType, label: 'Vehicles', icon: Truck },
     { id: 'drivers' as TabType, label: 'Drivers', icon: User },
-    { id: 'routes' as TabType, label: 'Routes', icon: RouteIcon },
     { id: 'clients' as TabType, label: 'Clients', icon: Building2 },
     { id: 'companies' as TabType, label: 'Companies', icon: Building2 },
   ];
@@ -217,7 +199,7 @@ export default function ResourcesPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Resource Management</h1>
-          <p className="text-gray-600">Manage your containers, vehicles, drivers, routes, clients, and companies</p>
+          <p className="text-gray-600">Manage your containers, vehicles, drivers, clients, and companies</p>
         </div>
         <button
           onClick={handleAdd}
@@ -277,13 +259,6 @@ export default function ResourcesPage() {
             {activeTab === 'drivers' && (
               <DriversTable
                 drivers={drivers}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            )}
-            {activeTab === 'routes' && (
-              <RoutesTable
-                routes={routes}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
@@ -500,66 +475,6 @@ function DriversTable({
   );
 }
 
-function RoutesTable({
-  routes,
-  onEdit,
-  onDelete,
-}: {
-  routes: Route[];
-  onEdit: (item: Route) => void;
-  onDelete: (id: string) => void;
-}) {
-  if (routes.length === 0) {
-    return <div className="text-center py-8 text-gray-500">No routes found. Click "Add route" to create one.</div>;
-  }
-
-  return (
-    <table className="w-full">
-      <thead>
-        <tr className="border-b border-gray-200">
-          <th className="text-left py-3 px-4">Code</th>
-          <th className="text-left py-3 px-4">Origin</th>
-          <th className="text-left py-3 px-4">Destination</th>
-          <th className="text-left py-3 px-4">Distance (km)</th>
-          <th className="text-left py-3 px-4">Client</th>
-          <th className="text-left py-3 px-4">Status</th>
-          <th className="text-right py-3 px-4">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {routes.map((route) => (
-          <tr key={route.id} className="border-b border-gray-100 hover:bg-gray-50">
-            <td className="py-3 px-4 font-medium">{route.code}</td>
-            <td className="py-3 px-4">{route.origin}</td>
-            <td className="py-3 px-4">{route.destination}</td>
-            <td className="py-3 px-4">{route.kmEstimate || '-'}</td>
-            <td className="py-3 px-4">{route.client ? `${route.client.name} (${route.client.code})` : 'General'}</td>
-            <td className="py-3 px-4">
-              <span className={`px-2 py-1 rounded-full text-xs ${route.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                {route.isActive ? 'Active' : 'Inactive'}
-              </span>
-            </td>
-            <td className="py-3 px-4 text-right">
-              <button
-                onClick={() => onEdit(route)}
-                className="text-blue-600 hover:text-blue-800 mr-3"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => onDelete(route.id)}
-                className="text-red-600 hover:text-red-800"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 function ClientsTable({
   clients,
   onEdit,
@@ -716,7 +631,6 @@ function ResourceModal({
           {type === 'containers' && <ContainerForm formData={formData} setFormData={setFormData} />}
           {type === 'vehicles' && <VehicleForm formData={formData} setFormData={setFormData} />}
           {type === 'drivers' && <DriverForm formData={formData} setFormData={setFormData} />}
-          {type === 'routes' && <RouteForm formData={formData} setFormData={setFormData} companyId={companyId} />}
           {type === 'companies' && <CompanyForm formData={formData} setFormData={setFormData} />}
 
           {error && (
@@ -967,95 +881,6 @@ function DriverForm({ formData, setFormData }: { formData: any; setFormData: (da
             placeholder="e.g., driver@example.com"
           />
         </div>
-      </div>
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          checked={formData.isActive !== false}
-          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-          className="mr-2"
-        />
-        <label className="text-sm font-medium text-gray-700">Active</label>
-      </div>
-    </>
-  );
-}
-
-function RouteForm({ formData, setFormData, companyId }: { formData: any; setFormData: (data: any) => void; companyId: string }) {
-  const [clients, setClients] = useState<Client[]>([]);
-
-  useEffect(() => {
-    if (!companyId) return;
-    fetch(getApiUrl(`/api/v1/clients?companyId=${companyId}`))
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setClients(data.data);
-      })
-      .catch(err => console.error('Failed to load clients:', err));
-  }, [companyId]);
-
-  return (
-    <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Route Code *</label>
-        <input
-          type="text"
-          value={formData.code || ''}
-          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          required
-          placeholder="e.g., MUM-DEL-001"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Origin *</label>
-          <input
-            type="text"
-            value={formData.origin || ''}
-            onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-            placeholder="e.g., Mumbai Port"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Destination *</label>
-          <input
-            type="text"
-            value={formData.destination || ''}
-            onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-            placeholder="e.g., Delhi ICD"
-          />
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Distance (km)</label>
-        <input
-          type="number"
-          value={formData.kmEstimate || ''}
-          onChange={(e) => setFormData({ ...formData, kmEstimate: parseInt(e.target.value) || null })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          placeholder="e.g., 1450"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Client (optional)</label>
-        <select
-          value={formData.clientId || ''}
-          onChange={(e) => setFormData({ ...formData, clientId: e.target.value || null })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">General Route (All clients)</option>
-          {clients.map(client => (
-            <option key={client.id} value={client.id}>
-              {client.name} ({client.code})
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-gray-500">Leave empty for a general route available to all clients</p>
       </div>
       <div className="flex items-center">
         <input

@@ -13,15 +13,6 @@ interface Client {
   code: string;
 }
 
-interface Route {
-  id: string;
-  code: string;
-  origin: string;
-  destination: string;
-  kmEstimate: number;
-  clientId: string;
-}
-
 interface Vehicle {
   id: string;
   regNo: string;
@@ -47,7 +38,6 @@ interface Container {
 
 interface CreateJobData {
   clientId: string;
-  routeId: string;
   containerId?: string;
   vehicleId?: string;
   driverId?: string;
@@ -67,14 +57,12 @@ export default function CreateJobPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
 
   const [formData, setFormData] = useState<CreateJobData>({
     clientId: '',
-    routeId: '',
     jobType: 'ONE_WAY',
     priority: 'NORMAL',
   });
@@ -93,9 +81,8 @@ export default function CreateJobPage() {
 
       try {
         const query = `companyId=${companyId}`;
-        const [clientsRes, routesRes, vehiclesRes, driversRes, containersRes] = await Promise.all([
+        const [clientsRes, vehiclesRes, driversRes, containersRes] = await Promise.all([
           fetch(getApiUrl(`/api/v1/clients?${query}`)),
-          fetch(getApiUrl(`/api/v1/routes?${query}`)),
           fetch(getApiUrl(`/api/v1/vehicles?${query}`)),
           fetch(getApiUrl(`/api/v1/drivers?${query}`)),
           fetch(getApiUrl(`/api/v1/containers?${query}`)),
@@ -105,16 +92,14 @@ export default function CreateJobPage() {
           return;
         }
 
-        const [clientsJson, routesJson, vehiclesJson, driversJson, containersJson] = await Promise.all([
+        const [clientsJson, vehiclesJson, driversJson, containersJson] = await Promise.all([
           clientsRes.json(),
-          routesRes.json(),
           vehiclesRes.json(),
           driversRes.json(),
           containersRes.json(),
         ]);
 
         setClients(clientsJson.success ? clientsJson.data : []);
-        setRoutes(routesJson.success ? routesJson.data : []);
         setVehicles(vehiclesJson.success ? vehiclesJson.data : []);
         setDrivers(driversJson.success ? driversJson.data : []);
         setContainers(containersJson.success ? containersJson.data : []);
@@ -123,7 +108,6 @@ export default function CreateJobPage() {
         if (!cancelled) {
           setError('Unable to load reference data. Please retry.');
           setClients([]);
-          setRoutes([]);
           setVehicles([]);
           setDrivers([]);
           setContainers([]);
@@ -142,24 +126,6 @@ export default function CreateJobPage() {
     };
   }, [companyId]);
 
-  const filteredRoutes = useMemo(() => {
-    if (!formData.clientId) {
-      return [];
-    }
-    return routes.filter((route) => route.clientId === formData.clientId);
-  }, [formData.clientId, routes]);
-
-  useEffect(() => {
-    if (!formData.clientId) {
-      setFormData((prev) => ({ ...prev, routeId: '' }));
-      return;
-    }
-
-    if (formData.routeId && !filteredRoutes.some((route) => route.id === formData.routeId)) {
-      setFormData((prev) => ({ ...prev, routeId: '' }));
-    }
-  }, [formData.clientId, formData.routeId, filteredRoutes]);
-
   const updateFormData = (field: keyof CreateJobData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -167,8 +133,8 @@ export default function CreateJobPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!companyId || !formData.clientId || !formData.routeId) {
-      setError('Client and route are required.');
+    if (!companyId || !formData.clientId) {
+      setError('Client is required.');
       return;
     }
 
@@ -266,24 +232,6 @@ export default function CreateJobPage() {
                     {clients.map((client) => (
                       <option key={client.id} value={client.id}>
                         {client.name} {client.code ? `(${client.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Route</label>
-                  <select
-                    value={formData.routeId}
-                    onChange={(event) => updateFormData('routeId', event.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={filteredRoutes.length === 0}
-                  >
-                    <option value="">Select route</option>
-                    {filteredRoutes.map((route) => (
-                      <option key={route.id} value={route.id}>
-                        {route.code} - {route.origin}{' -> '}{route.destination}
                       </option>
                     ))}
                   </select>
@@ -422,11 +370,11 @@ export default function CreateJobPage() {
               </Link>
               <motion.button
                 type="submit"
-                disabled={submitting || !formData.clientId || !formData.routeId}
+                disabled={submitting || !formData.clientId}
                 whileHover={{ scale: submitting ? 1 : 1.02 }}
                 whileTap={{ scale: submitting ? 1 : 0.98 }}
                 className={`px-8 py-3 rounded-xl font-semibold transition-all ${
-                  submitting || !formData.clientId || !formData.routeId
+                  submitting || !formData.clientId
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
                 }`}

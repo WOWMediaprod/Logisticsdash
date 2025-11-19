@@ -101,7 +101,7 @@ export class TrackingService {
       // Calculate ETA updates
       if (this.etaService) {
         // Get the delivery waypoint for destination coordinates
-        const deliveryWaypoint = await this.prisma.routeWaypoint.findFirst({
+        const deliveryWaypoint = await this.prisma.waypoint.findFirst({
           where: {
             jobId: locationData.jobId,
             type: 'DELIVERY'
@@ -191,7 +191,6 @@ export class TrackingService {
           job: {
             include: {
               client: { select: { name: true, code: true } },
-              route: { select: { origin: true, destination: true } },
               driver: { select: { name: true, phone: true } },
               vehicle: { select: { regNo: true, make: true, model: true } }
             }
@@ -242,7 +241,6 @@ export class TrackingService {
         },
         include: {
           client: { select: { name: true, code: true } },
-          route: { select: { origin: true, destination: true, kmEstimate: true } },
           driver: { select: { name: true, phone: true, isOnline: true } },
           vehicle: { select: { regNo: true, make: true, model: true } },
           locationTracks: {
@@ -264,7 +262,6 @@ export class TrackingService {
             jobId: job.id,
             status: job.status,
             client: job.client,
-            route: job.route,
             driver: job.driver,
             vehicle: job.vehicle,
             lastLocation: lastLocation ? {

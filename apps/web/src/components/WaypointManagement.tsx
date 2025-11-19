@@ -32,7 +32,6 @@ type WaypointType =
 interface Waypoint {
   id: string;
   jobId: string;
-  routeId: string;
   name: string;
   type: WaypointType;
   lat: number;
@@ -51,7 +50,6 @@ interface Waypoint {
 
 interface WaypointManagementProps {
   jobId: string;
-  routeId: string;
 }
 
 const waypointTypeConfig: Record<WaypointType, { label: string; icon: React.ReactNode; color: string }> = {
@@ -64,7 +62,7 @@ const waypointTypeConfig: Record<WaypointType, { label: string; icon: React.Reac
   RETURN: { label: 'Return/Empty Return', icon: <Navigation className="w-4 h-4" />, color: 'bg-gray-50 text-gray-700 border-gray-200' },
 };
 
-export default function WaypointManagement({ jobId, routeId }: WaypointManagementProps) {
+export default function WaypointManagement({ jobId }: WaypointManagementProps) {
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -215,7 +213,6 @@ export default function WaypointManagement({ jobId, routeId }: WaypointManagemen
         {showAddModal && (
           <WaypointModal
             jobId={jobId}
-            routeId={routeId}
             waypoint={editingWaypoint}
             onClose={() => {
               setShowAddModal(false);
@@ -236,14 +233,13 @@ export default function WaypointManagement({ jobId, routeId }: WaypointManagemen
 
 interface WaypointModalProps {
   jobId: string;
-  routeId: string;
   waypoint: Waypoint | null;
   onClose: () => void;
   onSuccess: () => void;
   nextSequence: number;
 }
 
-function WaypointModal({ jobId, routeId, waypoint, onClose, onSuccess, nextSequence }: WaypointModalProps) {
+function WaypointModal({ jobId, waypoint, onClose, onSuccess, nextSequence }: WaypointModalProps) {
   const [formData, setFormData] = useState({
     name: waypoint?.name || '',
     type: (waypoint?.type || 'CHECKPOINT') as WaypointType,
@@ -270,7 +266,6 @@ function WaypointModal({ jobId, routeId, waypoint, onClose, onSuccess, nextSeque
     try {
       const payload = {
         jobId,
-        routeId,
         name: formData.name,
         type: formData.type,
         address: formData.address,

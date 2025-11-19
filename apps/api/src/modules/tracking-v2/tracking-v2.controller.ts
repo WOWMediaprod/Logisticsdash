@@ -102,10 +102,6 @@ export class TrackingV2Controller {
       job: {
         id: tracking.job.id,
         status: tracking.job.status,
-        route: {
-          origin: tracking.job.route?.origin,
-          destination: tracking.job.route?.destination,
-        },
       },
       currentLocation: tracking.currentLocation,
       eta: null, // Calculate if needed

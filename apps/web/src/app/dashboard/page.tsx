@@ -30,12 +30,6 @@ interface Job {
     name: string;
     code: string;
   };
-  route?: {
-    code: string;
-    origin: string;
-    destination: string;
-    kmEstimate: number;
-  };
   container?: {
     iso: string;
     size: string;
@@ -362,14 +356,9 @@ export default function DashboardPage() {
                     {job.client?.name || "No client"}
                     {job.client?.code && <span className="text-sm font-normal text-gray-500 ml-2">({job.client.code})</span>}
                   </h3>
-                  {job.route && (
-                    <div className="flex items-center text-gray-600 text-sm space-x-2">
-                      <span className="font-medium">{job.route.origin}</span>
-                      <span>→</span>
-                      <span className="font-medium">{job.route.destination}</span>
-                      <span className="text-gray-400">({job.route.kmEstimate} km)</span>
-                    </div>
-                  )}
+                  <div className="flex items-center text-gray-600 text-sm space-x-2">
+                    <span className="font-medium">Job ID: {job.id.substring(0, 8)}</span>
+                  </div>
                 </div>
 
                 {job.container && (

@@ -76,10 +76,6 @@ interface Job {
     id: string;
     name: string;
   };
-  route?: {
-    origin: string;
-    destination: string;
-  };
   vehicle?: {
     regNo: string;
   };
@@ -336,10 +332,7 @@ export default function DriverJobDetailPage() {
                 <User className="w-5 h-5 text-blue-600" />
                 <h2 className="text-xl font-bold text-gray-900">{job.client?.name || 'Unknown Client'}</h2>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm">{job.route?.origin || 'N/A'} → {job.route?.destination || 'N/A'}</span>
-              </div>
+              {/* Route information removed - using waypoints instead */}
             </div>
             <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
               {job.status.replace(/_/g, ' ')}

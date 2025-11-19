@@ -27,7 +27,6 @@ export class TrackingV2Service {
         },
         include: {
           client: true,
-          route: true,
           vehicle: true,
         },
       });
@@ -158,9 +157,7 @@ export class TrackingV2Service {
 
     // Calculate ETA if job has destination
     let eta = null;
-    if (job?.route) {
-      eta = this.calculateSimpleETA(lat, lng, job.route.destination, speed);
-    }
+    // ETA calculation removed - route model no longer exists
 
     // Get driver info
     const driver = await this.prisma.driver.findUnique({
@@ -332,7 +329,6 @@ export class TrackingV2Service {
           },
           include: {
             client: true,
-            route: true,
             vehicle: true,
           },
         },
@@ -406,7 +402,6 @@ export class TrackingV2Service {
           },
         },
         client: true,
-        route: true,
         vehicle: true,
         locationTracks: {
           orderBy: { timestamp: 'desc' },
@@ -427,7 +422,6 @@ export class TrackingV2Service {
         id: job.id,
         status: job.status,
         client: job.client,
-        route: job.route,
         vehicle: job.vehicle,
       },
       driver: job.driver
