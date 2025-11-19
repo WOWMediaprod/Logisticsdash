@@ -656,6 +656,7 @@ export default function AcceptanceDetailsForm({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   disabled={isProcessing}
                 >
+                  <option value="0">0 Hours</option>
                   <option value="12">12 Hours</option>
                   <option value="24">24 Hours</option>
                 </select>
