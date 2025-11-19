@@ -345,6 +345,10 @@ export class TrackingV2Gateway implements OnGatewayInit, OnGatewayConnection, On
     }
   }
 
+  broadcastToClient(clientId: string, event: string, data: any) {
+    this.server.to(`client:${clientId}`).emit(event, data);
+  }
+
   /**
    * Broadcast job amendment to all relevant parties
    */
