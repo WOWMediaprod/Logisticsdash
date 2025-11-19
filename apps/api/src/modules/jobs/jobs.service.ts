@@ -285,6 +285,16 @@ export class JobsService {
       },
     });
 
+    // Broadcast status change to client via WebSocket
+    if (updatedJob.clientId) {
+      this.trackingGateway.broadcastToClient(updatedJob.clientId, 'job-status-update', {
+        jobId: id,
+        status: statusDto.status,
+        timestamp: new Date().toISOString(),
+        note: statusDto.note,
+      });
+    }
+
     return { success: true, data: updatedJob };
   }
 

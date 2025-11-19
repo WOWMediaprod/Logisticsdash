@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { io, Socket } from "socket.io-client";
 import { useCompany } from "../../../../contexts/CompanyContext";
 import { useClientAuth } from "../../../../contexts/ClientAuthContext";
 import { ArrowLeft, MapPin, Clock, Package, FileText, Receipt, Download, ExternalLink, X, History } from "lucide-react";
@@ -131,12 +132,30 @@ export default function ClientJobDetailPage() {
   const [waypoints, setWaypoints] = useState<any[]>([]);
   const [amendmentHistory, setAmendmentHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
 
   const mapRef = useRef<any>(null);
   const [L, setL] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
+  // Helper function to fetch amendment history (can be called from multiple places)
+  const fetchAmendmentHistory = useCallback(async (jobIdToFetch: string) => {
+    try {
+      setHistoryLoading(true);
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobIdToFetch}/history?companyId=${companyId}`));
+      const data = await response.json();
+      if (data.success) {
+        setAmendmentHistory(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch amendment history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [companyId]);
 
   useEffect(() => {
     setMounted(true);
@@ -215,23 +234,147 @@ export default function ClientJobDetailPage() {
       }
     };
 
-    const fetchAmendmentHistory = async (jobId: string) => {
+    fetchJob();
+  }, [companyId, clientId, jobId, fetchAmendmentHistory]);
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!clientId || !jobId) return;
+
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+    const newSocket = io(`${socketUrl}/tracking-v2`, {
+      transports: ['polling', 'websocket'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Client job details connected to WebSocket');
+      setConnected(true);
+
+      // Join client tracking room to receive job updates
+      newSocket.emit('join-client-tracking', { clientId });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Client job details disconnected from WebSocket');
+      setConnected(false);
+    });
+
+    // Listen for job amendments
+    newSocket.on('job:amended:client', (data: {
+      jobId: string;
+      changes: Array<{ field: string; oldValue: any; newValue: any }>;
+      summary: string;
+      timestamp: Date;
+    }) => {
+      console.log('Job amendment received:', data);
+
+      // Only update if this is the current job
+      if (data.jobId === jobId) {
+        // Refetch job data to get latest changes
+        fetchJobData();
+        // Refetch amendment history to show new entry
+        fetchAmendmentHistory(jobId);
+      }
+    });
+
+    // Listen for GPS location updates
+    newSocket.on('job-tracking-update', (data: {
+      jobId: string;
+      location: { lat: number; lng: number; speed: number };
+      timestamp: string;
+    }) => {
+      console.log('Location update received:', data);
+
+      // Only update if this is the current job
+      if (data.jobId === jobId) {
+        setJob(prev => prev ? {
+          ...prev,
+          lastLocation: {
+            lat: data.location.lat,
+            lng: data.location.lng,
+            speed: data.location.speed,
+            timestamp: data.timestamp,
+          }
+        } : null);
+      }
+    });
+
+    // Listen for status changes
+    newSocket.on('job-status-update', (data: {
+      jobId: string;
+      status: string;
+      timestamp: string;
+      note?: string;
+    }) => {
+      console.log('Status update received:', data);
+
+      // Only update if this is the current job
+      if (data.jobId === jobId) {
+        setJob(prev => prev ? {
+          ...prev,
+          status: data.status,
+          statusEvents: [
+            ...(prev.statusEvents || []),
+            {
+              id: `${Date.now()}`,
+              code: data.status,
+              timestamp: data.timestamp,
+              note: data.note,
+            }
+          ]
+        } : null);
+      }
+    });
+
+    // Listen for new documents
+    newSocket.on('job-document-added', (data: {
+      jobId: string;
+      document: {
+        id: string;
+        fileName: string;
+        fileUrl: string;
+        fileType: string;
+        uploadedAt: string;
+      };
+    }) => {
+      console.log('Document added:', data);
+
+      // Only update if this is the current job
+      if (data.jobId === jobId) {
+        setJob(prev => prev ? {
+          ...prev,
+          documents: [
+            ...(prev.documents || []),
+            data.document
+          ]
+        } : null);
+      }
+    });
+
+    setSocket(newSocket);
+
+    // Helper function to refetch job data
+    const fetchJobData = async () => {
       try {
-        setHistoryLoading(true);
-        const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}/history?companyId=${companyId}`));
-        const data = await response.json();
-        if (data.success) {
-          setAmendmentHistory(data.data || []);
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL_HTTPS || 'https://192.168.1.20:3004';
+        const response = await fetch(`${backendUrl}/api/v1/jobs/${jobId}?companyId=${companyId}`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.clientId === clientId) {
+          setJob(result.data);
         }
       } catch (err) {
-        console.error("Failed to fetch amendment history", err);
-      } finally {
-        setHistoryLoading(false);
+        console.error('Failed to refetch job data', err);
       }
     };
 
-    fetchJob();
-  }, [companyId, clientId, jobId]);
+    // Cleanup on unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [clientId, jobId, companyId]);
 
   // Auto-center map ONCE when location data arrives (don't reset zoom on updates)
   useEffect(() => {
@@ -297,7 +440,20 @@ export default function ClientJobDetailPage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Portal
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">Job Details</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900">Job Details</h1>
+              {connected ? (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                  Live
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full mr-1.5"></span>
+                  Reconnecting...
+                </span>
+              )}
+            </div>
             <p className="text-gray-600">Track your shipment progress and details</p>
           </div>
         </div>

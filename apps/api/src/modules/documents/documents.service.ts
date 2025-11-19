@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { StorageService } from './services/storage.service';
 import { OcrService } from './services/ocr.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UploadDocumentDto } from './dto/upload-document.dto';
+import { TrackingV2Gateway } from '../tracking-v2/tracking-v2.gateway';
 
 @Injectable()
 export class DocumentsService {
@@ -13,6 +14,8 @@ export class DocumentsService {
     private prisma: PrismaService,
     private storageService: StorageService,
     private ocrService: OcrService,
+    @Inject(forwardRef(() => TrackingV2Gateway))
+    private trackingGateway: TrackingV2Gateway,
   ) {}
 
   async uploadDocument(
@@ -110,6 +113,27 @@ export class DocumentsService {
       }
 
       this.logger.log(`Document uploaded successfully: ${document.id}`);
+
+      // Broadcast document upload to client via WebSocket if job is associated
+      if (document.jobId && document.job?.client) {
+        const job = await this.prisma.job.findUnique({
+          where: { id: document.jobId },
+          select: { clientId: true },
+        });
+
+        if (job?.clientId) {
+          this.trackingGateway.broadcastToClient(job.clientId, 'job-document-added', {
+            jobId: document.jobId,
+            document: {
+              id: document.id,
+              fileName: document.fileName,
+              fileUrl: document.fileUrl,
+              fileType: document.type,
+              uploadedAt: document.createdAt.toISOString(),
+            },
+          });
+        }
+      }
 
       return {
         success: true,
