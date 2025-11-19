@@ -27,6 +27,13 @@ logistics-platform/
 - **Real-time Notifications**: WebSocket-based updates for job status changes
 
 ### Recent Additions (Nov 2025)
+- ✅ **Complete Job Amendment System**: Admins can now amend all aspects of jobs with intelligent status-based validation
+  - Driver reassignment with smart restrictions
+  - Job type amendment with transit-state protection
+  - Admin status override capability
+  - GPS tracking configuration (enable/disable, public links)
+  - Organized 5-section amendment modal
+  - Real-time WebSocket notifications
 - ✅ **Route Model Removal**: Simplified job creation by removing redundant route selection
 - ✅ **Waypoint-Based Navigation**: Waypoints now serve as primary system for geofencing and tracking
 - ✅ **0 Hours Free Time Option**: Clients can specify zero free time for held up containers
@@ -320,5 +327,5 @@ Built with:
 
 ---
 
-**Last Updated**: November 6, 2025
-**Version**: 2.0.0
+**Last Updated**: November 19, 2025
+**Version**: 2.1.0 - Job Amendment System Complete

@@ -2,6 +2,128 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-19] - Job Amendment System Enhancements (Session 2)
+
+### 🎯 **Session Focus**: Complete Job Amendment Capability for Admins
+
+**Status**: ✅ **Complete** - Full amendment system implemented with status-based validation
+
+**Objective**: Enable admins to amend all aspects of job orders with intelligent validation and real-time notifications.
+
+### Added
+
+#### **1. Enhanced Job Amendment Fields**
+- **Driver Assignment**: `driverId` field allows reassigning drivers with restrictions (disabled at AT_DELIVERY and DELIVERED stages)
+- **Job Type Amendment**: `jobType` field enables changing job type with restrictions (disabled after IN_TRANSIT)
+- **Admin Status Override**: `status` field for admin-level status changes with warning indicator
+- **GPS Tracking Configuration**:
+  - `trackingEnabled`: Boolean toggle to enable/disable real-time location tracking
+  - `shareTrackingLink`: String field for public tracking link/code configuration
+
+#### **2. Comprehensive Amendment Modal Restructuring**
+- **Core Details Section**: Job Type, Priority, Status (admin override with orange styling)
+- **Assignments Section**: Driver, Client, Vehicle, Container with 2-column grid layout
+- **Schedule Section**: Pickup Time, ETA, Delivery Time with datetime inputs
+- **Tracking Configuration Section**: GPS tracking checkbox and public tracking link input
+- **Notes & Reason Section**: Special notes, amendment reason (required), notification checkboxes
+- **Amendment History**: Inline display of previous amendments with change details
+- **Location**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx:1064-1389`
+
+#### **3. Status-Based Amendment Validation**
+Implemented intelligent field restrictions based on job status:
+- **CREATED/ASSIGNED/ON_HOLD**: All fields amendable
+- **IN_TRANSIT**: Cannot change jobType, vehicleId, containerId
+- **AT_PICKUP**: Cannot change containerId, pickupTs, jobType
+- **LOADED**: Cannot change containerId, vehicleId, pickupTs, jobType
+- **AT_DELIVERY**: Limited changes only (cannot change container, vehicle, pickup, drop, type, driver)
+- **DELIVERED/COMPLETED/CANCELLED**: Only status can be changed (admin override)
+- **Location**: `apps/api/src/modules/jobs/jobs.service.ts:440-453` (validateAmendments method)
+
+#### **4. Client Dropdown Population**
+- **Implementation**: Added dynamic client fetching in `loadAssignmentOptions()`
+- **Endpoint**: GET `/api/v1/clients?companyId={companyId}`
+- **Display Format**: "Client Name (Client Code)" for better UX
+- **Location**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx:278-326`
+
+#### **5. TypeScript Type Updates**
+- **JobDetail Type**: Added `trackingEnabled: boolean` and `shareTrackingLink: string` fields
+- **Location**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx:62-80`
+
+### Changed
+
+#### **1. Amendment DTO Expansion**
+- **File**: `apps/api/src/modules/jobs/dto/amend-job.dto.ts`
+- **Additions**:
+  - `@IsOptional() @IsString() driverId?: string`
+  - `@IsOptional() @IsEnum(JobStatus) status?: JobStatus`
+  - `@IsOptional() @IsBoolean() trackingEnabled?: boolean`
+  - `@IsOptional() @IsString() shareTrackingLink?: string`
+
+#### **2. Amendment Logic Enhancement**
+- **File**: `apps/api/src/modules/jobs/jobs.service.ts`
+- **Changes**:
+  - `amendJob()`: Updated to handle all new fields (lines 320-334)
+  - `validateAmendments()`: Enhanced with comprehensive status-based restrictions
+  - `detectChanges()`: Updated fieldMap to include new fields (lines 475-489)
+  - `getDriverRelevantChanges()`: Added 'Driver' and 'Job Type' to relevant fields notification list
+
+#### **3. Frontend Amendment Form State**
+- **File**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx`
+- **State Updates**:
+  - Added `jobType`, `status`, `driverId`, `trackingEnabled`, `shareTrackingLink` to amendmentData state
+  - Updated `openAmendmentModal()` to pre-populate all new fields from job object
+  - Enhanced `handleSubmitAmendment()` to include all new fields in API request
+  - Updated form reset logic to include new fields
+
+### Fixed
+
+#### **1. JSX Structure Validation**
+- **Issue**: Missing closing `</div>` tag for Notes & Reason section
+- **Fix**: Added closing tag before outer container close (line 1353)
+- **Impact**: Fixed TypeScript JSX compilation error (TS17008)
+
+#### **2. TypeScript Type Errors**
+- **Issue 1**: `trackingEnabled` and `shareTrackingLink` properties missing from JobDetail type
+- **Fix**: Added optional properties to JobDetail type definition
+- **Issue 2**: Amendment state reset missing new fields
+- **Fix**: Updated setAmendmentData() reset to include all new fields
+- **Impact**: Full TypeScript compilation success (0 errors)
+
+### Testing & Validation
+
+- **TypeScript Compilation**: ✅ Passed (`pnpm type-check`)
+- **Backend Validation**: ✅ All restrictions properly enforced
+- **Frontend UI**: ✅ All sections properly structured and styled
+- **State Management**: ✅ All fields correctly managed and persisted
+- **WebSocket Integration**: ✅ Compatible with existing notification system
+
+### Impact Assessment
+
+**Backend**:
+- Enhanced DTO with 4 new optional fields
+- Service logic expanded with status-based validation
+- Backward compatible (all new fields optional)
+
+**Frontend**:
+- Amendment modal now features 5 organized sections
+- Improved UX with field restrictions and helper text
+- Type-safe implementation with full TypeScript coverage
+
+**User Experience**:
+- Admins can now amend all aspects of job orders
+- Clear visual indicators for admin-only overrides
+- Helpful restriction messages guide proper usage
+- Real-time notifications keep stakeholders informed
+
+### Database
+
+- No schema changes required (tracking fields already in Job model)
+- Existing amendment history preserved and displayed
+
+### Commits
+
+- `cb0f8cf` - "feat: enhance job amendment system with complete field coverage"
+
 ## [2025-11-19] - Route Model Removal & UX Improvements
 
 ### 🎯 **Session Focus**: Remove Redundant Route Selection Workflow
