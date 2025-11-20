@@ -646,10 +646,12 @@ function RequestDetailView({
 
   // Driver assignment states
   const [vehicles, setVehicles] = useState<Array<{id: string; label: string}>>([]);
+  const [trailers, setTrailers] = useState<Array<{id: string; label: string}>>([]);
   const [drivers, setDrivers] = useState<Array<{id: string; label: string}>>([]);
   const [containers, setContainers] = useState<Array<{id: string; label: string}>>([]);
   const [assignmentData, setAssignmentData] = useState({
     vehicleId: '',
+    trailerId: '',
     driverId: '',
     containerId: '',
   });
@@ -817,19 +819,21 @@ function RequestDetailView({
     }
   };
 
-  // Load assignment options (drivers, vehicles, containers)
+  // Load assignment options (drivers, vehicles, containers, trailers)
   const loadAssignmentOptions = async () => {
     if (!companyId) return;
 
     try {
-      const [vehiclesRes, driversRes, containersRes] = await Promise.all([
+      const [vehiclesRes, trailersRes, driversRes, containersRes] = await Promise.all([
         fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/trailers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
       ]);
 
-      const [vehiclesData, driversData, containersData] = await Promise.all([
+      const [vehiclesData, trailersData, driversData, containersData] = await Promise.all([
         vehiclesRes.json(),
+        trailersRes.json(),
         driversRes.json(),
         containersRes.json(),
       ]);
@@ -839,6 +843,15 @@ function RequestDetailView({
           vehiclesData.data.map((item: any) => ({
             id: item.id,
             label: `${item.regNo} - ${[item.make, item.model].filter(Boolean).join(" ")}`.trim(),
+          }))
+        );
+      }
+
+      if (trailersData.success) {
+        setTrailers(
+          trailersData.data.map((item: any) => ({
+            id: item.id,
+            label: `${item.regNo} - ${item.type}${item.capacity ? ` (${item.capacity})` : ""}`,
           }))
         );
       }
@@ -892,6 +905,7 @@ function RequestDetailView({
         body: JSON.stringify({
           companyId,
           vehicleId: assignmentData.vehicleId || null,
+          trailerId: assignmentData.trailerId || null,
           driverId: assignmentData.driverId || null,
           containerId: assignmentData.containerId || null,
         }),
@@ -1194,6 +1208,32 @@ function RequestDetailView({
                           ))}
                         </select>
                       </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Trailer
+                        <select
+                          value={assignmentData.trailerId}
+                          onChange={(event) => {
+                            if (trailers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, trailerId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (trailers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select trailer</option>
+                          {trailers.map((trailer) => (
+                            <option key={trailer.id} value={trailer.id}>
+                              {trailer.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
 
                     <motion.button
@@ -1328,6 +1368,9 @@ function RequestDetailView({
                 <div className="text-sm text-blue-800 space-y-1">
                   {assignmentData.vehicleId && vehicles.find(v => v.id === assignmentData.vehicleId) && (
                     <p>• Vehicle: {vehicles.find(v => v.id === assignmentData.vehicleId)?.label}</p>
+                  )}
+                  {assignmentData.trailerId && trailers.find(t => t.id === assignmentData.trailerId) && (
+                    <p>• Trailer: {trailers.find(t => t.id === assignmentData.trailerId)?.label}</p>
                   )}
                   {assignmentData.driverId && drivers.find(d => d.id === assignmentData.driverId) && (
                     <p>• Driver: {drivers.find(d => d.id === assignmentData.driverId)?.label}</p>
