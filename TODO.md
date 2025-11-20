@@ -2,6 +2,21 @@
 
 ## ✅ COMPLETED FEATURES (Nov 2025)
 
+### Complete Trailer Management System (Completed Nov 20, 2025 - Session 5)
+- ✅ Trailer model added to Prisma schema with cost tracking (lease per day, maintenance per km)
+- ✅ TrailersModule created with full CRUD API endpoints
+- ✅ Trailer assignment integrated into job creation and driver assignment workflows
+- ✅ Trailer amendment support in job amendment modal with status-based constraints
+- ✅ Resource Management page includes Trailers tab with table and form components
+- ✅ Job details sidebar displays assigned trailer information
+- ✅ Trailer selection in both assignment modal and inline panel
+- ✅ Support for trailer types: Flatbed, Container Chassis, Lowbed, Refrigerated, Tanker, Curtainsider, Other
+- ✅ Soft delete functionality for trailers using isActive flag
+- ✅ Multi-tenancy enforcement across all trailer operations
+- ✅ Full TypeScript compilation (0 errors)
+- **Commit**: `fa175c4`
+- **Documentation**: See CHANGELOG.md for detailed changes
+
 ### Complete Shipment Details Integration (Completed Nov 19, 2025 - Session 4)
 - ✅ 17 new fields added to Job model (release order, loading location, container details, cargo, BL cutoff, wharf, delivery info)
 - ✅ Job creation logic updated to copy all JobRequest fields

@@ -2,6 +2,138 @@
 
 All notable changes to the Logistics Platform will be documented in this file.
 
+## [2025-11-20] - Complete Trailer Management System (Session 5)
+
+### 🎯 **Session Focus**: Add Trailer Management with Full Job Integration
+
+**Status**: ✅ **Complete** - Full trailer management system with resource management and job integration
+
+**Objective**: Enable complete trailer fleet management with support for trailer assignment during job creation, driver assignment, and job amendments.
+
+### Added
+
+#### **1. Database Schema - Trailer Model**
+- **Trailer Model** added to Prisma schema with fields:
+  - `regNo` (registration number - unique per company)
+  - `type` (Flatbed, Container Chassis, Lowbed, Refrigerated, Tanker, Curtainsider, Other)
+  - `make`, `model`, `year` (trailer specifications)
+  - `capacity` (e.g., "40ft", "45000kg")
+  - `axles` (number of axles)
+  - `leasePerDay` (daily lease cost)
+  - `maintPerKm` (maintenance cost per km)
+  - `isActive` (soft delete support)
+  - Relations: Company (many-to-one), Job (one-to-many), MaintenanceEvent (one-to-many)
+- **Job Model Enhancement**: Added `trailerId` field for trailer assignment
+- **MaintenanceEvent Update**: Now supports both vehicles and trailers
+- **Location**: `apps/api/prisma/schema.prisma:183-209, 217, 269, 284, 557-579`
+
+#### **2. Backend API - Trailers Module**
+- **TrailersModule** with complete CRUD operations:
+  - **TrailersController** (`apps/api/src/modules/trailers/trailers.controller.ts`):
+    - `POST /trailers` - Create new trailer
+    - `GET /trailers?companyId=...` - List trailers (active only by default)
+    - `GET /trailers/available?companyId=...` - Get unassigned trailers
+    - `GET /trailers/stats?companyId=...` - Get statistics
+    - `GET /trailers/:id?companyId=...` - Get single trailer
+    - `PATCH /trailers/:id?companyId=...` - Update trailer
+    - `DELETE /trailers/:id?companyId=...` - Soft delete
+  - **TrailersService** (`apps/api/src/modules/trailers/trailers.service.ts`):
+    - Full CRUD with company scoping
+    - `getAvailableTrailers()` - Get trailers not assigned to active jobs
+    - `getStats()` - Return total, active, inactive, inUse, available counts
+  - **DTOs** (`apps/api/src/modules/trailers/dto/`):
+    - `CreateTrailerDto` with full validation
+    - `UpdateTrailerDto` using PartialType pattern
+- **Jobs Module Integration** (`apps/api/src/modules/jobs/`):
+  - `assignJob()` method updated to support trailer assignment
+  - `defaultJobInclude()` now includes trailer relation
+  - `amend-job.dto.ts` includes `trailerId` field
+- **Location**: `apps/api/src/modules/trailers/`, `apps/app.module.ts`
+
+#### **3. Frontend - Resource Management**
+- **Trailers Tab** in Resource Management page (`apps/web/src/app/dashboard/resources/page.tsx`):
+  - Added "Trailers" tab to resource tabs (icon: Truck)
+  - **TrailersTable Component**:
+    - Displays: regNo, type, make/model, year, capacity, axles, status
+    - Edit/delete actions for each trailer
+    - Empty state messaging
+  - **TrailerForm Component**:
+    - Full form for creating/editing trailers
+    - Dropdown for trailer type selection
+    - Fields: regNo, type, make, model, year, axles, capacity, leasePerDay, maintPerKm, isActive
+    - Proper form validation and styling
+  - **Integrated Modal**:
+    - Uses existing ResourceModal component
+    - Supports add and edit modes
+    - Shows success/error messages
+- **Files Modified**:
+  - Lines: 10 (TabType), 36-46 (Trailer interface), 73 (state), 113-115 (loadData), 135-137 (setData), 203 (tab), 279-285 (rendering), 441-503 (TrailersTable), 724 (modal case), 931-1056 (TrailerForm)
+
+#### **4. Frontend - Job Assignment & Amendment**
+- **Job Details Page** (`apps/web/src/app/dashboard/jobs/[id]/page.tsx`):
+  - **TrailerInfo Type** for type safety
+  - **Trailer Display Section** in sidebar:
+    - Shows assigned trailer with regNo, type, make/model, capacity
+    - Purple-colored card for visual distinction
+  - **Assignment Modal Updates**:
+    - Added trailer select dropdown after vehicle selection
+    - Trailer selection is optional (can assign job without trailer)
+    - Lazy-loads trailers on focus
+  - **Amendment Modal Updates**:
+    - Added trailer select in "Assignments" section
+    - Respects job status constraints (can't change after transit)
+    - Shows helpful message about transit restrictions
+  - **State Management**:
+    - Added `trailers` state array
+    - Added `trailerId` to `assignmentData` state
+    - Added `trailerId` to `amendmentData` state
+  - **API Integration**:
+    - `loadAssignmentOptions()` now fetches trailers
+    - `handleAssignmentUpdate()` sends trailerId to API
+    - `handleSubmitAmendment()` includes trailerId in API call
+- **Files Modified**:
+  - Lines: 25-32 (TrailerInfo type), 88 (trailer in JobDetail), 201 (trailers state), 207, 224 (assignmentData/amendmentData), 274 (assignment load), 330-362 (loadAssignmentOptions trailer fetch), 425 (assignJob API), 473 (amendment prepop), 554 (amendment API), 606 (amendment reset), 924-935 (sidebar display), 1057-1081 (inline panel), 1213-1226 (modal), 1444-1462 (amendment modal)
+
+### Key Features
+
+- **Full CRUD for Trailers**: Create, view, edit, delete trailers via Resource Management
+- **Job Integration**: Assign trailers during job creation, driver assignment, and amendments
+- **Multi-tenancy**: All data properly scoped by companyId
+- **Soft Deletes**: Uses isActive flag, trailers can be deactivated without data loss
+- **Cost Tracking**: Lease per day and maintenance per km support for economics
+- **Status-Based Constraints**: Cannot change trailer after job transit starts
+- **Availability Tracking**: API can identify available trailers not in active jobs
+- **Type Safety**: Full TypeScript support throughout codebase
+- **Validation**: Both backend (class-validator) and frontend validation
+
+### Files Modified
+
+**Backend**:
+- `apps/api/prisma/schema.prisma` - Trailer model and Job/MaintenanceEvent updates
+- `apps/api/src/app.module.ts` - TrailersModule registration
+- `apps/api/src/modules/trailers/` - New trailers module (5 files)
+- `apps/api/src/modules/jobs/jobs.service.ts` - Trailer assignment support
+- `apps/api/src/modules/jobs/dto/amend-job.dto.ts` - Trailer field
+
+**Frontend**:
+- `apps/web/src/app/dashboard/resources/page.tsx` - Trailers tab, table, form
+- `apps/web/src/app/dashboard/jobs/[id]/page.tsx` - Trailer display, assignment, amendment
+
+### Testing
+
+- ✅ TypeScript compilation successful (0 errors)
+- ✅ All API endpoints tested
+- ✅ Frontend type checking passed
+- ✅ Form validation working correctly
+- ✅ Multi-tenancy properly enforced
+
+### Commit
+
+- **Hash**: `fa175c4`
+- **Message**: "feat: add complete trailer management system with job integration"
+
+---
+
 ## [2025-11-19] - Complete Shipment Details Integration (Session 4)
 
 ### 🎯 **Session Focus**: Display All Job Request Details in Job Portal
