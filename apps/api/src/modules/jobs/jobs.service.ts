@@ -221,12 +221,13 @@ export class JobsService {
     return { success: true, data: updatedJob };
   }
 
-  async assignJob(id: string, companyId: string, assignDto: { driverId: string; vehicleId: string; assignedBy: string }) {
+  async assignJob(id: string, companyId: string, assignDto: { driverId: string; vehicleId: string; trailerId?: string; assignedBy: string }) {
     await this.ensureJobExists(id, companyId);
 
-    const [driver, vehicle] = await Promise.all([
+    const [driver, vehicle, trailer] = await Promise.all([
       this.prisma.driver.findFirst({ where: { id: assignDto.driverId, companyId } }),
       this.prisma.vehicle.findFirst({ where: { id: assignDto.vehicleId, companyId } }),
+      assignDto.trailerId ? this.prisma.trailer.findFirst({ where: { id: assignDto.trailerId, companyId } }) : null,
     ]);
 
     if (!driver) {
@@ -235,23 +236,31 @@ export class JobsService {
     if (!vehicle) {
       throw new BadRequestException("Vehicle not found or does not belong to your company");
     }
+    if (assignDto.trailerId && !trailer) {
+      throw new BadRequestException("Trailer not found or does not belong to your company");
+    }
 
     const updatedJob = await this.prisma.job.update({
       where: { id },
       data: {
         driverId: assignDto.driverId,
         vehicleId: assignDto.vehicleId,
+        trailerId: assignDto.trailerId || null,
         assignedBy: assignDto.assignedBy,
         status: JobStatus.ASSIGNED,
       },
       include: this.defaultJobInclude(),
     });
 
+    const noteText = trailer
+      ? `Job assigned to ${driver.name} with vehicle ${vehicle.regNo} and trailer ${trailer.regNo}`
+      : `Job assigned to ${driver.name} with vehicle ${vehicle.regNo}`;
+
     await this.prisma.statusEvent.create({
       data: {
         jobId: id,
         code: "JOB_ASSIGNED",
-        note: `Job assigned to ${driver.name} with vehicle ${vehicle.regNo}`,
+        note: noteText,
         source: "MANUAL",
       },
     });
@@ -587,6 +596,7 @@ export class JobsService {
       client: true,
       container: true,
       vehicle: true,
+      trailer: true,
       driver: true,
       assignedByUser: { select: { id: true, firstName: true, lastName: true } },
     };

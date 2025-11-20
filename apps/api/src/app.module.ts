@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
+import { TrailersModule } from './modules/trailers/trailers.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { ContainersModule } from './modules/containers/containers.module';
 import { DocumentsModule } from './modules/documents/documents.module';
@@ -43,6 +44,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     JobRequestsModule,
     ClientsModule,
     VehiclesModule,
+    TrailersModule,
     DriversModule,
     ContainersModule,
     DocumentsModule,

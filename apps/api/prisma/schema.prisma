@@ -26,6 +26,7 @@ model Company {
   notifications  Notification[]
   users          User[]
   vehicles       Vehicle[]
+  trailers       Trailer[]
   sessions       DriverSession[]
   earnings       DriverEarning[]
   trackingStates TrackingState[]
@@ -180,12 +181,41 @@ model Container {
   @@map("containers")
 }
 
+model Trailer {
+  id             String             @id @default(cuid())
+  companyId      String
+  regNo          String             // Registration number
+  type           String             // e.g., "Flatbed", "Container Chassis", "Lowbed", "Refrigerated"
+  make           String?
+  model          String?
+  year           Int?
+  capacity       String?            // e.g., "40ft", "20ft", "45000kg"
+  axles          Int?               // Number of axles
+  leasePerDay    Decimal?           @db.Decimal(10, 2)
+  maintPerKm     Decimal?           @db.Decimal(10, 4)
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  // Relations
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobs           Job[]
+  maintenance    MaintenanceEvent[]
+
+  @@unique([companyId, regNo])
+  @@index([companyId])
+  @@index([isActive])
+  @@index([type])
+  @@map("trailers")
+}
+
 model Job {
   id              String             @id @default(cuid())
   companyId       String
   clientId        String?
   containerId     String?
   vehicleId       String?
+  trailerId       String?
   driverId        String?
   assignedBy      String?
   status          JobStatus          @default(CREATED)
@@ -237,6 +267,7 @@ model Job {
   container       Container?         @relation(fields: [containerId], references: [id])
   driver          Driver?            @relation(fields: [driverId], references: [id])
   vehicle         Vehicle?           @relation(fields: [vehicleId], references: [id])
+  trailer         Trailer?           @relation(fields: [trailerId], references: [id])
   locationTracks  LocationTracking[]
   notifications   Notification[]
   pod             POD?
@@ -251,6 +282,7 @@ model Job {
   @@index([clientId])
   @@index([driverId])
   @@index([vehicleId])
+  @@index([trailerId])
   @@index([createdAt])
   @@index([companyId, clientId, status], map: "jobs_company_client_status_idx")
   @@index([companyId, driverId, status], map: "jobs_company_driver_status_idx")
@@ -524,7 +556,8 @@ model JobEconomics {
 
 model MaintenanceEvent {
   id          String          @id @default(cuid())
-  vehicleId   String
+  vehicleId   String?
+  trailerId   String?
   type        MaintenanceType
   description String?
   odoReading  Int
@@ -535,9 +568,11 @@ model MaintenanceEvent {
   metadata    Json?
   performedAt DateTime        @default(now())
   createdAt   DateTime        @default(now())
-  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  trailer     Trailer?        @relation(fields: [trailerId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId])
+  @@index([trailerId])
   @@index([type])
   @@index([performedAt])
   @@map("maintenance_events")

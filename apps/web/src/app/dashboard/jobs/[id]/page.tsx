@@ -22,6 +22,15 @@ type VehicleInfo = {
   class?: string;
 };
 
+type TrailerInfo = {
+  id: string;
+  regNo: string;
+  type: string;
+  make?: string;
+  model?: string;
+  capacity?: string;
+};
+
 type DriverInfo = {
   id: string;
   name: string;
@@ -76,6 +85,7 @@ type JobDetail = {
   container?: ContainerInfo;
   driver?: DriverInfo;
   vehicle?: VehicleInfo;
+  trailer?: TrailerInfo;
   statusEvents?: StatusEvent[];
   // Job Request Details
   releaseOrderUrl?: string;
@@ -188,11 +198,13 @@ export default function JobDetailPage() {
   const [isAssigning, setIsAssigning] = useState(false);
 
   const [vehicles, setVehicles] = useState<OptionItem[]>([]);
+  const [trailers, setTrailers] = useState<OptionItem[]>([]);
   const [drivers, setDrivers] = useState<OptionItem[]>([]);
   const [containers, setContainers] = useState<OptionItem[]>([]);
 
   const [assignmentData, setAssignmentData] = useState({
     vehicleId: "",
+    trailerId: "",
     driverId: "",
     containerId: "",
   });
@@ -209,6 +221,7 @@ export default function JobDetailPage() {
     clientId: "",
     containerId: "",
     vehicleId: "",
+    trailerId: "",
     driverId: "",
     trackingEnabled: undefined as boolean | undefined,
     shareTrackingLink: "",
@@ -258,6 +271,7 @@ export default function JobDetailPage() {
           setJob(data.data);
           setAssignmentData({
             vehicleId: data.data.vehicleId || "",
+            trailerId: data.data.trailerId || "",
             driverId: data.data.driverId || "",
             containerId: data.data.containerId || "",
           });
@@ -313,15 +327,17 @@ export default function JobDetailPage() {
     }
 
     try {
-      const [vehiclesRes, driversRes, containersRes, clientsRes] = await Promise.all([
+      const [vehiclesRes, trailersRes, driversRes, containersRes, clientsRes] = await Promise.all([
         fetch(getApiUrl(`/api/v1/vehicles?companyId=${companyId}`)),
+        fetch(getApiUrl(`/api/v1/trailers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/drivers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/containers?companyId=${companyId}`)),
         fetch(getApiUrl(`/api/v1/clients?companyId=${companyId}`)),
       ]);
 
-      const [vehiclesData, driversData, containersData, clientsData] = await Promise.all([
+      const [vehiclesData, trailersData, driversData, containersData, clientsData] = await Promise.all([
         vehiclesRes.json(),
+        trailersRes.json(),
         driversRes.json(),
         containersRes.json(),
         clientsRes.json(),
@@ -332,6 +348,15 @@ export default function JobDetailPage() {
           vehiclesData.data.map((item: any) => ({
             id: item.id,
             label: `${item.regNo} - ${[item.make, item.model].filter(Boolean).join(" ")}`.trim(),
+          }))
+        );
+      }
+
+      if (trailersData.success) {
+        setTrailers(
+          trailersData.data.map((item: any) => ({
+            id: item.id,
+            label: `${item.regNo} - ${item.type}${item.capacity ? ` (${item.capacity})` : ""}`,
           }))
         );
       }
@@ -397,6 +422,7 @@ export default function JobDetailPage() {
         body: JSON.stringify({
           companyId,
           vehicleId: assignmentData.vehicleId || null,
+          trailerId: assignmentData.trailerId || null,
           driverId: assignmentData.driverId || null,
           containerId: assignmentData.containerId || null,
         }),
@@ -444,6 +470,7 @@ export default function JobDetailPage() {
       clientId: job.client?.id || "",
       containerId: job.container?.id || "",
       vehicleId: job.vehicle?.id || "",
+      trailerId: job.trailer?.id || "",
       driverId: job.driver?.id || "",
       trackingEnabled: job.trackingEnabled,
       shareTrackingLink: job.shareTrackingLink || "",
@@ -524,6 +551,7 @@ export default function JobDetailPage() {
           clientId: amendmentData.clientId || undefined,
           containerId: amendmentData.containerId || undefined,
           vehicleId: amendmentData.vehicleId || undefined,
+          trailerId: amendmentData.trailerId || undefined,
           driverId: amendmentData.driverId || undefined,
           trackingEnabled: amendmentData.trackingEnabled,
           shareTrackingLink: amendmentData.shareTrackingLink || undefined,
@@ -575,6 +603,7 @@ export default function JobDetailPage() {
           clientId: "",
           containerId: "",
           vehicleId: "",
+          trailerId: "",
           driverId: "",
           trackingEnabled: undefined,
           shareTrackingLink: "",
@@ -892,6 +921,20 @@ export default function JobDetailPage() {
             </div>
 
             <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Trailer</h2>
+              {job.trailer ? (
+                <div className="p-4 bg-purple-50 rounded-xl">
+                  <p className="text-sm font-semibold text-gray-900">{job.trailer.regNo}</p>
+                  <p className="text-sm text-gray-600">{job.trailer.type}</p>
+                  {job.trailer.make && job.trailer.model && <p className="text-xs text-gray-500 mt-1">{job.trailer.make} {job.trailer.model}</p>}
+                  {job.trailer.capacity && <p className="text-xs text-gray-500 mt-1">Capacity: {job.trailer.capacity}</p>}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">No trailer assigned.</p>
+              )}
+            </div>
+
+            <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Documents</h2>
 
               {documentsLoading ? (
@@ -1006,6 +1049,32 @@ export default function JobDetailPage() {
                           {vehicles.map((vehicle) => (
                             <option key={vehicle.id} value={vehicle.id}>
                               {vehicle.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Trailer
+                        <select
+                          value={assignmentData.trailerId}
+                          onChange={(event) => {
+                            if (trailers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                            setAssignmentData((prev) => ({ ...prev, trailerId: event.target.value }));
+                          }}
+                          onFocus={() => {
+                            if (trailers.length === 0) {
+                              loadAssignmentOptions();
+                            }
+                          }}
+                          className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select trailer</option>
+                          {trailers.map((trailer) => (
+                            <option key={trailer.id} value={trailer.id}>
+                              {trailer.label}
                             </option>
                           ))}
                         </select>
@@ -1136,6 +1205,21 @@ export default function JobDetailPage() {
                       {vehicles.map((vehicle) => (
                         <option key={vehicle.id} value={vehicle.id}>
                           {vehicle.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Trailer
+                    <select
+                      value={assignmentData.trailerId}
+                      onChange={(event) => setAssignmentData((prev) => ({ ...prev, trailerId: event.target.value }))}
+                      className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">No trailer</option>
+                      {trailers.map((trailer) => (
+                        <option key={trailer.id} value={trailer.id}>
+                          {trailer.label}
                         </option>
                       ))}
                     </select>
@@ -1357,6 +1441,28 @@ export default function JobDetailPage() {
                       )}
                     </label>
 
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Trailer
+                      <select
+                        value={amendmentData.trailerId}
+                        onChange={(e) => setAmendmentData((prev) => ({ ...prev, trailerId: e.target.value }))}
+                        className="mt-1 w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status)}
+                      >
+                        <option value="">Keep current</option>
+                        {trailers.map((trailer) => (
+                          <option key={trailer.id} value={trailer.id}>
+                            {trailer.label}
+                          </option>
+                        ))}
+                      </select>
+                      {["IN_TRANSIT", "LOADED", "AT_DELIVERY", "DELIVERED"].includes(job.status) && (
+                        <p className="text-xs text-gray-500 mt-1">Cannot change trailer after transit starts</p>
+                      )}
+                    </label>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 mt-4">
                     <label className="block text-sm font-semibold text-gray-700">
                       Container
                       <select

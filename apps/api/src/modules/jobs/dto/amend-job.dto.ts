@@ -18,6 +18,11 @@ export class AmendJobDto {
   @IsString()
   vehicleId?: string;
 
+  @ApiProperty({ description: 'Trailer ID', required: false })
+  @IsOptional()
+  @IsString()
+  trailerId?: string;
+
   @ApiProperty({ description: 'Driver ID', required: false })
   @IsOptional()
   @IsString()
