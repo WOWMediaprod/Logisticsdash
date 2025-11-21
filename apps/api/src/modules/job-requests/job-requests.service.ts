@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateJobRequestDto } from './dto/create-job-request.dto';
 import { UpdateJobRequestDto } from './dto/update-job-request.dto';
@@ -6,6 +6,8 @@ import { JobRequestQueryDto } from './dto/job-request-query.dto';
 
 @Injectable()
 export class JobRequestsService {
+  private readonly logger = new Logger(JobRequestsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async create(createJobRequestDto: CreateJobRequestDto) {
