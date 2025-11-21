@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef } from "@nestjs/common";
+﻿import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef, Logger } from "@nestjs/common";
 import { JobStatus, NotificationType } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { CreateJobDto } from "./dto/create-job.dto";
@@ -10,6 +10,8 @@ import { TrackingV2Gateway } from "../tracking-v2/tracking-v2.gateway";
 
 @Injectable()
 export class JobsService {
+  private logger = new Logger(JobsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
@@ -264,6 +266,28 @@ export class JobsService {
         source: "MANUAL",
       },
     });
+
+    // Send notification to driver about job assignment
+    try {
+      await this.notificationsService.sendToDriver(
+        assignDto.driverId,
+        companyId,
+        'New Job Assigned',
+        `You have been assigned job #${id.substring(0, 8)}. ${updatedJob.client?.name ? `Client: ${updatedJob.client.name}` : ''} - Check the app for details.`,
+        id,
+        {
+          jobId: id,
+          clientName: updatedJob.client?.name,
+          vehicleRegNo: vehicle.regNo,
+          trailerRegNo: trailer?.regNo,
+          pickupTs: updatedJob.pickupTs,
+          assignedAt: new Date().toISOString(),
+        }
+      );
+    } catch (error) {
+      this.logger.warn(`Failed to send job assignment notification for job ${id}:`, error);
+      // Don't throw error - assignment should succeed even if notification fails
+    }
 
     return { success: true, data: updatedJob };
   }

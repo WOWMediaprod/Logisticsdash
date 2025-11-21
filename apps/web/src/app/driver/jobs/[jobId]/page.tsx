@@ -25,8 +25,15 @@ import {
   Loader2,
   X,
   Download,
+  FileDown,
+  Weight,
+  Anchor,
+  Phone,
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api-config';
+import { CollapsibleSection } from '@/components/driver/CollapsibleSection';
+import { CountdownTimer } from '@/components/driver/CountdownTimer';
+import { ContactCard } from '@/components/driver/ContactCard';
 
 type WaypointType = 'PICKUP' | 'DELIVERY' | 'CHECKPOINT' | 'REST_STOP' | 'YARD' | 'PORT';
 
@@ -71,7 +78,27 @@ interface Job {
   priority: string;
   pickupTs: string | null;
   etaTs: string | null;
+  dropTs: string | null;
   specialNotes: string | null;
+  // Shipment Details (17 fields)
+  releaseOrderUrl?: string;
+  loadingLocation?: string;
+  loadingLocationLat?: number;
+  loadingLocationLng?: number;
+  loadingContactName?: string;
+  loadingContactPhone?: string;
+  containerNumber?: string;
+  sealNumber?: string;
+  containerYardLocation?: string;
+  cargoDescription?: string;
+  cargoWeight?: number;
+  blCutoffRequired?: boolean;
+  blCutoffDateTime?: string;
+  wharfName?: string;
+  wharfContact?: string;
+  deliveryAddress?: string;
+  deliveryContactName?: string;
+  deliveryContactPhone?: string;
   client?: {
     id: string;
     name: string;
@@ -375,6 +402,191 @@ export default function DriverJobDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Release Order Section - Always show at top */}
+        {job.releaseOrderUrl && (
+          <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 bg-red-50">
+            <a
+              href={job.releaseOrderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-between px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <FileDown className="w-5 h-5" />
+                View Release Order
+              </span>
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          </div>
+        )}
+
+        {/* BL Cutoff Warning - Show prominently if applicable and urgent */}
+        {job.blCutoffRequired && job.blCutoffDateTime && (
+          <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
+            <div className="space-y-3">
+              <CountdownTimer
+                targetDate={job.blCutoffDateTime}
+                urgentThresholdHours={24}
+              />
+              <div className="pt-2 border-t border-red-100">
+                <p className="text-sm text-gray-700">
+                  <strong>BL Cutoff Date & Time:</strong> {new Date(job.blCutoffDateTime).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Details Section */}
+        <CollapsibleSection
+          title="Loading Details"
+          icon={<MapPin className="w-5 h-5" />}
+          bgColor="bg-blue-50"
+          borderColor="border-blue-200"
+          defaultOpen={true}
+        >
+          <div className="space-y-3">
+            {job.loadingLocation && (
+              <div>
+                <p className="text-gray-600 font-medium mb-1">📍 Loading Location</p>
+                <p className="text-gray-800">{job.loadingLocation}</p>
+                {job.loadingLocationLat && job.loadingLocationLng && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Coordinates: {job.loadingLocationLat.toFixed(4)}, {job.loadingLocationLng.toFixed(4)}
+                  </p>
+                )}
+              </div>
+            )}
+            <ContactCard
+              name={job.loadingContactName}
+              phone={job.loadingContactPhone}
+              type="loading"
+            />
+            {job.pickupTs && (
+              <div>
+                <p className="text-gray-600 font-medium mb-1">📅 Loading Date</p>
+                <p className="text-gray-800">{new Date(job.pickupTs).toLocaleDateString()}</p>
+              </div>
+            )}
+            {job.pickupTs && (
+              <div>
+                <p className="text-gray-600 font-medium mb-1">⏰ Loading Time</p>
+                <p className="text-gray-800">{new Date(job.pickupTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* Container & Cargo Details Section */}
+        {(job.containerNumber || job.cargoDescription || job.cargoWeight) && (
+          <CollapsibleSection
+            title="Container & Cargo Details"
+            icon={<Package className="w-5 h-5" />}
+            bgColor="bg-purple-50"
+            borderColor="border-purple-200"
+            defaultOpen={true}
+          >
+            <div className="space-y-3">
+              {job.containerNumber && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">📦 Container Number</p>
+                  <p className="text-gray-800 font-mono">{job.containerNumber}</p>
+                </div>
+              )}
+              {job.sealNumber && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">🔒 Seal Number</p>
+                  <p className="text-gray-800 font-mono">{job.sealNumber}</p>
+                </div>
+              )}
+              {job.containerYardLocation && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">🏭 Yard Location</p>
+                  <p className="text-gray-800">{job.containerYardLocation}</p>
+                </div>
+              )}
+              {job.cargoDescription && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">📋 Cargo Description</p>
+                  <p className="text-gray-800">{job.cargoDescription}</p>
+                </div>
+              )}
+              {job.cargoWeight && (
+                <div className="flex items-center gap-2">
+                  <Weight className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-gray-600 font-medium">Cargo Weight</p>
+                    <p className="text-gray-800">{job.cargoWeight} kg</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Wharf Details Section */}
+        {(job.wharfName || job.wharfContact) && (
+          <CollapsibleSection
+            title="Wharf Details"
+            icon={<Anchor className="w-5 h-5" />}
+            bgColor="bg-cyan-50"
+            borderColor="border-cyan-200"
+            defaultOpen={false}
+          >
+            <div className="space-y-3">
+              {job.wharfName && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">🚢 Wharf Name</p>
+                  <p className="text-gray-800">{job.wharfName}</p>
+                </div>
+              )}
+              {job.wharfContact && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">Wharf Contact</p>
+                  <a
+                    href={`tel:${job.wharfContact}`}
+                    className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+                  >
+                    <Phone className="w-4 h-4" />
+                    {job.wharfContact}
+                  </a>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Delivery Details Section */}
+        {(job.deliveryAddress || job.deliveryContactName || job.deliveryContactPhone) && (
+          <CollapsibleSection
+            title="Delivery Details"
+            icon={<CheckCircle className="w-5 h-5" />}
+            bgColor="bg-gray-50"
+            borderColor="border-gray-200"
+            defaultOpen={false}
+          >
+            <div className="space-y-3">
+              {job.deliveryAddress && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">📍 Delivery Address</p>
+                  <p className="text-gray-800">{job.deliveryAddress}</p>
+                </div>
+              )}
+              <ContactCard
+                name={job.deliveryContactName}
+                phone={job.deliveryContactPhone}
+                type="delivery"
+              />
+              {job.dropTs && (
+                <div>
+                  <p className="text-gray-600 font-medium mb-1">Expected Delivery</p>
+                  <p className="text-gray-800">{new Date(job.dropTs).toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
 
         {/* GPS Tracking Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
