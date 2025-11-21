@@ -33,13 +33,22 @@ All notable changes to the Logistics Platform will be documented in this file.
 #### **4. Job Request Completion Flow**
 - Verified PATCH endpoint exists in `job-requests.controller.ts`
 - Confirmed all job-requests CRUD operations functional
-- Deployment synchronization ensured
+- **Fixed**: Corrected pnpm workspace build configuration in `render.yaml`
+- **Root Cause Found**: Build command was running `pnpm install` from subdirectory instead of workspace root
+- **Solution**: Changed to `pnpm install && pnpm --filter @logistics/api build` for proper dependency resolution
+- **File Fixed**: `apps/api/render.yaml` line 7
+- Result: PATCH endpoint decorators now properly applied during build
 
 ### Deploy Status
-- ✅ Render API: Live at a93680c
+- ✅ Render API: Deployment a98b8e4 (fixed build command)
 - ✅ Vercel Frontend: Ready
 - ✅ Neon Database: Connection pooling enabled
 - ✅ Supabase Storage: Bucket created with policies configured
+
+### Known Issues Resolved
+- ❌ **404 on PATCH /api/v1/job-requests/:id** - FIXED by correcting workspace build command
+- ❌ **Supabase bucket not found** - FIXED by creating logistics-documents bucket
+- ❌ **Database 503 errors** - FIXED by enabling connection pooling in Neon
 
 ## [2025-11-20] - Complete Trailer Management System (Session 5)
 
