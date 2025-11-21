@@ -436,6 +436,26 @@ export class JobRequestsService {
       });
     }
 
+    // Transfer documents from job request to job
+    if (jobRequest.attachedDocuments && jobRequest.attachedDocuments.length > 0) {
+      this.logger.log(
+        `[Job Create] Linking ${jobRequest.attachedDocuments.length} documents from job request ${jobRequest.id} to job ${job.id}`,
+      );
+
+      await this.prisma.document.updateMany({
+        where: {
+          jobRequestId: jobRequest.id,
+          companyId,
+        },
+        data: {
+          jobId: job.id,
+          // Keep jobRequestId for audit trail
+        },
+      });
+
+      this.logger.log(`[Job Create] Documents successfully linked to job ${job.id}`);
+    }
+
     // Update the job request with acceptance info and link to job
     const updatedJobRequest = await this.prisma.jobRequest.update({
       where: { id },
