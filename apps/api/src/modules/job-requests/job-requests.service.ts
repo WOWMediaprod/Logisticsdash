@@ -336,7 +336,10 @@ export class JobRequestsService {
     // Find the job request
     const jobRequest = await this.prisma.jobRequest.findFirst({
       where: { id, companyId },
-      include: { client: true },
+      include: {
+        client: true,
+        attachedDocuments: true,
+      },
     });
 
     if (!jobRequest) {
