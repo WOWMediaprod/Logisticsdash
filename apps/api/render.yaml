@@ -4,7 +4,7 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: npm install -g pnpm && cd apps/api && pnpm install && pnpm run build
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter @logistics/api build
     startCommand: cd apps/api && pnpm run prisma:deploy && pnpm run start:prod
     envVars:
       - key: NODE_ENV
