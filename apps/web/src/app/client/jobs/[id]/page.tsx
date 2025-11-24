@@ -354,6 +354,7 @@ export default function ClientJobDetailPage() {
         fileName: string;
         fileUrl: string;
         fileType: string;
+        type: string;
         uploadedAt: string;
       };
     }) => {
