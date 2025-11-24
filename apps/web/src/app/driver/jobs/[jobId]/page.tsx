@@ -404,22 +404,38 @@ export default function DriverJobDetailPage() {
         </div>
 
         {/* Release Order Section - Always show at top */}
-        {job.releaseOrderUrl && (
-          <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 bg-red-50">
-            <a
-              href={job.releaseOrderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-between px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <FileDown className="w-5 h-5" />
-                View Release Order
-              </span>
-              <ExternalLink className="w-5 h-5" />
-            </a>
-          </div>
-        )}
+        {(() => {
+          const releaseOrderDoc = job.documents?.find(doc => doc.type === 'RELEASE_ORDER');
+          if (!releaseOrderDoc) return null;
+
+          return (
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 bg-red-50">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(getApiUrl(`/api/v1/documents/${releaseOrderDoc.id}/download`));
+                    const data = await response.json();
+                    if (data.success && data.data.url) {
+                      window.open(data.data.url, '_blank');
+                    } else {
+                      alert('Failed to get release order URL');
+                    }
+                  } catch (error) {
+                    console.error('Error fetching release order:', error);
+                    alert('Failed to load release order');
+                  }
+                }}
+                className="w-full flex items-center justify-between px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <FileDown className="w-5 h-5" />
+                  View Release Order
+                </span>
+                <ExternalLink className="w-5 h-5" />
+              </button>
+            </div>
+          );
+        })()}
 
         {/* BL Cutoff Warning - Show prominently if applicable and urgent */}
         {job.blCutoffRequired && job.blCutoffDateTime && (
