@@ -54,22 +54,40 @@ All notable changes to the Logistics Platform will be documented in this file.
 - **Commits**: d51f3fa, 1244bb5, 89a371b
 - **Result**: Documents now properly linked to jobs when created from job requests
 
-#### **6. Release Order Display in Driver View**
-- **Issue**: Release order "View" button didn't work in driver job details even after document transfer
-- **Root Cause**: Driver view used `job.releaseOrderUrl` string field which wasn't synchronized with document transfers
-- **Solution**: Changed driver view to use `job.documents` array instead
-- **Implementation**:
-  - Find RELEASE_ORDER document in `job.documents` array
-  - Use document download API endpoint (same as other documents)
-  - Consistent with existing document display pattern
-- **File Modified**: `apps/web/src/app/driver/jobs/[jobId]/page.tsx` (lines 406-438)
-- **Commit**: d6e4186
-- **Benefits**:
-  - More reliable than `releaseOrderUrl` field
-  - Works regardless of when release order was uploaded
-  - Consistent with other document displays
-  - No backend changes needed
-- **Result**: ✅ Release orders now display and download correctly in driver view
+#### **6. Release Order Display Across All Views**
+- **Issue**: Release order "View" buttons didn't work in any job details views even after document transfer
+- **Root Cause**: All views used `job.releaseOrderUrl` string field which wasn't synchronized with document transfers
+- **Solution**: Changed all views to use `job.documents` array instead
+
+**Implementation Details:**
+
+**A. Driver View Fix** (Commit: d6e4186)
+- **File**: `apps/web/src/app/driver/jobs/[jobId]/page.tsx` (lines 406-438)
+- Find RELEASE_ORDER document in `job.documents` array
+- Use document download API endpoint
+- Button with async click handler fetches signed URL
+
+**B. Client View Fix** (Commit: 3819129, 6f3e4ce, 17a0454)
+- **File**: `apps/web/src/app/client/jobs/[id]/page.tsx` (lines 547-576)
+- Same pattern as driver view
+- Added `type` field to JobDetail documents type definition (line 79)
+- Added `type` field to socket event document type (line 357)
+- Ensures type safety and WebSocket compatibility
+
+**C. Admin View Fix** (Commit: 3819129, 6f3e4ce)
+- **File**: `apps/web/src/app/dashboard/jobs/[id]/page.tsx` (lines 768-796)
+- Same pattern as driver and client views
+- Added `documents` field to JobDetail type using existing DocumentInfo type (line 90)
+- Consistent implementation across all dashboards
+
+**Benefits:**
+- More reliable than `releaseOrderUrl` field
+- Works regardless of when release order was uploaded
+- Consistent with other document displays
+- No backend changes needed
+- Type-safe implementation
+
+**Result**: ✅ Release orders now display and download correctly in **all three views** (driver, client, admin)
 
 #### **7. CORS and Package Version Fixes**
 - **Added explicit HTTP methods** to CORS configuration in `main.ts`
@@ -85,7 +103,7 @@ All notable changes to the Logistics Platform will be documented in this file.
 
 ### Deploy Status
 - ✅ Render API: Deployment d7ce4f8 (CORS + package fixes)
-- ✅ Vercel Frontend: Deployment d6e4186 (release order fix)
+- ✅ Vercel Frontend: Deployment 17a0454 (release order fixes for all views + TypeScript fixes)
 - ✅ Neon Database: Connection pooling enabled
 - ✅ Supabase Storage: Bucket created with policies configured
 
@@ -94,7 +112,10 @@ All notable changes to the Logistics Platform will be documented in this file.
 - ❌ **Supabase bucket not found** - FIXED by creating logistics-documents bucket
 - ❌ **Database 503 errors** - FIXED by enabling connection pooling in Neon
 - ❌ **Release orders not displaying in driver view** - FIXED by using documents array instead of releaseOrderUrl field
+- ❌ **Release orders not displaying in client view** - FIXED by applying same solution as driver view
+- ❌ **Release orders not displaying in admin view** - FIXED by applying same solution as driver view
 - ❌ **Documents not transferring from job requests to jobs** - FIXED by adding document transfer logic
+- ❌ **TypeScript compilation errors on Vercel** - FIXED by adding type field to all document type definitions
 
 ### Architecture Improvements
 
