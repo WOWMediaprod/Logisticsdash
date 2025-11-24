@@ -442,10 +442,12 @@ function DocumentCard({ document }: { document: Document }) {
 }
 
 function UploadModal({ onClose }: { onClose: () => void }) {
+  const { companyId } = useCompany();
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploadType, setUploadType] = useState('RELEASE_ORDER');
   const [jobReference, setJobReference] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -479,10 +481,70 @@ function UploadModal({ onClose }: { onClose: () => void }) {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
-    // Simulate upload
-    console.log('Uploading files:', files);
-    onClose();
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      alert('Please select at least one file');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Upload each file individually
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', uploadType);
+        formData.append('enableOcr', 'true');
+
+        // Associate with job if reference provided
+        if (jobReference && jobReference.trim()) {
+          // The backend will validate the job ID
+          formData.append('jobId', jobReference.trim());
+        }
+
+        // Add metadata about the upload
+        if (companyId) {
+          const metadata = JSON.stringify({
+            uploadedBy: 'client',
+            uploadedVia: 'documents-modal',
+            jobReference: jobReference || 'none'
+          });
+          formData.append('metadata', metadata);
+        }
+
+        const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to upload ${file.name}`);
+        }
+
+        return await response.json();
+      });
+
+      await Promise.all(uploadPromises);
+
+      alert(`Successfully uploaded ${files.length} file(s)!`);
+
+      // Reset form
+      setFiles([]);
+      setJobReference('');
+      setUploadType('RELEASE_ORDER');
+
+      onClose();
+
+      // Refresh the documents list
+      window.location.reload();
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -609,10 +671,10 @@ function UploadModal({ onClose }: { onClose: () => void }) {
             </button>
             <button
               onClick={handleUpload}
-              disabled={files.length === 0}
+              disabled={files.length === 0 || uploading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Upload {files.length} file{files.length !== 1 ? 's' : ''}
+              {uploading ? 'Uploading...' : `Upload ${files.length} file${files.length !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>

@@ -277,25 +277,39 @@ export default function DriverJobDetailPage() {
     setUploadingPhotos(true);
 
     try {
-      const formData = new FormData();
-      photos.forEach((photo) => {
-        formData.append('photos', photo);
+      // Upload each photo individually
+      const uploadPromises = photos.map(async (photo) => {
+        const formData = new FormData();
+        formData.append('file', photo);
+        formData.append('type', 'PHOTO'); // POD photos
+        formData.append('jobId', jobId); // Associate with job
+        formData.append('enableOcr', 'false'); // Don't OCR photos
+
+        const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to upload ${photo.name}`);
+        }
+
+        return await response.json();
       });
 
-      // TODO: Implement actual upload endpoint
-      // const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}/pod-photos`), {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      await Promise.all(uploadPromises);
 
-      // Simulate upload
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      alert('Photos uploaded successfully!');
+      alert(`Successfully uploaded ${photos.length} photo(s)!`);
       setPhotos([]);
+
+      // Refresh job details to show newly uploaded documents
+      if (driver) {
+        fetchJobDetails(driver.companyId);
+      }
     } catch (error) {
       console.error('Failed to upload photos:', error);
-      alert('Failed to upload photos');
+      alert(`Failed to upload photos: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingPhotos(false);
     }

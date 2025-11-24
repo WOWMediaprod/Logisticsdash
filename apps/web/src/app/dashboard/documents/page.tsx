@@ -59,6 +59,8 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string>('ALL');
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState('OTHER');
+  const [uploadJobId, setUploadJobId] = useState('');
 
   useEffect(() => {
     fetchDocuments();
@@ -87,8 +89,21 @@ export default function DocumentsPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'OTHER'); // Default type
+      formData.append('type', uploadDocType); // Use selected type
       formData.append('enableOcr', 'true');
+
+      // Associate with job if ID provided
+      if (uploadJobId && uploadJobId.trim()) {
+        formData.append('jobId', uploadJobId.trim());
+      }
+
+      // Add metadata about the upload
+      const metadata = JSON.stringify({
+        uploadedBy: 'admin',
+        uploadedVia: 'admin-dashboard',
+        jobReference: uploadJobId || 'none'
+      });
+      formData.append('metadata', metadata);
 
       const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
         method: 'POST',
@@ -97,12 +112,19 @@ export default function DocumentsPage() {
 
       const data = await response.json();
       if (data.success) {
+        alert(`Successfully uploaded ${file.name}!`);
         fetchDocuments(); // Refresh the list
         // Reset the input
         event.target.value = '';
+        // Reset form
+        setUploadDocType('OTHER');
+        setUploadJobId('');
+      } else {
+        alert(`Upload failed: ${data.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to upload document:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingFile(false);
     }
@@ -190,6 +212,36 @@ export default function DocumentsPage() {
                   ← Back to Dashboard
                 </motion.button>
               </Link>
+
+              {/* Document Type Selector */}
+              <select
+                value={uploadDocType}
+                onChange={(e) => setUploadDocType(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="RELEASE_ORDER">Release Order</option>
+                <option value="CDN">CDN</option>
+                <option value="LOADING_PASS">Loading Pass</option>
+                <option value="FCL_DOCUMENT">FCL Document</option>
+                <option value="BOL">Bill of Lading</option>
+                <option value="INVOICE">Invoice</option>
+                <option value="DELIVERY_NOTE">Delivery Note</option>
+                <option value="GATE_PASS">Gate Pass</option>
+                <option value="CUSTOMS">Customs</option>
+                <option value="INSURANCE">Insurance</option>
+                <option value="PHOTO">Photo</option>
+                <option value="SIGNATURE">Signature</option>
+                <option value="OTHER">Other</option>
+              </select>
+
+              {/* Optional Job ID Input */}
+              <input
+                type="text"
+                value={uploadJobId}
+                onChange={(e) => setUploadJobId(e.target.value)}
+                placeholder="Job ID (optional)"
+                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
+              />
 
               <div className="relative">
                 <input
