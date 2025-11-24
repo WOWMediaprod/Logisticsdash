@@ -71,6 +71,7 @@ async function bootstrap() {
   app.enableCors({
     origin: API_CORS_ORIGINS,
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
   // API versioning
