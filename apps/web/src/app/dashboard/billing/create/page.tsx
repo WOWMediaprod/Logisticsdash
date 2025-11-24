@@ -15,6 +15,9 @@ import {
 interface Job {
   id: string;
   status: string;
+  pickupTs: string | null;
+  loadingLocation?: string;
+  deliveryAddress?: string;
   client: {
     name: string;
     code: string;
@@ -27,14 +30,40 @@ interface Job {
   };
   vehicle?: {
     regNo: string;
+    registrationNo?: string;
   };
   driver?: {
     name: string;
+    firstName?: string;
+    lastName?: string;
   };
+  documents?: Array<{
+    id: string;
+    type: string;
+    fileName: string;
+    fileUrl: string;
+    createdAt: string;
+  }>;
 }
 
 interface Bill {
   jobId: string;
+}
+
+interface CDNDetails {
+  originLocation: string;
+  destinationLocation: string;
+  vehicleNo: string;
+  driverName: string;
+  dateOfHire: string;
+  hasDelay: boolean;
+  delayFactoryName?: string;
+  timeEnteredFactory?: string;
+  timeUnloadedAtPort?: string;
+  delayDurationHours?: number;
+  detentionCharges?: number;
+  delayReason?: string;
+  cdnDocumentId?: string;
 }
 
 export default function CreateBillPage() {
@@ -46,6 +75,7 @@ export default function CreateBillPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCdnDetails, setShowCdnDetails] = useState(false);
 
   const [formData, setFormData] = useState({
     jobId: '',
@@ -54,6 +84,15 @@ export default function CreateBillPage() {
     issuedDate: '',
     dueDate: '',
     notes: '',
+  });
+
+  const [cdnDetails, setCdnDetails] = useState<CDNDetails>({
+    originLocation: '',
+    destinationLocation: '',
+    vehicleNo: '',
+    driverName: '',
+    dateOfHire: '',
+    hasDelay: false,
   });
 
   useEffect(() => {
@@ -106,6 +145,29 @@ export default function CreateBillPage() {
     }
   }, [selectedJob, formData.amount]);
 
+  // Auto-populate CDN details when job selected
+  useEffect(() => {
+    if (selectedJob) {
+      const cdnDoc = selectedJob.documents?.find(doc => doc.type === 'CDN');
+
+      setCdnDetails({
+        originLocation: selectedJob.loadingLocation || selectedJob.route.origin || '',
+        destinationLocation: selectedJob.deliveryAddress || selectedJob.route.destination || '',
+        vehicleNo: selectedJob.vehicle?.registrationNo || selectedJob.vehicle?.regNo || '',
+        driverName: selectedJob.driver?.name ||
+                    `${selectedJob.driver?.firstName || ''} ${selectedJob.driver?.lastName || ''}`.trim(),
+        dateOfHire: selectedJob.pickupTs ? new Date(selectedJob.pickupTs).toISOString().split('T')[0] : '',
+        hasDelay: false,
+        cdnDocumentId: cdnDoc?.id,
+      });
+
+      // Auto-expand CDN section if CDN document exists
+      if (cdnDoc) {
+        setShowCdnDetails(true);
+      }
+    }
+  }, [selectedJob]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -139,6 +201,13 @@ export default function CreateBillPage() {
 
       if (formData.notes) {
         payload.notes = formData.notes;
+      }
+
+      // Add CDN details to metadata if populated
+      if (cdnDetails.originLocation || cdnDetails.hasDelay) {
+        payload.metadata = {
+          cdnDetails: cdnDetails
+        };
       }
 
       console.log('Creating bill with payload:', payload);
@@ -339,6 +408,245 @@ export default function CreateBillPage() {
                   placeholder="Add any additional notes or remarks..."
                 />
               </div>
+
+              {/* CDN & Detention Details */}
+              {selectedJob && (
+                <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      CDN & Detention Details
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowCdnDetails(!showCdnDetails)}
+                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                    >
+                      {showCdnDetails ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+
+                  {showCdnDetails && (
+                    <div className="space-y-4 bg-white p-4 rounded-lg">
+                      {/* Show CDN document link if available */}
+                      {cdnDetails.cdnDocumentId && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              <span className="font-semibold">CDN Document Available</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(getApiUrl(`/api/v1/documents/${cdnDetails.cdnDocumentId}/download`));
+                                  const data = await response.json();
+                                  if (data.success && data.data.url) {
+                                    window.open(data.data.url, '_blank');
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to open CDN:', error);
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
+                            >
+                              View CDN
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Basic Route & Hire Info (Auto-populated) */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Origin Location
+                          </label>
+                          <input
+                            type="text"
+                            value={cdnDetails.originLocation}
+                            onChange={(e) => setCdnDetails({ ...cdnDetails, originLocation: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g., Dankotuwa"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Destination Location
+                          </label>
+                          <input
+                            type="text"
+                            value={cdnDetails.destinationLocation}
+                            onChange={(e) => setCdnDetails({ ...cdnDetails, destinationLocation: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g., Colombo Port"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Vehicle Number
+                          </label>
+                          <input
+                            type="text"
+                            value={cdnDetails.vehicleNo}
+                            onChange={(e) => setCdnDetails({ ...cdnDetails, vehicleNo: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g., CAB-1234"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Driver Name
+                          </label>
+                          <input
+                            type="text"
+                            value={cdnDetails.driverName}
+                            onChange={(e) => setCdnDetails({ ...cdnDetails, driverName: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g., John Silva"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Date of Hire
+                        </label>
+                        <input
+                          type="date"
+                          value={cdnDetails.dateOfHire}
+                          onChange={(e) => setCdnDetails({ ...cdnDetails, dateOfHire: e.target.value })}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      {/* Delay/Detention Details */}
+                      <div className="border-t border-slate-200 pt-4 mt-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <input
+                            type="checkbox"
+                            id="hasDelay"
+                            checked={cdnDetails.hasDelay}
+                            onChange={(e) => setCdnDetails({ ...cdnDetails, hasDelay: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                          <label htmlFor="hasDelay" className="text-sm font-medium text-slate-700">
+                            There was a delay/detention
+                          </label>
+                        </div>
+
+                        {cdnDetails.hasDelay && (
+                          <div className="space-y-4 pl-6 border-l-2 border-red-200">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Factory Name (where delayed)
+                              </label>
+                              <input
+                                type="text"
+                                value={cdnDetails.delayFactoryName || ''}
+                                onChange={(e) => setCdnDetails({ ...cdnDetails, delayFactoryName: e.target.value })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g., ABC Ceramics Factory"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Time Entered Factory
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.timeEnteredFactory || ''}
+                                  onChange={(e) => {
+                                    setCdnDetails({ ...cdnDetails, timeEnteredFactory: e.target.value });
+                                    // Auto-calculate duration if both times are set
+                                    if (e.target.value && cdnDetails.timeUnloadedAtPort) {
+                                      const hours = (new Date(cdnDetails.timeUnloadedAtPort).getTime() - new Date(e.target.value).getTime()) / (1000 * 60 * 60);
+                                      setCdnDetails(prev => ({ ...prev, delayDurationHours: Math.round(hours * 100) / 100 }));
+                                    }
+                                  }}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Time Unloaded at Port
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.timeUnloadedAtPort || ''}
+                                  onChange={(e) => {
+                                    setCdnDetails({ ...cdnDetails, timeUnloadedAtPort: e.target.value });
+                                    // Auto-calculate duration if both times are set
+                                    if (e.target.value && cdnDetails.timeEnteredFactory) {
+                                      const hours = (new Date(e.target.value).getTime() - new Date(cdnDetails.timeEnteredFactory).getTime()) / (1000 * 60 * 60);
+                                      setCdnDetails(prev => ({ ...prev, delayDurationHours: Math.round(hours * 100) / 100 }));
+                                    }
+                                  }}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Delay Duration (hours)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={cdnDetails.delayDurationHours || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, delayDurationHours: parseFloat(e.target.value) || undefined })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="6.25"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Detention Charges (LKR)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={cdnDetails.detentionCharges || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, detentionCharges: parseFloat(e.target.value) || undefined })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="5000.00"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Delay Reason
+                              </label>
+                              <textarea
+                                value={cdnDetails.delayReason || ''}
+                                onChange={(e) => setCdnDetails({ ...cdnDetails, delayReason: e.target.value })}
+                                rows={2}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g., Waiting for loading clearance"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex items-center gap-4 pt-4">

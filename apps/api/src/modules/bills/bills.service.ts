@@ -44,6 +44,7 @@ export class BillsService {
         dueDate: createBillDto.dueDate ? new Date(createBillDto.dueDate) : null,
         // attachedDocumentIds: createBillDto.attachedDocumentIds, // Field doesn't exist
         // notes: createBillDto.notes, // Field doesn't exist
+        metadata: createBillDto.metadata || null, // Store CDN details and other metadata
       },
       include: {
         job: {
@@ -147,6 +148,9 @@ export class BillsService {
     }
     if (updateBillDto.paidDate !== undefined) {
       updateData.paidAt = updateBillDto.paidDate ? new Date(updateBillDto.paidDate) : null; // Changed from paidDate to paidAt
+    }
+    if (updateBillDto.metadata !== undefined) {
+      updateData.metadata = updateBillDto.metadata; // Update CDN details and other metadata
     }
 
     const updatedBill = await this.prisma.bill.update({

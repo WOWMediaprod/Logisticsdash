@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsUUID, IsArray, IsDateString } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum, IsUUID, IsArray, IsDateString, IsObject } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum BillStatus {
@@ -49,4 +49,9 @@ export class CreateBillDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Additional metadata (e.g., CDN details)' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
 }

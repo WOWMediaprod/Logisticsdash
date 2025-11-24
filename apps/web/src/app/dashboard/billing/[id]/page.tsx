@@ -23,6 +23,22 @@ import {
 
 type BillStatus = 'DRAFT' | 'ISSUED' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 
+interface CDNDetails {
+  originLocation?: string;
+  destinationLocation?: string;
+  vehicleNo?: string;
+  driverName?: string;
+  dateOfHire?: string;
+  hasDelay?: boolean;
+  delayFactoryName?: string;
+  timeEnteredFactory?: string;
+  timeUnloadedAtPort?: string;
+  delayDurationHours?: number;
+  detentionCharges?: number;
+  delayReason?: string;
+  cdnDocumentId?: string;
+}
+
 interface Bill {
   id: string;
   billNumber: string;
@@ -35,6 +51,9 @@ interface Bill {
   sentToClient: boolean;
   sentAt: string | null;
   notes: string | null;
+  metadata?: {
+    cdnDetails?: CDNDetails;
+  };
   job: {
     id: string;
     status: string;
@@ -334,6 +353,141 @@ export default function BillDetailPage() {
               >
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">Notes</h2>
                 <p className="text-slate-600 whitespace-pre-wrap">{bill.notes}</p>
+              </motion.div>
+            )}
+
+            {/* CDN & Detention Details */}
+            {bill.metadata?.cdnDetails && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-blue-50 rounded-2xl shadow-sm border border-blue-200 p-6"
+              >
+                <div className="flex items-center gap-2 text-blue-700 mb-4">
+                  <FileText className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">CDN & Detention Details</h2>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 space-y-4">
+                  {/* Basic Route & Hire Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {bill.metadata.cdnDetails.originLocation && (
+                      <div>
+                        <p className="text-sm text-slate-500">Origin</p>
+                        <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.originLocation}</p>
+                      </div>
+                    )}
+                    {bill.metadata.cdnDetails.destinationLocation && (
+                      <div>
+                        <p className="text-sm text-slate-500">Destination</p>
+                        <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.destinationLocation}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {bill.metadata.cdnDetails.vehicleNo && (
+                      <div>
+                        <p className="text-sm text-slate-500">Vehicle No.</p>
+                        <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.vehicleNo}</p>
+                      </div>
+                    )}
+                    {bill.metadata.cdnDetails.driverName && (
+                      <div>
+                        <p className="text-sm text-slate-500">Driver</p>
+                        <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.driverName}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {bill.metadata.cdnDetails.dateOfHire && (
+                    <div>
+                      <p className="text-sm text-slate-500">Date of Hire</p>
+                      <p className="text-base font-medium text-slate-900">
+                        {new Date(bill.metadata.cdnDetails.dateOfHire).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* CDN Document Link */}
+                  {bill.metadata.cdnDetails.cdnDocumentId && (
+                    <div className="border-t border-slate-200 pt-4">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(getApiUrl(`/api/v1/documents/${bill.metadata?.cdnDetails?.cdnDocumentId}/download`));
+                            const data = await response.json();
+                            if (data.success && data.data.url) {
+                              window.open(data.data.url, '_blank');
+                            }
+                          } catch (error) {
+                            console.error('Failed to open CDN:', error);
+                          }
+                        }}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
+                      >
+                        View CDN Document
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delay/Detention Details */}
+                  {bill.metadata.cdnDetails.hasDelay && (
+                    <div className="border-t border-red-200 pt-4 mt-4 bg-red-50 -m-4 p-4 rounded-lg">
+                      <h3 className="font-semibold text-red-800 mb-3">Detention Charges</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {bill.metadata.cdnDetails.delayFactoryName && (
+                          <div>
+                            <p className="text-sm text-red-600">Factory Name</p>
+                            <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.delayFactoryName}</p>
+                          </div>
+                        )}
+                        {bill.metadata.cdnDetails.delayDurationHours && (
+                          <div>
+                            <p className="text-sm text-red-600">Duration</p>
+                            <p className="text-base font-medium text-slate-900">{bill.metadata.cdnDetails.delayDurationHours} hours</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        {bill.metadata.cdnDetails.timeEnteredFactory && (
+                          <div>
+                            <p className="text-sm text-red-600">Time Entered Factory</p>
+                            <p className="text-base font-medium text-slate-900">
+                              {new Date(bill.metadata.cdnDetails.timeEnteredFactory).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                        {bill.metadata.cdnDetails.timeUnloadedAtPort && (
+                          <div>
+                            <p className="text-sm text-red-600">Time Delivered</p>
+                            <p className="text-base font-medium text-slate-900">
+                              {new Date(bill.metadata.cdnDetails.timeUnloadedAtPort).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {bill.metadata.cdnDetails.detentionCharges && (
+                        <div className="mt-3 pt-3 border-t border-red-200">
+                          <p className="text-sm text-red-600">Detention Charges</p>
+                          <p className="text-2xl font-bold text-red-700">
+                            LKR {bill.metadata.cdnDetails.detentionCharges.toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+
+                      {bill.metadata.cdnDetails.delayReason && (
+                        <div className="mt-3">
+                          <p className="text-sm text-red-600">Reason</p>
+                          <p className="text-base text-slate-700">{bill.metadata.cdnDetails.delayReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
           </div>

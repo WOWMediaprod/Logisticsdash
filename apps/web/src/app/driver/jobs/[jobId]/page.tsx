@@ -138,6 +138,8 @@ export default function DriverJobDetailPage() {
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [cdnFile, setCdnFile] = useState<File | null>(null);
+  const [uploadingCdn, setUploadingCdn] = useState(false);
   const [showEarningsModal, setShowEarningsModal] = useState(false);
 
   useEffect(() => {
@@ -312,6 +314,58 @@ export default function DriverJobDetailPage() {
       alert(`Failed to upload photos: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingPhotos(false);
+    }
+  };
+
+  const handleCdnSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setCdnFile(e.target.files[0]);
+    }
+  };
+
+  const removeCdnFile = () => {
+    setCdnFile(null);
+  };
+
+  const uploadCDN = async () => {
+    if (!cdnFile) {
+      alert('Please select a CDN document');
+      return;
+    }
+
+    setUploadingCdn(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', cdnFile);
+      formData.append('type', 'CDN'); // Container Delivery Note
+      formData.append('jobId', jobId); // Associate with job
+      formData.append('enableOcr', 'false'); // OCR will be enabled in future phase
+
+      const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to upload ${cdnFile.name}`);
+      }
+
+      await response.json();
+
+      alert('CDN uploaded successfully!');
+      setCdnFile(null);
+
+      // Refresh job details to show newly uploaded document
+      if (driver) {
+        fetchJobDetails(driver.companyId);
+      }
+    } catch (error) {
+      console.error('Failed to upload CDN:', error);
+      alert(`Failed to upload CDN: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingCdn(false);
     }
   };
 
@@ -868,6 +922,94 @@ export default function DriverJobDetailPage() {
                     </>
                   )}
                 </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CDN Document Upload (MANDATORY) */}
+        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 bg-red-50">
+          <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-red-600" />
+            CDN Document Upload
+          </h3>
+          <p className="text-sm text-red-600 mb-4 font-semibold">
+            ⚠️ MANDATORY - Job cannot be completed without CDN upload
+          </p>
+
+          <div className="space-y-4">
+            <input
+              type="file"
+              id="cdn-upload"
+              accept="image/*,.pdf"
+              capture="environment"
+              onChange={handleCdnSelect}
+              className="hidden"
+            />
+
+            {!cdnFile ? (
+              <label
+                htmlFor="cdn-upload"
+                className="block w-full py-4 px-6 border-2 border-dashed border-red-300 rounded-lg text-center cursor-pointer hover:border-red-400 hover:bg-red-100 transition-colors"
+              >
+                <FileText className="w-10 h-10 text-red-400 mx-auto mb-2" />
+                <span className="text-sm text-gray-700 font-semibold">Tap to capture/upload CDN document</span>
+                <p className="text-xs text-gray-500 mt-1">Photo or PDF accepted</p>
+              </label>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-8 h-8 text-red-600" />
+                      <div>
+                        <p className="font-semibold text-gray-900">{cdnFile.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {(cdnFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={removeCdnFile}
+                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={uploadCDN}
+                  disabled={uploadingCdn}
+                  className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  {uploadingCdn ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Uploading CDN...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5" />
+                      Upload CDN Document
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Show uploaded CDN if exists */}
+            {job.documents && job.documents.some(doc => doc.type === 'CDN') && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-green-700">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-semibold">CDN Document Uploaded</span>
+                </div>
+                <p className="text-sm text-green-600 mt-1">
+                  Uploaded: {new Date(job.documents.find(doc => doc.type === 'CDN')?.createdAt || '').toLocaleDateString()}
+                </p>
               </div>
             )}
           </div>
