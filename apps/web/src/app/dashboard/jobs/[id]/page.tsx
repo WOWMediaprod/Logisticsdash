@@ -765,14 +765,35 @@ export default function JobDetailPage() {
                 <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                   <h3 className="text-sm font-bold text-blue-900 mb-3">Shipment Details</h3>
                   <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    {job.releaseOrderUrl && (
-                      <div>
-                        <p className="text-blue-600 font-semibold">Release Order</p>
-                        <a href={job.releaseOrderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">
-                          View Document
-                        </a>
-                      </div>
-                    )}
+                    {(() => {
+                      const releaseOrderDoc = job.documents?.find(doc => doc.type === 'RELEASE_ORDER');
+                      if (!releaseOrderDoc) return null;
+
+                      return (
+                        <div>
+                          <p className="text-blue-600 font-semibold">Release Order</p>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(getApiUrl(`/api/v1/documents/${releaseOrderDoc.id}/download`));
+                                const data = await response.json();
+                                if (data.success && data.data.url) {
+                                  window.open(data.data.url, '_blank');
+                                } else {
+                                  alert('Failed to get release order URL');
+                                }
+                              } catch (error) {
+                                console.error('Error fetching release order:', error);
+                                alert('Failed to load release order');
+                              }
+                            }}
+                            className="text-blue-700 hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
+                          >
+                            View Document
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     {job.loadingLocation && (
                       <div>

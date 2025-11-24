@@ -544,15 +544,36 @@ export default function ClientJobDetailPage() {
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass p-6 rounded-2xl">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Shipment Details</h2>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  {job.releaseOrderUrl && (
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-blue-600 font-semibold mb-1">Release Order</p>
-                      <a href={job.releaseOrderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline flex items-center gap-1">
-                        View Document
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
+                  {(() => {
+                    const releaseOrderDoc = job.documents?.find(doc => doc.type === 'RELEASE_ORDER');
+                    if (!releaseOrderDoc) return null;
+
+                    return (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-blue-600 font-semibold mb-1">Release Order</p>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(getApiUrl(`/api/v1/documents/${releaseOrderDoc.id}/download`));
+                              const data = await response.json();
+                              if (data.success && data.data.url) {
+                                window.open(data.data.url, '_blank');
+                              } else {
+                                alert('Failed to get release order URL');
+                              }
+                            } catch (error) {
+                              console.error('Error fetching release order:', error);
+                              alert('Failed to load release order');
+                            }
+                          }}
+                          className="text-blue-700 hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+                        >
+                          View Document
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   {job.loadingLocation && (
                     <div className="bg-gray-50 rounded-lg p-3">
