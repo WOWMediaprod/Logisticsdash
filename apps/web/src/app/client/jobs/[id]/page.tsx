@@ -76,6 +76,7 @@ type JobDetail = {
     fileName: string;
     fileUrl: string;
     fileType: string;
+    type: string;
     uploadedAt: string;
   }>;
   bill?: {

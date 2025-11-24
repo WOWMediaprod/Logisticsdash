@@ -87,6 +87,7 @@ type JobDetail = {
   vehicle?: VehicleInfo;
   trailer?: TrailerInfo;
   statusEvents?: StatusEvent[];
+  documents?: DocumentInfo[];
   // Job Request Details
   releaseOrderUrl?: string;
   loadingLocation?: string;
