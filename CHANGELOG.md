@@ -89,7 +89,67 @@ All notable changes to the Logistics Platform will be documented in this file.
 
 **Result**: ✅ Release orders now display and download correctly in **all three views** (driver, client, admin)
 
-#### **7. CORS and Package Version Fixes**
+#### **7. Upload Functionality Implementation Across All Dashboards** (Commit: 280b616)
+- **Issue**: Critical upload gaps found in driver POD photos, client documents modal, and admin dashboard
+- **Root Cause Analysis**:
+  - Driver POD photo upload was commented out as TODO
+  - Client documents modal had stubbed upload function
+  - Admin dashboard hardcoded document type as 'OTHER' with no job association
+  - API and storage infrastructure were working correctly, but frontend implementations were incomplete
+- **Solution**: Implemented actual upload functionality for all three interfaces
+
+**Implementation Details:**
+
+**A. Driver POD Photo Upload**
+- **File**: `apps/web/src/app/driver/jobs/[jobId]/page.tsx` (lines 271-316)
+- Replaced TODO/simulated 2-second delay with actual upload
+- Upload each photo individually to `/api/v1/documents/upload`
+- Set document type: 'PHOTO'
+- Associate with jobId automatically
+- Disable OCR for photos
+- Refresh job details after successful upload to show new documents
+- Proper error handling with detailed error messages
+- Upload progress indicator
+
+**B. Client Documents Modal Upload**
+- **File**: `apps/web/src/app/client/documents/page.tsx` (lines 444-548, 672-678)
+- Added `useCompany()` hook for companyId access
+- Added `uploading` state for UI feedback
+- Replaced stubbed `handleUpload()` with actual implementation (lines 484-548)
+- Upload each file individually with Promise.all()
+- Use selected document type from dropdown
+- Support optional job reference association via input field
+- Add metadata: uploadedBy, uploadedVia, jobReference
+- Enable OCR for document processing
+- Update button to show "Uploading..." during upload (line 677)
+- Disable button when no files or during upload
+- Refresh documents list after successful upload
+- Proper error handling with user feedback
+
+**C. Admin Dashboard Upload Enhancement**
+- **File**: `apps/web/src/app/dashboard/documents/page.tsx` (lines 62-63, 92, 96-106, 115-127, 216-244)
+- Added state: `uploadDocType` and `uploadJobId` (lines 62-63)
+- Added document type selector UI (lines 217-235)
+- Added optional job ID input field UI (lines 238-244)
+- Updated handleFileUpload to use selected type instead of hardcoded 'OTHER' (line 92)
+- Added job association support (lines 96-98)
+- Added upload metadata tracking (lines 101-106)
+- Improved user feedback with success/error alerts (lines 115-127)
+- Reset form after successful upload
+
+**Benefits:**
+- ✅ All uploads now go to Supabase storage bucket (logistics-documents)
+- ✅ Proper document type categorization across all interfaces
+- ✅ Job association support in client and admin interfaces
+- ✅ Consistent error handling and user feedback
+- ✅ UI reflects upload progress and status
+- ✅ Documents immediately visible after upload
+- ✅ OCR processing enabled where appropriate
+- ✅ Metadata tracking for audit trail
+
+**Result**: ✅ All document upload functionality now fully operational with proper storage bucket integration
+
+#### **8. CORS and Package Version Fixes**
 - **Added explicit HTTP methods** to CORS configuration in `main.ts`
   - Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS
   - Ensures CORS preflight allows PATCH requests
@@ -103,7 +163,7 @@ All notable changes to the Logistics Platform will be documented in this file.
 
 ### Deploy Status
 - ✅ Render API: Deployment d7ce4f8 (CORS + package fixes)
-- ✅ Vercel Frontend: Deployment 17a0454 (release order fixes for all views + TypeScript fixes)
+- ✅ Vercel Frontend: Deployment 280b616 (upload functionality implementation)
 - ✅ Neon Database: Connection pooling enabled
 - ✅ Supabase Storage: Bucket created with policies configured
 
@@ -116,6 +176,9 @@ All notable changes to the Logistics Platform will be documented in this file.
 - ❌ **Release orders not displaying in admin view** - FIXED by applying same solution as driver view
 - ❌ **Documents not transferring from job requests to jobs** - FIXED by adding document transfer logic
 - ❌ **TypeScript compilation errors on Vercel** - FIXED by adding type field to all document type definitions
+- ❌ **Driver POD photos not uploading** - FIXED by implementing actual upload to replace TODO
+- ❌ **Client documents modal not uploading** - FIXED by implementing actual upload to replace stub
+- ❌ **Admin dashboard hardcoded document type** - FIXED by adding type selector and job ID input
 
 ### Architecture Improvements
 
