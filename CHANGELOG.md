@@ -39,16 +39,75 @@ All notable changes to the Logistics Platform will be documented in this file.
 - **File Fixed**: `apps/api/render.yaml` line 7
 - Result: PATCH endpoint decorators now properly applied during build
 
+#### **5. Document Transfer from Job Requests to Jobs**
+- **Issue**: Release orders and supporting documents weren't appearing in job views
+- **Root Cause**: When job requests were accepted, document records weren't linked to the new job
+- **Solution**: Added document transfer logic in `job-requests.service.ts` acceptAndCreateJob method
+- **Implementation**:
+  - Transfer all documents from job request to job by setting `jobId`
+  - Maintain `jobRequestId` for audit trail
+  - Include `attachedDocuments` in job request query for proper transfer
+  - Added Logger to JobRequestsService for debugging
+- **Files Modified**:
+  - `apps/api/src/modules/job-requests/job-requests.service.ts` (lines 336-457)
+  - Added document transfer block after waypoint creation
+- **Commits**: d51f3fa, 1244bb5, 89a371b
+- **Result**: Documents now properly linked to jobs when created from job requests
+
+#### **6. Release Order Display in Driver View**
+- **Issue**: Release order "View" button didn't work in driver job details even after document transfer
+- **Root Cause**: Driver view used `job.releaseOrderUrl` string field which wasn't synchronized with document transfers
+- **Solution**: Changed driver view to use `job.documents` array instead
+- **Implementation**:
+  - Find RELEASE_ORDER document in `job.documents` array
+  - Use document download API endpoint (same as other documents)
+  - Consistent with existing document display pattern
+- **File Modified**: `apps/web/src/app/driver/jobs/[jobId]/page.tsx` (lines 406-438)
+- **Commit**: d6e4186
+- **Benefits**:
+  - More reliable than `releaseOrderUrl` field
+  - Works regardless of when release order was uploaded
+  - Consistent with other document displays
+  - No backend changes needed
+- **Result**: ✅ Release orders now display and download correctly in driver view
+
+#### **7. CORS and Package Version Fixes**
+- **Added explicit HTTP methods** to CORS configuration in `main.ts`
+  - Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS
+  - Ensures CORS preflight allows PATCH requests
+- **Pinned @nestjs/mapped-types version** from wildcard `"*"` to `"^2.0.5"`
+  - Prevents version mismatches between local and production
+  - Ensures consistent decorator metadata across environments
+- **Files Modified**:
+  - `apps/api/src/main.ts` (line 74)
+  - `apps/api/package.json` (line 36)
+- **Commits**: 5bf3b1e, d7ce4f8
+
 ### Deploy Status
-- ✅ Render API: Deployment a98b8e4 (fixed build command)
-- ✅ Vercel Frontend: Ready
+- ✅ Render API: Deployment d7ce4f8 (CORS + package fixes)
+- ✅ Vercel Frontend: Deployment d6e4186 (release order fix)
 - ✅ Neon Database: Connection pooling enabled
 - ✅ Supabase Storage: Bucket created with policies configured
 
 ### Known Issues Resolved
-- ❌ **404 on PATCH /api/v1/job-requests/:id** - FIXED by correcting workspace build command
+- ❌ **404 on PATCH /api/v1/job-requests/:id** - FIXED by correcting workspace build command + CORS config
 - ❌ **Supabase bucket not found** - FIXED by creating logistics-documents bucket
 - ❌ **Database 503 errors** - FIXED by enabling connection pooling in Neon
+- ❌ **Release orders not displaying in driver view** - FIXED by using documents array instead of releaseOrderUrl field
+- ❌ **Documents not transferring from job requests to jobs** - FIXED by adding document transfer logic
+
+### Architecture Improvements
+
+**Document Management Pattern:**
+- Documents now properly flow from job requests → jobs
+- Frontend views use `job.documents` array consistently
+- Document download uses centralized API endpoint
+- Maintains audit trail with both `jobRequestId` and `jobId`
+
+**Best Practice Established:**
+- Always include related data in Prisma queries when needed for business logic
+- Use array relationships instead of string fields for document references
+- Implement proper logging for debugging production issues
 
 ## [2025-11-20] - Complete Trailer Management System (Session 5)
 
