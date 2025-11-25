@@ -240,9 +240,75 @@ All notable changes to the Logistics Platform will be documented in this file.
 
 **Result**: ✅ CDN uploads working, billing workflow complete end-to-end
 
+#### **10. CDN Billing UX Improvements & Route Cleanup** (Commits: bfbc15a, eb4d01b, df29d10, 93ff5e4, 9523690)
+
+**Issue**: After initial CDN billing deployment, discovered multiple issues:
+1. Billing pages crashed with "Cannot read properties of undefined (reading 'origin')"
+2. CDN document viewer not visible on billing create page
+3. Job ID not displayed for verification
+
+**Root Causes:**
+1. **Route References**: Multiple locations still referenced removed route system
+2. **Documents Not Included**: Backend didn't include documents in job queries
+3. **UI Visibility**: CDN section collapsed by default, document viewer buried in form
+
+**Solutions Implemented:**
+
+**A. Remove ALL Route References** (Commits: bfbc15a, eb4d01b)
+- **Files**: `billing/create/page.tsx`, `billing/page.tsx`, `billing/[id]/page.tsx`
+- **Changes**:
+  - Replaced `route.origin/destination` with `loadingLocation/deliveryAddress`
+  - Updated TypeScript interfaces to remove route object
+  - Removed auto-amount calculation (was based on `route.kmEstimate`)
+  - Job dropdown now shows: `Client - Origin → Destination - Vehicle`
+  - Bills list shows: `Client • Origin → Destination`
+  - Bill detail shows simplified route section
+
+**B. Improve CDN Details Visibility** (Commit: df29d10)
+- **File**: `billing/create/page.tsx:318-327, 159, 426-428`
+- **Changes**:
+  - Added Job ID display below job selector for verification
+  - Changed CDN section to ALWAYS auto-expand when job selected (not just when CDN exists)
+  - Added descriptive summary: "Capture: Origin/Destination, Vehicle, Driver, Date of Hire, Delay/Detention charges"
+
+**C. Reposition CDN Document Viewer** (Commit: 93ff5e4)
+- **File**: `billing/create/page.tsx:409-445`
+- **Changes**:
+  - Moved CDN viewer to standalone section right after Notes field
+  - Removed duplicate viewer from inside details form
+  - New prominent design: Green gradient box with large button
+  - Clear messaging: "Review the document before entering detention details"
+  - Perfect workflow: View CDN → Enter detention details
+
+**D. Backend Documents Include Fix** (Commit: 9523690)
+- **File**: `apps/api/src/modules/jobs/jobs.service.ts:626`
+- **Issue**: CDN viewer not appearing even when CDN uploaded
+- **Root Cause**: `defaultJobInclude()` didn't include documents relation
+- **Solution**: Added `documents: true` to default include
+- **Impact**: All job queries now return documents array
+
+**User Flow After Fixes:**
+1. Select job from dropdown → See Job ID
+2. Fill amount, dates, notes
+3. **See green "Driver Uploaded CDN" box** if CDN exists
+4. Click "View CDN Document" to review
+5. CDN details section auto-expanded with pre-filled data
+6. Enter detention details based on CDN review
+7. Submit bill
+
+**Benefits:**
+- ✅ No more crashes on billing pages
+- ✅ CDN document immediately visible and accessible
+- ✅ Job ID displayed for verification
+- ✅ CDN section always visible (no hunting for Show button)
+- ✅ Perfect workflow for detention billing
+- ✅ All route references cleaned up system-wide
+
+**Result**: ✅ Complete CDN billing workflow fully operational with excellent UX
+
 ### Deploy Status
-- ✅ Render API: Deployment d65e4e8 (CUID validation fix)
-- ✅ Vercel Frontend: Deployment d65e4e8 (CDN billing + CUID validation fix)
+- ✅ Render API: Deployment 9523690 (CDN billing complete with documents include)
+- ✅ Vercel Frontend: Deployment 93ff5e4 (CDN billing UX improvements)
 - ✅ Neon Database: Connection pooling enabled
 - ✅ Supabase Storage: Bucket created with policies configured
 
@@ -259,6 +325,10 @@ All notable changes to the Logistics Platform will be documented in this file.
 - ❌ **Client documents modal not uploading** - FIXED by implementing actual upload to replace stub
 - ❌ **Admin dashboard hardcoded document type** - FIXED by adding type selector and job ID input
 - ❌ **CDN upload "jobId must be a UUID" error** - FIXED by changing validation from UUID to CUID format across frontend and backend
+- ❌ **Billing pages crashing with route.origin error** - FIXED by removing all route references and using job location fields
+- ❌ **CDN document viewer not showing on billing page** - FIXED by adding documents to backend defaultJobInclude()
+- ❌ **Job ID not visible for verification** - FIXED by adding Job ID display in billing create form
+- ❌ **CDN section hidden by default** - FIXED by auto-expanding CDN details when job selected
 
 ### Architecture Improvements
 
