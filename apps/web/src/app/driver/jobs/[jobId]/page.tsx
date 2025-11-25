@@ -333,14 +333,43 @@ export default function DriverJobDetailPage() {
       return;
     }
 
+    // DEBUG: Validate jobId before uploading
+    console.log('🔍 CDN Upload Debug:', {
+      jobId,
+      jobIdType: typeof jobId,
+      jobIdLength: jobId?.length,
+      jobIdTrimmed: jobId?.trim(),
+      fileName: cdnFile.name,
+    });
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const trimmedJobId = jobId?.trim() || '';
+
+    if (!uuidRegex.test(trimmedJobId)) {
+      console.error('❌ Invalid jobId format:', {
+        original: jobId,
+        trimmed: trimmedJobId,
+        expected: 'UUID format (e.g., 550e8400-e29b-41d4-a716-446655440000)'
+      });
+      alert(`Invalid Job ID format.\n\nJob ID: "${jobId}"\n\nThis is a bug. Please report to admin.`);
+      return;
+    }
+
     setUploadingCdn(true);
 
     try {
       const formData = new FormData();
       formData.append('file', cdnFile);
       formData.append('type', 'CDN'); // Container Delivery Note
-      formData.append('jobId', jobId); // Associate with job
+      formData.append('jobId', trimmedJobId); // Sanitized jobId
       formData.append('enableOcr', 'false'); // OCR will be enabled in future phase
+
+      console.log('📤 Sending CDN upload request...', {
+        endpoint: '/api/v1/documents/upload',
+        jobId: trimmedJobId,
+        fileSize: cdnFile.size,
+      });
 
       const response = await fetch(getApiUrl('/api/v1/documents/upload'), {
         method: 'POST',
@@ -349,10 +378,17 @@ export default function DriverJobDetailPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Upload failed - Server response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          jobId: trimmedJobId,
+        });
         throw new Error(errorData.message || `Failed to upload ${cdnFile.name}`);
       }
 
-      await response.json();
+      const result = await response.json();
+      console.log('✅ CDN uploaded successfully:', result);
 
       alert('CDN uploaded successfully!');
       setCdnFile(null);
@@ -362,8 +398,19 @@ export default function DriverJobDetailPage() {
         fetchJobDetails(driver.companyId);
       }
     } catch (error) {
-      console.error('Failed to upload CDN:', error);
-      alert(`Failed to upload CDN: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ CDN Upload Error:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        jobId: trimmedJobId,
+        fileName: cdnFile.name,
+        fileSize: cdnFile.size,
+      });
+      alert(
+        `Failed to upload CDN: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
+        `File: ${cdnFile.name}\n` +
+        `Job ID: ${trimmedJobId}\n\n` +
+        `Check browser console (F12) for details.`
+      );
     } finally {
       setUploadingCdn(false);
     }
@@ -938,24 +985,50 @@ export default function DriverJobDetailPage() {
           </p>
 
           <div className="space-y-4">
-            <input
-              type="file"
-              id="cdn-upload"
-              accept="image/*,.pdf"
-              capture="environment"
-              onChange={handleCdnSelect}
-              className="hidden"
-            />
-
             {!cdnFile ? (
-              <label
-                htmlFor="cdn-upload"
-                className="block w-full py-4 px-6 border-2 border-dashed border-red-300 rounded-lg text-center cursor-pointer hover:border-red-400 hover:bg-red-100 transition-colors"
-              >
-                <FileText className="w-10 h-10 text-red-400 mx-auto mb-2" />
-                <span className="text-sm text-gray-700 font-semibold">Tap to capture/upload CDN document</span>
-                <p className="text-xs text-gray-500 mt-1">Photo or PDF accepted</p>
-              </label>
+              <div>
+                <p className="text-xs text-gray-600 mb-3 text-center">Choose how to upload your CDN:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Camera Capture Option */}
+                  <div>
+                    <input
+                      type="file"
+                      id="cdn-camera"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleCdnSelect}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="cdn-camera"
+                      className="flex flex-col items-center justify-center py-6 px-4 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-400 hover:bg-red-100 transition-colors h-full"
+                    >
+                      <Camera className="w-10 h-10 text-red-400 mb-2" />
+                      <span className="text-sm text-gray-700 font-semibold text-center">Take Photo</span>
+                      <p className="text-xs text-gray-500 mt-1 text-center">Use camera</p>
+                    </label>
+                  </div>
+
+                  {/* File Upload Option */}
+                  <div>
+                    <input
+                      type="file"
+                      id="cdn-file"
+                      accept="image/*,.pdf"
+                      onChange={handleCdnSelect}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="cdn-file"
+                      className="flex flex-col items-center justify-center py-6 px-4 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-400 hover:bg-red-100 transition-colors h-full"
+                    >
+                      <FileText className="w-10 h-10 text-red-400 mb-2" />
+                      <span className="text-sm text-gray-700 font-semibold text-center">Choose File</span>
+                      <p className="text-xs text-gray-500 mt-1 text-center">Image or PDF</p>
+                    </label>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
                 <div className="bg-white border border-gray-200 rounded-lg p-4">

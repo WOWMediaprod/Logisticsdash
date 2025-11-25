@@ -10,6 +10,7 @@ export class UploadDocumentDto {
 
   @ApiPropertyOptional({ description: 'Job ID to associate with document' })
   @IsOptional()
+  @Transform(({ value }) => value?.trim()) // Trim whitespace before validation
   @IsUUID()
   jobId?: string;
 
