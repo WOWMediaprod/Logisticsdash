@@ -623,6 +623,7 @@ export class JobsService {
       trailer: true,
       driver: true,
       assignedByUser: { select: { id: true, firstName: true, lastName: true } },
+      documents: true, // Include documents for CDN billing workflow
     };
   }
 }
