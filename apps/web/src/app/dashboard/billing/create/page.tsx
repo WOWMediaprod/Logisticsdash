@@ -155,10 +155,8 @@ export default function CreateBillPage() {
         cdnDocumentId: cdnDoc?.id,
       });
 
-      // Auto-expand CDN section if CDN document exists
-      if (cdnDoc) {
-        setShowCdnDetails(true);
-      }
+      // Always auto-expand CDN section when job selected
+      setShowCdnDetails(true);
     }
   }, [selectedJob]);
 
@@ -315,11 +313,16 @@ export default function CreateBillPage() {
                   ))}
                 </select>
                 {selectedJob && (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Driver: {selectedJob.driver?.name || 'Not assigned'} |
-                    Vehicle: {selectedJob.vehicle?.regNo || 'Not assigned'} |
-                    Status: {selectedJob.status}
-                  </p>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs text-slate-500">
+                      <span className="font-semibold">Job ID:</span> {selectedJob.id}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      Driver: {selectedJob.driver?.name || 'Not assigned'} |
+                      Vehicle: {selectedJob.vehicle?.regNo || 'Not assigned'} |
+                      Status: {selectedJob.status}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -406,18 +409,23 @@ export default function CreateBillPage() {
               {/* CDN & Detention Details */}
               {selectedJob && (
                 <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      CDN & Detention Details
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowCdnDetails(!showCdnDetails)}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                    >
-                      {showCdnDetails ? 'Hide' : 'Show'}
-                    </button>
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                        CDN & Detention Details
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowCdnDetails(!showCdnDetails)}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      >
+                        {showCdnDetails ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-600 ml-7">
+                      Capture: Origin/Destination, Vehicle, Driver, Date of Hire, Delay/Detention charges
+                    </p>
                   </div>
 
                   {showCdnDetails && (
