@@ -136,14 +136,8 @@ export default function CreateBillPage() {
     job => !bills.some(bill => bill.jobId === job.id)
   );
 
-  // Auto-calculate amount based on km estimate (Rs. 150 per km)
+  // Selected job (routes removed - manual amount entry required)
   const selectedJob = jobs.find(job => job.id === formData.jobId);
-  useEffect(() => {
-    if (selectedJob && formData.amount === 0) {
-      const estimatedAmount = (selectedJob.route.kmEstimate || 0) * 150;
-      setFormData(prev => ({ ...prev, amount: estimatedAmount }));
-    }
-  }, [selectedJob, formData.amount]);
 
   // Auto-populate CDN details when job selected
   useEffect(() => {
@@ -315,7 +309,7 @@ export default function CreateBillPage() {
                   <option value="">-- Select a Job --</option>
                   {availableJobs.map((job) => (
                     <option key={job.id} value={job.id}>
-                      {job.client.name} ({job.client.code}) - {job.route.origin} → {job.route.destination} - {job.route.kmEstimate} km
+                      {job.client.name} ({job.client.code}) - {job.loadingLocation || 'N/A'} → {job.deliveryAddress || 'N/A'}
                       {job.vehicle && ` - ${job.vehicle.regNo}`}
                     </option>
                   ))}

@@ -38,14 +38,11 @@ interface Bill {
   job: {
     id: string;
     status: string;
+    loadingLocation: string | null;
+    deliveryAddress: string | null;
     client: {
       name: string;
       code: string;
-    };
-    route: {
-      code: string;
-      origin: string;
-      destination: string;
     };
   };
   createdAt: string;
@@ -412,7 +409,7 @@ function BillCard({
             </span>
           </div>
           <p className="text-gray-600">
-            {bill.job.client.name} • {bill.job.route.origin} → {bill.job.route.destination}
+            {bill.job.client.name} • {bill.job.loadingLocation || 'N/A'} → {bill.job.deliveryAddress || 'N/A'}
           </p>
         </div>
         <div className="text-right">

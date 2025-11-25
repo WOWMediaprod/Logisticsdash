@@ -57,15 +57,11 @@ interface Bill {
   job: {
     id: string;
     status: string;
+    loadingLocation: string | null;
+    deliveryAddress: string | null;
     client: {
       name: string;
       code: string;
-    };
-    route: {
-      code: string;
-      origin: string;
-      destination: string;
-      kmEstimate: number;
     };
     driver?: {
       name: string;
@@ -311,10 +307,7 @@ export default function BillDetailPage() {
                   <div>
                     <p className="text-sm text-slate-500">Route</p>
                     <p className="text-lg font-medium text-slate-900">
-                      {bill.job.route.origin} → {bill.job.route.destination}
-                    </p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {bill.job.route.code} • {bill.job.route.kmEstimate} km
+                      {bill.job.loadingLocation || 'N/A'} → {bill.job.deliveryAddress || 'N/A'}
                     </p>
                   </div>
                 </div>
