@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsEnum, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum DocumentType {
@@ -28,7 +28,7 @@ export class CreateDocumentDto {
 
   @ApiPropertyOptional({ description: 'Job ID to associate with document' })
   @IsOptional()
-  @IsUUID()
+  @Matches(/^c[a-z0-9]{23,24}$/, { message: 'jobId must be a valid CUID' })
   jobId?: string;
 
   @ApiPropertyOptional({ description: 'Additional metadata' })

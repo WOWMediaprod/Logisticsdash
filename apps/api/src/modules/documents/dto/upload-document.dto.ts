@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsUUID, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentType } from './create-document.dto';
 import { Transform } from 'class-transformer';
@@ -11,7 +11,7 @@ export class UploadDocumentDto {
   @ApiPropertyOptional({ description: 'Job ID to associate with document' })
   @IsOptional()
   @Transform(({ value }) => value?.trim()) // Trim whitespace before validation
-  @IsUUID()
+  @Matches(/^c[a-z0-9]{23,24}$/, { message: 'jobId must be a valid CUID' })
   jobId?: string;
 
   @ApiPropertyOptional({ description: 'Whether this is an original document (true) or a copy (false)', default: true })

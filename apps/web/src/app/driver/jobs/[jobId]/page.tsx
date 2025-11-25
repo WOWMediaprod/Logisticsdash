@@ -342,15 +342,15 @@ export default function DriverJobDetailPage() {
       fileName: cdnFile.name,
     });
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // Validate CUID format (database uses cuid() for all IDs)
+    const cuidRegex = /^c[a-z0-9]{23,24}$/;
     const trimmedJobId = jobId?.trim() || '';
 
-    if (!uuidRegex.test(trimmedJobId)) {
+    if (!cuidRegex.test(trimmedJobId)) {
       console.error('❌ Invalid jobId format:', {
         original: jobId,
         trimmed: trimmedJobId,
-        expected: 'UUID format (e.g., 550e8400-e29b-41d4-a716-446655440000)'
+        expected: 'CUID format (e.g., cmicv6r6d6005miech5omlsr)'
       });
       alert(`Invalid Job ID format.\n\nJob ID: "${jobId}"\n\nThis is a bug. Please report to admin.`);
       return;
