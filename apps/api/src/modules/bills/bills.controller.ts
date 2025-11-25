@@ -48,8 +48,9 @@ export class BillsController {
   @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
   async getStats(
     @CurrentCompany() companyId: string = 'cmfmbojit0000vj0ch078cnbu', // Demo company ID
+    @Query('clientId') clientId?: string,
   ) {
-    return this.billsService.getStats(companyId);
+    return this.billsService.getStats(companyId, clientId);
   }
 
   @Get(':id')

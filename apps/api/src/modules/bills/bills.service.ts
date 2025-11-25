@@ -61,7 +61,7 @@ export class BillsService {
   }
 
   async findAll(query: BillQueryDto, companyId: string) {
-    const { status, jobId, page = 1, limit = 10 } = query;
+    const { status, jobId, clientId, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     const where: any = { companyId };
@@ -72,6 +72,13 @@ export class BillsService {
 
     if (jobId) {
       where.jobId = jobId;
+    }
+
+    // Filter by client ID (for client portal)
+    if (clientId) {
+      where.job = {
+        clientId,
+      };
     }
 
     const [bills, total] = await Promise.all([
@@ -225,15 +232,21 @@ export class BillsService {
     return { success: true, message: 'Bill deleted successfully' };
   }
 
-  async getStats(companyId: string) {
+  async getStats(companyId: string, clientId?: string) {
+    // Build base where clause
+    const baseWhere: any = { companyId };
+    if (clientId) {
+      baseWhere.job = { clientId };
+    }
+
     const [totalBills, draftBills, issuedBills, paidBills, overdueBills, totalRevenue] = await Promise.all([
-      this.prisma.bill.count({ where: { companyId } }),
-      this.prisma.bill.count({ where: { companyId, status: BillStatus.DRAFT } }),
-      this.prisma.bill.count({ where: { companyId, status: BillStatus.ISSUED } }),
-      this.prisma.bill.count({ where: { companyId, status: BillStatus.PAID } }),
-      this.prisma.bill.count({ where: { companyId, status: BillStatus.OVERDUE } }),
+      this.prisma.bill.count({ where: baseWhere }),
+      this.prisma.bill.count({ where: { ...baseWhere, status: BillStatus.DRAFT } }),
+      this.prisma.bill.count({ where: { ...baseWhere, status: BillStatus.ISSUED } }),
+      this.prisma.bill.count({ where: { ...baseWhere, status: BillStatus.PAID } }),
+      this.prisma.bill.count({ where: { ...baseWhere, status: BillStatus.OVERDUE } }),
       this.prisma.bill.aggregate({
-        where: { companyId, status: BillStatus.PAID },
+        where: { ...baseWhere, status: BillStatus.PAID },
         _sum: { amount: true },
       }),
     ]);

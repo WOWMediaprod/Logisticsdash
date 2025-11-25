@@ -18,6 +18,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { useCompany } from '../../../contexts/CompanyContext';
+import { useClientAuth } from '../../../contexts/ClientAuthContext';
 import { getApiUrl } from '../../../lib/api-config';
 
 interface Bill {
@@ -34,17 +35,15 @@ interface Bill {
     id: string;
     status: string;
     jobType: string;
+    loadingLocation: string | null;
+    deliveryAddress: string | null;
     client: {
       name: string;
       code: string;
     };
-    route: {
-      origin: string;
-      destination: string;
-      kmEstimate: number;
-    };
   };
   notes?: string;
+  metadata?: any;
 }
 
 interface BillStats {
@@ -59,6 +58,7 @@ interface BillStats {
 
 export default function ClientBillingPage() {
   const { companyId } = useCompany();
+  const { clientId } = useClientAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [stats, setStats] = useState<BillStats>({
     totalBills: 0,
@@ -78,7 +78,7 @@ export default function ClientBillingPage() {
     let cancelled = false;
 
     const loadBillingData = async () => {
-      if (!companyId) {
+      if (!companyId || !clientId) {
         setBills([]);
         setStats({
           totalBills: 0,
@@ -96,12 +96,12 @@ export default function ClientBillingPage() {
       setLoading(true);
 
       try {
-        // Note: companyId is handled by @CurrentCompany() decorator in backend (demo mode)
+        // Filter bills by client ID for security
         const [statsResponse, billsResponse] = await Promise.all([
-          fetch(getApiUrl(`/api/v1/bills/stats`), {
+          fetch(getApiUrl(`/api/v1/bills/stats?clientId=${clientId}`), {
             headers: { 'Accept': 'application/json' }
           }),
-          fetch(getApiUrl(`/api/v1/bills?limit=50`), {
+          fetch(getApiUrl(`/api/v1/bills?limit=50&clientId=${clientId}`), {
             headers: { 'Accept': 'application/json' }
           })
         ]);
@@ -144,14 +144,14 @@ export default function ClientBillingPage() {
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, clientId]);
 
   const filteredBills = bills.filter(bill => {
     const matchesSearch =
       bill.billNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill.job.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.job.route.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.job.route.destination.toLowerCase().includes(searchTerm.toLowerCase());
+      (bill.job.loadingLocation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (bill.job.deliveryAddress || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = filterStatus === 'ALL' || bill.status === filterStatus;
 
@@ -507,9 +507,8 @@ function BillCard({
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">Route</p>
           <p className="text-sm text-gray-600">
-            {bill.job.route.origin} → {bill.job.route.destination}
+            {bill.job.loadingLocation || 'N/A'} → {bill.job.deliveryAddress || 'N/A'}
           </p>
-          <p className="text-xs text-gray-500">{bill.job.route.kmEstimate} km</p>
         </div>
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">Job Type</p>
@@ -707,18 +706,15 @@ function BillDetailView({ bill, onBack }: { bill: Bill; onBack: () => void }) {
                 <p className="text-sm font-medium text-gray-700 mb-2">Route</p>
                 <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{bill.job.route.origin}</p>
+                    <p className="font-medium text-gray-900">{bill.job.loadingLocation || 'N/A'}</p>
                     <p className="text-xs text-gray-600">Origin</p>
                   </div>
                   <div className="text-gray-400">→</div>
                   <div className="flex-1 text-right">
-                    <p className="font-medium text-gray-900">{bill.job.route.destination}</p>
+                    <p className="font-medium text-gray-900">{bill.job.deliveryAddress || 'N/A'}</p>
                     <p className="text-xs text-gray-600">Destination</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Distance: {bill.job.route.kmEstimate} km
-                </p>
               </div>
             </div>
           </div>

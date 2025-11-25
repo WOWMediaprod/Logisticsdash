@@ -14,6 +14,11 @@ export class BillQueryDto {
   @IsString()
   jobId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by client ID (for client portal)' })
+  @IsOptional()
+  @IsString()
+  clientId?: string;
+
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
   @Type(() => Number)
