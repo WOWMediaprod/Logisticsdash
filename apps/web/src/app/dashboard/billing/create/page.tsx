@@ -406,6 +406,44 @@ export default function CreateBillPage() {
                 />
               </div>
 
+              {/* Driver Uploaded CDN Document */}
+              {selectedJob && cdnDetails.cdnDocumentId && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-500 rounded-full p-2">
+                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-green-900">Driver Uploaded CDN</h3>
+                        <p className="text-sm text-green-700">Review the document before entering detention details</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(getApiUrl(`/api/v1/documents/${cdnDetails.cdnDocumentId}/download`));
+                          const data = await response.json();
+                          if (data.success && data.data.url) {
+                            window.open(data.data.url, '_blank');
+                          }
+                        } catch (error) {
+                          console.error('Failed to open CDN:', error);
+                          alert('Failed to open CDN document');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                    >
+                      <FileText className="w-5 h-5" />
+                      View CDN Document
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* CDN & Detention Details */}
               {selectedJob && (
                 <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
@@ -430,37 +468,6 @@ export default function CreateBillPage() {
 
                   {showCdnDetails && (
                     <div className="space-y-4 bg-white p-4 rounded-lg">
-                      {/* Show CDN document link if available */}
-                      {cdnDetails.cdnDocumentId && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-green-700">
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                              <span className="font-semibold">CDN Document Available</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  const response = await fetch(getApiUrl(`/api/v1/documents/${cdnDetails.cdnDocumentId}/download`));
-                                  const data = await response.json();
-                                  if (data.success && data.data.url) {
-                                    window.open(data.data.url, '_blank');
-                                  }
-                                } catch (error) {
-                                  console.error('Failed to open CDN:', error);
-                                }
-                              }}
-                              className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
-                            >
-                              View CDN
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Basic Route & Hire Info (Auto-populated) */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
