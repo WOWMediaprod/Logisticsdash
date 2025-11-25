@@ -151,8 +151,8 @@ export default function CreateBillPage() {
       const cdnDoc = selectedJob.documents?.find(doc => doc.type === 'CDN');
 
       setCdnDetails({
-        originLocation: selectedJob.loadingLocation || selectedJob.route.origin || '',
-        destinationLocation: selectedJob.deliveryAddress || selectedJob.route.destination || '',
+        originLocation: selectedJob.loadingLocation || '',
+        destinationLocation: selectedJob.deliveryAddress || '',
         vehicleNo: selectedJob.vehicle?.registrationNo || selectedJob.vehicle?.regNo || '',
         driverName: selectedJob.driver?.name ||
                     `${selectedJob.driver?.firstName || ''} ${selectedJob.driver?.lastName || ''}`.trim(),
