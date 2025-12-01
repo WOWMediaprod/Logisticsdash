@@ -37,6 +37,12 @@ interface CDNDetails {
   detentionCharges?: number;
   delayReason?: string;
   cdnDocumentId?: string;
+  // Driver-entered timestamps from CDN upload
+  emptyPickupTime?: string;
+  factoryInTime?: string;
+  factoryOutTime?: string;
+  portInTime?: string;
+  portOutTime?: string;
 }
 
 interface Bill {
@@ -422,6 +428,99 @@ export default function BillDetailPage() {
                       >
                         View CDN Document
                       </button>
+                    </div>
+                  )}
+
+                  {/* Driver Reported Times */}
+                  {(bill.metadata.cdnDetails.emptyPickupTime || bill.metadata.cdnDetails.factoryInTime ||
+                    bill.metadata.cdnDetails.factoryOutTime || bill.metadata.cdnDetails.portInTime ||
+                    bill.metadata.cdnDetails.portOutTime) && (
+                    <div className="border-t border-green-200 pt-4 mt-4 bg-green-50 -m-4 p-4 rounded-lg">
+                      <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Driver Reported Times
+                      </h3>
+
+                      <div className="space-y-3">
+                        {/* Empty Pickup Time */}
+                        {bill.metadata.cdnDetails.emptyPickupTime && (
+                          <div>
+                            <p className="text-sm text-green-600">1. Empty Pick Up Time</p>
+                            <p className="text-base font-medium text-slate-900">
+                              {new Date(bill.metadata.cdnDetails.emptyPickupTime).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Factory Times */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {bill.metadata.cdnDetails.factoryInTime && (
+                            <div>
+                              <p className="text-sm text-green-600">2. Time Entered Factory</p>
+                              <p className="text-base font-medium text-slate-900">
+                                {new Date(bill.metadata.cdnDetails.factoryInTime).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          {bill.metadata.cdnDetails.factoryOutTime && (
+                            <div>
+                              <p className="text-sm text-green-600">3. Factory Out Time</p>
+                              <p className="text-base font-medium text-slate-900">
+                                {new Date(bill.metadata.cdnDetails.factoryOutTime).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Port Times */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {bill.metadata.cdnDetails.portInTime && (
+                            <div>
+                              <p className="text-sm text-green-600">4. Port In Time</p>
+                              <p className="text-base font-medium text-slate-900">
+                                {new Date(bill.metadata.cdnDetails.portInTime).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          {bill.metadata.cdnDetails.portOutTime && (
+                            <div>
+                              <p className="text-sm text-green-600">5. Port Out Time</p>
+                              <p className="text-base font-medium text-slate-900">
+                                {new Date(bill.metadata.cdnDetails.portOutTime).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Duration Calculations */}
+                        {bill.metadata.cdnDetails.factoryInTime && bill.metadata.cdnDetails.factoryOutTime && (
+                          <div className="flex items-center gap-2 text-sm text-slate-700 bg-white px-3 py-2 rounded border border-green-300 mt-3">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-medium">Factory Duration:</span>
+                            <span className="font-semibold text-green-700">
+                              {((new Date(bill.metadata.cdnDetails.factoryOutTime).getTime() -
+                                 new Date(bill.metadata.cdnDetails.factoryInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours
+                            </span>
+                          </div>
+                        )}
+
+                        {bill.metadata.cdnDetails.portInTime && bill.metadata.cdnDetails.portOutTime && (
+                          <div className="flex items-center gap-2 text-sm text-slate-700 bg-white px-3 py-2 rounded border border-green-300">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-medium">Port Duration:</span>
+                            <span className="font-semibold text-green-700">
+                              {((new Date(bill.metadata.cdnDetails.portOutTime).getTime() -
+                                 new Date(bill.metadata.cdnDetails.portInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 

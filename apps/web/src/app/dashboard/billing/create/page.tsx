@@ -64,6 +64,12 @@ interface CDNDetails {
   detentionCharges?: number;
   delayReason?: string;
   cdnDocumentId?: string;
+  // Driver-entered timestamps from CDN upload
+  emptyPickupTime?: string;
+  factoryInTime?: string;
+  factoryOutTime?: string;
+  portInTime?: string;
+  portOutTime?: string;
 }
 
 export default function CreateBillPage() {
@@ -144,6 +150,9 @@ export default function CreateBillPage() {
     if (selectedJob) {
       const cdnDoc = selectedJob.documents?.find(doc => doc.type === 'CDN');
 
+      // Extract driver timestamps from CDN document metadata
+      const driverTimes = (cdnDoc as any)?.metadata?.driverTimestamps || {};
+
       setCdnDetails({
         originLocation: selectedJob.loadingLocation || '',
         destinationLocation: selectedJob.deliveryAddress || '',
@@ -153,6 +162,12 @@ export default function CreateBillPage() {
         dateOfHire: selectedJob.pickupTs ? new Date(selectedJob.pickupTs).toISOString().split('T')[0] : '',
         hasDelay: false,
         cdnDocumentId: cdnDoc?.id,
+        // Auto-populate driver-entered timestamps if available
+        emptyPickupTime: driverTimes.emptyPickupTime || '',
+        factoryInTime: driverTimes.factoryInTime || '',
+        factoryOutTime: driverTimes.factoryOutTime || '',
+        portInTime: driverTimes.portInTime || '',
+        portOutTime: driverTimes.portOutTime || '',
       });
 
       // Always auto-expand CDN section when job selected
@@ -536,6 +551,116 @@ export default function CreateBillPage() {
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
+
+                      {/* Driver Reported Times */}
+                      {(cdnDetails.emptyPickupTime || cdnDetails.factoryInTime || cdnDetails.factoryOutTime ||
+                        cdnDetails.portInTime || cdnDetails.portOutTime) && (
+                        <div className="border-t border-slate-200 pt-4 mt-4">
+                          <h4 className="text-md font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Driver Reported Times
+                          </h4>
+                          <p className="text-xs text-slate-600 mb-3">
+                            Times entered by driver when uploading CDN (editable)
+                          </p>
+
+                          <div className="space-y-3 bg-green-50 p-4 rounded-lg border border-green-200">
+                            {/* Empty Pickup Time */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                1. Empty Pick Up Time
+                              </label>
+                              <input
+                                type="datetime-local"
+                                value={cdnDetails.emptyPickupTime || ''}
+                                onChange={(e) => setCdnDetails({ ...cdnDetails, emptyPickupTime: e.target.value })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+
+                            {/* Factory Times */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  2. Time Entered Factory
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.factoryInTime || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, factoryInTime: e.target.value })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  3. Factory Out Time
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.factoryOutTime || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, factoryOutTime: e.target.value })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Port Times */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  4. Port In Time
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.portInTime || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, portInTime: e.target.value })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  5. Port Out Time
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={cdnDetails.portOutTime || ''}
+                                  onChange={(e) => setCdnDetails({ ...cdnDetails, portOutTime: e.target.value })}
+                                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Duration Calculations */}
+                            {cdnDetails.factoryInTime && cdnDetails.factoryOutTime && (
+                              <div className="flex items-center gap-2 text-sm text-slate-700 bg-white px-3 py-2 rounded border border-green-300">
+                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium">Factory Duration:</span>
+                                <span className="font-semibold text-green-700">
+                                  {((new Date(cdnDetails.factoryOutTime).getTime() - new Date(cdnDetails.factoryInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours
+                                </span>
+                              </div>
+                            )}
+
+                            {cdnDetails.portInTime && cdnDetails.portOutTime && (
+                              <div className="flex items-center gap-2 text-sm text-slate-700 bg-white px-3 py-2 rounded border border-green-300">
+                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium">Port Duration:</span>
+                                <span className="font-semibold text-green-700">
+                                  {((new Date(cdnDetails.portOutTime).getTime() - new Date(cdnDetails.portInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Delay/Detention Details */}
                       <div className="border-t border-slate-200 pt-4 mt-4">

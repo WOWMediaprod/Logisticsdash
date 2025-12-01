@@ -140,6 +140,13 @@ export default function DriverJobDetailPage() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [cdnFile, setCdnFile] = useState<File | null>(null);
   const [uploadingCdn, setUploadingCdn] = useState(false);
+  const [driverTimestamps, setDriverTimestamps] = useState({
+    emptyPickupTime: '',
+    factoryInTime: '',
+    factoryOutTime: '',
+    portInTime: '',
+    portOutTime: '',
+  });
   const [showEarningsModal, setShowEarningsModal] = useState(false);
 
   useEffect(() => {
@@ -333,6 +340,22 @@ export default function DriverJobDetailPage() {
       return;
     }
 
+    // Validate all 5 timestamps are filled
+    const requiredTimes = [
+      { field: 'emptyPickupTime', label: 'Empty Pick Up Time' },
+      { field: 'factoryInTime', label: 'Time Entered Factory' },
+      { field: 'factoryOutTime', label: 'Factory Out Time' },
+      { field: 'portInTime', label: 'Port In Time' },
+      { field: 'portOutTime', label: 'Port Out Time' },
+    ];
+
+    const missingFields = requiredTimes.filter(({ field }) => !driverTimestamps[field as keyof typeof driverTimestamps]);
+
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required times:\n\n${missingFields.map(f => `• ${f.label}`).join('\n')}`);
+      return;
+    }
+
     // DEBUG: Validate jobId before uploading
     console.log('🔍 CDN Upload Debug:', {
       jobId,
@@ -364,6 +387,9 @@ export default function DriverJobDetailPage() {
       formData.append('type', 'CDN'); // Container Delivery Note
       formData.append('jobId', trimmedJobId); // Sanitized jobId
       formData.append('enableOcr', 'false'); // OCR will be enabled in future phase
+      formData.append('metadata', JSON.stringify({
+        driverTimestamps: driverTimestamps
+      }));
 
       console.log('📤 Sending CDN upload request...', {
         endpoint: '/api/v1/documents/upload',
@@ -983,6 +1009,147 @@ export default function DriverJobDetailPage() {
           <p className="text-sm text-red-600 mb-4 font-semibold">
             ⚠️ MANDATORY - Job cannot be completed without CDN upload
           </p>
+
+          {/* Job Times - Required for CDN Upload */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Job Times (Required)
+            </h4>
+            <p className="text-xs text-gray-600 mb-3">Please enter all timestamps before uploading CDN:</p>
+
+            <div className="space-y-3">
+              {/* Empty Pick Up Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  1. Empty Pick Up Time
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={driverTimestamps.emptyPickupTime}
+                    onChange={(e) => setDriverTimestamps({...driverTimestamps, emptyPickupTime: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      setDriverTimestamps({...driverTimestamps, emptyPickupTime: now.toISOString().slice(0, 16)});
+                    }}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                  >
+                    Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Time Entered Factory */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  2. Time Entered Factory
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={driverTimestamps.factoryInTime}
+                    onChange={(e) => setDriverTimestamps({...driverTimestamps, factoryInTime: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      setDriverTimestamps({...driverTimestamps, factoryInTime: now.toISOString().slice(0, 16)});
+                    }}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                  >
+                    Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Factory Out Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  3. Factory Out Time
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={driverTimestamps.factoryOutTime}
+                    onChange={(e) => setDriverTimestamps({...driverTimestamps, factoryOutTime: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      setDriverTimestamps({...driverTimestamps, factoryOutTime: now.toISOString().slice(0, 16)});
+                    }}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                  >
+                    Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Port In Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  4. Port In Time
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={driverTimestamps.portInTime}
+                    onChange={(e) => setDriverTimestamps({...driverTimestamps, portInTime: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      setDriverTimestamps({...driverTimestamps, portInTime: now.toISOString().slice(0, 16)});
+                    }}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                  >
+                    Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Port Out Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  5. Port Out Time
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={driverTimestamps.portOutTime}
+                    onChange={(e) => setDriverTimestamps({...driverTimestamps, portOutTime: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                      setDriverTimestamps({...driverTimestamps, portOutTime: now.toISOString().slice(0, 16)});
+                    }}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600"
+                  >
+                    Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-4">
             {!cdnFile ? (
