@@ -306,8 +306,6 @@ export default function JobWizard({
         loadingContactName: formData.loadingContactName,
         loadingContactPhone: formData.loadingContactPhone,
         loadingDate: loadingDateTime,
-        loadingTime: formData.loadingTime,
-        containerReservation: formData.containerReservation,
         containerNumber: formData.containerReservation ? formData.containerNumber : undefined,
         sealNumber: formData.containerReservation ? formData.sealNumber : undefined,
         containerYardLocation: formData.containerReservation ? formData.containerYardLocation : undefined,
