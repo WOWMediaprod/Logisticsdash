@@ -679,4 +679,96 @@ export class JobsService {
       documents: true, // Include documents for CDN billing workflow
     };
   }
+
+  async completeJob(
+    jobId: string,
+    companyId: string,
+    data: { driverId: string; timestamp?: string }
+  ) {
+    this.logger.log(`Driver completing job ${jobId}`);
+
+    // 1. Fetch job with all relations
+    const job = await this.prisma.job.findFirst({
+      where: { id: jobId, companyId },
+      include: {
+        ...this.defaultJobInclude(),
+        waypoints: true,
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // 2. Validate driver is assigned to this job
+    if (job.driverId !== data.driverId) {
+      throw new BadRequestException('You are not assigned to this job');
+    }
+
+    // 3. Validate CDN is uploaded
+    const hasCdn = job.documents?.some(doc => doc.type === 'CDN');
+    if (!hasCdn) {
+      throw new BadRequestException('CDN document must be uploaded before completing job');
+    }
+
+    // 4. Validate all waypoints are completed
+    const incompleteWaypoints = job.waypoints?.filter(w => !w.isCompleted) || [];
+    if (incompleteWaypoints.length > 0) {
+      throw new BadRequestException(
+        `Complete all waypoints first. Remaining: ${incompleteWaypoints.map(w => w.name).join(', ')}`
+      );
+    }
+
+    // 5. Update job status and set dropTs/completedAt
+    const completionTime = data.timestamp ? new Date(data.timestamp) : new Date();
+
+    const updatedJob = await this.prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.COMPLETED,
+        dropTs: completionTime,
+        completedAt: completionTime,
+      },
+      include: this.defaultJobInclude(),
+    });
+
+    // 6. Send notification to dispatcher/admin
+    try {
+      if (job.assignedBy) {
+        await this.notificationsService.createNotification({
+          companyId,
+          recipientId: job.assignedBy,
+          recipientType: 'USER',
+          type: NotificationType.JOB_COMPLETED,
+          title: 'Job Completed',
+          message: `Job #${job.id.substring(0, 8)} completed by ${job.driver?.name || 'driver'}`,
+          jobId: job.id,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send notification for job completion: ${error.message}`);
+      // Don't fail the request if notification fails
+    }
+
+    // 7. Broadcast via WebSocket for real-time dashboard update
+    try {
+      this.trackingGateway.broadcastToCompany(companyId, 'job-completed', {
+        jobId: job.id,
+        status: JobStatus.COMPLETED,
+        completedAt: completionTime.toISOString(),
+        driverName: job.driver?.name,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to broadcast job completion: ${error.message}`);
+      // Don't fail the request if broadcast fails
+    }
+
+    this.logger.log(`Job ${jobId} marked as COMPLETED by driver ${data.driverId}`);
+
+    return {
+      success: true,
+      data: updatedJob,
+      message: 'Job completed successfully',
+    };
+  }
 }

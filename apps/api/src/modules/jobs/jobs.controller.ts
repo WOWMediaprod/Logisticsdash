@@ -193,6 +193,20 @@ export class JobsController {
     };
   }
 
+  @Patch(':id/complete')
+  @ApiOperation({ summary: 'Mark job as completed by driver' })
+  @ApiResponse({ status: 200, description: 'Job completed successfully' })
+  async completeJob(
+    @Param('id') id: string,
+    @Body() completeDto: { companyId?: string; driverId: string; timestamp?: string }
+  ) {
+    if (!completeDto.companyId) {
+      throw new BadRequestException('companyId is required');
+    }
+    const { companyId, ...rest } = completeDto;
+    return this.jobsService.completeJob(id, companyId, rest);
+  }
+
   @Delete(":id")
   @ApiOperation({ summary: "Delete job" })
   @ApiResponse({ status: 200, description: "Job deleted successfully" })

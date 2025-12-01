@@ -224,6 +224,7 @@ model Job {
   etaTs           DateTime?
   pickupTs        DateTime?
   dropTs          DateTime?
+  completedAt     DateTime?
   specialNotes    String?
   trackingEnabled Boolean            @default(true)
   shareTrackingLink String?

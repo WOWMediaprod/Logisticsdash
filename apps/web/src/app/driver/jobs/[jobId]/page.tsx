@@ -34,6 +34,7 @@ import { getApiUrl } from '@/lib/api-config';
 import { CollapsibleSection } from '@/components/driver/CollapsibleSection';
 import { CountdownTimer } from '@/components/driver/CountdownTimer';
 import { ContactCard } from '@/components/driver/ContactCard';
+import { SlideToComplete } from '@/components/driver/SlideToComplete';
 
 type WaypointType = 'PICKUP' | 'DELIVERY' | 'CHECKPOINT' | 'REST_STOP' | 'YARD' | 'PORT';
 
@@ -440,6 +441,83 @@ export default function DriverJobDetailPage() {
     } finally {
       setUploadingCdn(false);
     }
+  };
+
+  const handleCompleteJob = async () => {
+    if (!driver || !job) return;
+
+    // Validation checks
+    const hasCdn = job.documents?.some(doc => doc.type === 'CDN');
+    if (!hasCdn) {
+      throw new Error('CDN must be uploaded before completing');
+    }
+
+    const incompleteWaypoints = job.waypoints?.filter(w => !w.isCompleted) || [];
+    if (incompleteWaypoints.length > 0) {
+      throw new Error(`Complete all waypoints first: ${incompleteWaypoints.map(w => w.name).join(', ')}`);
+    }
+
+    try {
+      const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}/complete`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          companyId: driver.companyId,
+          driverId: driver.id,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to complete job');
+      }
+
+      // Wait 2 seconds for confetti animation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Navigate to earnings view
+      if (job.earnings && job.earnings.length > 0) {
+        setShowEarningsModal(true);
+
+        // After earnings modal, go back to dashboard
+        setTimeout(() => {
+          router.push('/driver/dashboard');
+        }, 5000);
+      } else {
+        router.push('/driver/dashboard');
+      }
+    } catch (error) {
+      console.error('Failed to complete job:', error);
+      throw error; // Re-throw to let SlideToComplete handle the error
+    }
+  };
+
+  // Calculate validation status
+  const canCompleteJob = () => {
+    const hasCdn = job?.documents?.some(doc => doc.type === 'CDN');
+    const allWaypointsCompleted = job?.waypoints?.every(w => w.isCompleted) ?? true;
+
+    return hasCdn && allWaypointsCompleted;
+  };
+
+  const getValidationMessage = () => {
+    const hasCdn = job?.documents?.some(doc => doc.type === 'CDN');
+    const incompleteWaypoints = job?.waypoints?.filter(w => !w.isCompleted) || [];
+
+    if (!hasCdn && incompleteWaypoints.length > 0) {
+      return 'Upload CDN and complete all waypoints to finish job';
+    }
+    if (!hasCdn) {
+      return 'Upload CDN document before completing job';
+    }
+    if (incompleteWaypoints.length > 0) {
+      return `Complete remaining waypoints: ${incompleteWaypoints.map(w => w.name).join(', ')}`;
+    }
+    return '';
   };
 
   if (loading) {
@@ -1286,6 +1364,46 @@ export default function DriverJobDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Slide to Complete Job Button */}
+      {job.status !== 'COMPLETED' && job.status !== 'CANCELLED' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            Complete This Job
+          </h3>
+
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center gap-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${
+                job.documents?.some(doc => doc.type === 'CDN') ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <span className={
+                job.documents?.some(doc => doc.type === 'CDN') ? 'text-green-700' : 'text-red-700'
+              }>
+                CDN Document {job.documents?.some(doc => doc.type === 'CDN') ? 'Uploaded ✓' : 'Required'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${
+                job.waypoints?.every(w => w.isCompleted) ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <span className={
+                job.waypoints?.every(w => w.isCompleted) ? 'text-green-700' : 'text-red-700'
+              }>
+                All Waypoints {job.waypoints?.every(w => w.isCompleted) ? 'Completed ✓' : 'Required'}
+              </span>
+            </div>
+          </div>
+
+          <SlideToComplete
+            onComplete={handleCompleteJob}
+            disabled={!canCompleteJob()}
+            validationMessage={getValidationMessage()}
+          />
+        </div>
+      )}
 
       {/* Earnings Breakdown Modal */}
       {showEarningsModal && job.earnings && job.earnings.length > 0 && (

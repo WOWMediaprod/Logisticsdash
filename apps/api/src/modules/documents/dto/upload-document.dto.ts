@@ -25,7 +25,23 @@ export class UploadDocumentDto {
   @Transform(({ value }) => value === 'true' || value === true)
   enableOcr?: boolean = true;
 
-  @ApiPropertyOptional({ description: 'Additional metadata' })
+  @ApiPropertyOptional({ description: 'Additional metadata (JSON object or string)' })
   @IsOptional()
+  @Transform(({ value }) => {
+    // If it's already an object, return as-is
+    if (typeof value === 'object' && value !== null) {
+      return value;
+    }
+    // If it's a string, try to parse it as JSON
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        // If parsing fails, return empty object
+        return {};
+      }
+    }
+    return value;
+  })
   metadata?: Record<string, any>;
 }

@@ -150,8 +150,32 @@ export default function CreateBillPage() {
     if (selectedJob) {
       const cdnDoc = selectedJob.documents?.find(doc => doc.type === 'CDN');
 
-      // Extract driver timestamps from CDN document metadata
-      const driverTimes = (cdnDoc as any)?.metadata?.driverTimestamps || {};
+      // Extract driver timestamps from CDN document metadata with defensive parsing
+      const getDriverTimestamps = (cdnDoc: any) => {
+        const metadata = cdnDoc?.metadata;
+        if (!metadata) return {};
+
+        // If metadata.driverTimestamps is a string, parse it
+        if (typeof metadata.driverTimestamps === 'string') {
+          try {
+            return JSON.parse(metadata.driverTimestamps);
+          } catch (e) {
+            console.error('Failed to parse driverTimestamps:', e);
+            return {};
+          }
+        }
+
+        // If it's already an object, use it directly
+        return metadata.driverTimestamps || {};
+      };
+
+      const driverTimes = getDriverTimestamps(cdnDoc);
+
+      // Debug logging
+      console.log('Selected job:', selectedJob);
+      console.log('CDN document:', cdnDoc);
+      console.log('CDN metadata:', (cdnDoc as any)?.metadata);
+      console.log('Driver timestamps:', driverTimes);
 
       setCdnDetails({
         originLocation: selectedJob.loadingLocation || '',
