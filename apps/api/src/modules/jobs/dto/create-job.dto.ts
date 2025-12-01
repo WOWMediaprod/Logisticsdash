@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean, IsDateString } from 'class-validator';
-import { JobType, Priority } from '@prisma/client';
+import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean, IsDateString, IsArray } from 'class-validator';
+import { JobType, Priority, ShipmentType } from '@prisma/client';
 
 export class CreateJobDto {
   @ApiProperty({ description: 'Company ID' })
@@ -41,6 +41,22 @@ export class CreateJobDto {
   dropTs?: Date;
 
   // Job Request Details (from original job request)
+  @ApiProperty({ description: 'Job title', required: false })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty({ description: 'Shipment type', enum: ShipmentType, required: false })
+  @IsOptional()
+  @IsEnum(ShipmentType)
+  shipmentType?: ShipmentType;
+
+  @ApiProperty({ description: 'Supporting document IDs', required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  supportingDocumentIds?: string[];
+
   @ApiProperty({ description: 'Release order document URL', required: false })
   @IsOptional()
   @IsString()
@@ -86,6 +102,16 @@ export class CreateJobDto {
   @IsString()
   containerYardLocation?: string;
 
+  @ApiProperty({ description: 'Container yard latitude', required: false })
+  @IsOptional()
+  @IsNumber()
+  containerYardLocationLat?: number;
+
+  @ApiProperty({ description: 'Container yard longitude', required: false })
+  @IsOptional()
+  @IsNumber()
+  containerYardLocationLng?: number;
+
   @ApiProperty({ description: 'Cargo description', required: false })
   @IsOptional()
   @IsString()
@@ -95,6 +121,11 @@ export class CreateJobDto {
   @IsOptional()
   @IsNumber()
   cargoWeight?: number;
+
+  @ApiProperty({ description: 'Cargo weight unit', required: false, default: 'kg' })
+  @IsOptional()
+  @IsString()
+  cargoWeightUnit?: string;
 
   @ApiProperty({ description: 'Is BL cutoff required', required: false, default: false })
   @IsOptional()
@@ -120,6 +151,16 @@ export class CreateJobDto {
   @IsOptional()
   @IsString()
   deliveryAddress?: string;
+
+  @ApiProperty({ description: 'Delivery latitude', required: false })
+  @IsOptional()
+  @IsNumber()
+  deliveryLat?: number;
+
+  @ApiProperty({ description: 'Delivery longitude', required: false })
+  @IsOptional()
+  @IsNumber()
+  deliveryLng?: number;
 
   @ApiProperty({ description: 'Delivery contact person name', required: false })
   @IsOptional()

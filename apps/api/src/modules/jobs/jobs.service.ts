@@ -20,7 +20,7 @@ export class JobsService {
   ) {}
 
   async create(createJobDto: CreateJobDto) {
-    const { companyId, clientId, containerId, specialNotes, jobType } = createJobDto;
+    const { companyId, clientId, containerId, supportingDocumentIds, ...jobData } = createJobDto;
 
     await this.verifyRelatedEntities(companyId, { clientId, containerId });
 
@@ -29,16 +29,69 @@ export class JobsService {
         companyId,
         clientId,
         containerId,
-        specialNotes,
-        jobType: jobType || 'ONE_WAY',
+        jobType: createJobDto.jobType || 'ONE_WAY',
+        priority: createJobDto.priority || 'NORMAL',
         status: JobStatus.CREATED,
+
+        // Scheduling
+        pickupTs: createJobDto.pickupTs ? new Date(createJobDto.pickupTs) : null,
+        dropTs: createJobDto.dropTs ? new Date(createJobDto.dropTs) : null,
+        specialNotes: createJobDto.specialNotes,
+
+        // Job Request Details (all 37 fields)
+        title: createJobDto.title,
+        shipmentType: createJobDto.shipmentType,
+        releaseOrderUrl: createJobDto.releaseOrderUrl,
+
+        // Loading
+        loadingLocation: createJobDto.loadingLocation,
+        loadingLocationLat: createJobDto.loadingLocationLat,
+        loadingLocationLng: createJobDto.loadingLocationLng,
+        loadingContactName: createJobDto.loadingContactName,
+        loadingContactPhone: createJobDto.loadingContactPhone,
+
+        // Container
+        containerNumber: createJobDto.containerNumber,
+        sealNumber: createJobDto.sealNumber,
+        containerYardLocation: createJobDto.containerYardLocation,
+        containerYardLocationLat: createJobDto.containerYardLocationLat,
+        containerYardLocationLng: createJobDto.containerYardLocationLng,
+
+        // Cargo
+        cargoDescription: createJobDto.cargoDescription,
+        cargoWeight: createJobDto.cargoWeight,
+        cargoWeightUnit: createJobDto.cargoWeightUnit || 'kg',
+
+        // BL Cutoff
+        blCutoffRequired: createJobDto.blCutoffRequired || false,
+        blCutoffDateTime: createJobDto.blCutoffDateTime ? new Date(createJobDto.blCutoffDateTime) : null,
+
+        // Wharf
+        wharfName: createJobDto.wharfName,
+        wharfContact: createJobDto.wharfContact,
+
+        // Delivery
+        deliveryAddress: createJobDto.deliveryAddress,
+        deliveryLat: createJobDto.deliveryLat,
+        deliveryLng: createJobDto.deliveryLng,
+        deliveryContactName: createJobDto.deliveryContactName,
+        deliveryContactPhone: createJobDto.deliveryContactPhone,
       },
       include: this.defaultJobInclude(),
     });
 
+    // Link documents if provided
+    if (supportingDocumentIds && supportingDocumentIds.length > 0) {
+      this.logger.log(`Linking ${supportingDocumentIds.length} documents to job ${job.id}`);
+      await this.prisma.document.updateMany({
+        where: { id: { in: supportingDocumentIds }, companyId },
+        data: { jobId: job.id },
+      });
+    }
+
     // Auto-create waypoints based on job type
-    if (jobType === 'EXPORT' || jobType === 'IMPORT') {
-      await this.createWorkflowWaypoints(job.id, jobType);
+    if (createJobDto.jobType === 'EXPORT' || createJobDto.jobType === 'IMPORT') {
+      await this.createWorkflowWaypoints(job.id, createJobDto.jobType);
     }
 
     return { success: true, data: job };

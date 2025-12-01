@@ -233,6 +233,8 @@ model Job {
   lastKnownAddress String?
 
   // Job Request Details (copied from JobRequest when job is created)
+  title                     String?
+  shipmentType              ShipmentType?
   releaseOrderUrl           String?
   loadingLocation           String?
   loadingLocationLat        Float?
@@ -242,13 +244,18 @@ model Job {
   containerNumber           String?
   sealNumber                String?
   containerYardLocation     String?
+  containerYardLocationLat  Float?
+  containerYardLocationLng  Float?
   cargoDescription          String?
   cargoWeight               Decimal?           @db.Decimal(10, 2)
+  cargoWeightUnit           String?            @default("kg")
   blCutoffRequired          Boolean            @default(false)
   blCutoffDateTime          DateTime?
   wharfName                 String?
   wharfContact              String?
   deliveryAddress           String?
+  deliveryLat               Float?
+  deliveryLng               Float?
   deliveryContactName       String?
   deliveryContactPhone      String?
 
