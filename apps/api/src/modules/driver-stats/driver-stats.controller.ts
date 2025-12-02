@@ -49,7 +49,21 @@ export class DriverStatsController {
     return this.statsService.getEarningsHistory(req.user.id, limitNum);
   }
 
-  // Admin endpoints
+  // Admin endpoints - specific routes MUST come before parameterized routes
+  @Get('overview')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get comprehensive driver performance overview for admin dashboard' })
+  @ApiQuery({ name: 'companyId', required: true, description: 'Company ID' })
+  @ApiQuery({ name: 'period', enum: ['today', 'week', 'month', '30days'], required: false, description: 'Time period filter' })
+  @ApiResponse({ status: 200, description: 'Driver overview retrieved with stats, trends, and alerts' })
+  async getDriverOverview(
+    @Query('companyId') companyId: string,
+    @Query('period') period?: 'today' | 'week' | 'month' | '30days',
+  ) {
+    return this.statsService.getDriverOverview(companyId, period || 'week');
+  }
+
   @Get('driver/:driverId')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
@@ -88,19 +102,5 @@ export class DriverStatsController {
     @Query('period') period?: 'daily' | 'weekly' | 'monthly',
   ) {
     return this.statsService.getDriverLeaderboard(companyId, period || 'monthly');
-  }
-
-  @Get('overview')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get comprehensive driver performance overview for admin dashboard' })
-  @ApiQuery({ name: 'companyId', required: true, description: 'Company ID' })
-  @ApiQuery({ name: 'period', enum: ['today', 'week', 'month', '30days'], required: false, description: 'Time period filter' })
-  @ApiResponse({ status: 200, description: 'Driver overview retrieved with stats, trends, and alerts' })
-  async getDriverOverview(
-    @Query('companyId') companyId: string,
-    @Query('period') period?: 'today' | 'week' | 'month' | '30days',
-  ) {
-    return this.statsService.getDriverOverview(companyId, period || 'week');
   }
 }
