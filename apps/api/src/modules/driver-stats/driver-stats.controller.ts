@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, UseGuards, Request, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { DriverStatsService } from './driver-stats.service';
 import { DriverAuthGuard } from '../driver-auth/guards/driver-auth.guard';
-import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Driver Stats')
 @Controller('driver-stats')
@@ -51,8 +50,6 @@ export class DriverStatsController {
 
   // Admin endpoints - specific routes MUST come before parameterized routes
   @Get('overview')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get comprehensive driver performance overview for admin dashboard' })
   @ApiQuery({ name: 'companyId', required: true, description: 'Company ID' })
   @ApiQuery({ name: 'period', enum: ['today', 'week', 'month', '30days'], required: false, description: 'Time period filter' })
@@ -61,12 +58,13 @@ export class DriverStatsController {
     @Query('companyId') companyId: string,
     @Query('period') period?: 'today' | 'week' | 'month' | '30days',
   ) {
+    if (!companyId) {
+      throw new BadRequestException('companyId is required');
+    }
     return this.statsService.getDriverOverview(companyId, period || 'week');
   }
 
   @Get('driver/:driverId')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get stats for a specific driver (admin)' })
   @ApiQuery({ name: 'period', enum: ['daily', 'weekly', 'monthly', 'all'], required: false })
   @ApiResponse({ status: 200, description: 'Driver stats retrieved' })
@@ -78,8 +76,6 @@ export class DriverStatsController {
   }
 
   @Get('driver/:driverId/earnings')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get earnings history for a specific driver (admin)' })
   @ApiQuery({ name: 'limit', type: Number, required: false })
   @ApiResponse({ status: 200, description: 'Earnings history retrieved' })
@@ -92,8 +88,6 @@ export class DriverStatsController {
   }
 
   @Get('leaderboard/:companyId')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get driver leaderboard for a company' })
   @ApiQuery({ name: 'period', enum: ['daily', 'weekly', 'monthly'], required: false })
   @ApiResponse({ status: 200, description: 'Leaderboard retrieved' })
