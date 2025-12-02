@@ -5,7 +5,7 @@ import { DriverAuthGuard } from '../driver-auth/guards/driver-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Driver Stats')
-@Controller('api/v1/driver-stats')
+@Controller('driver-stats')
 export class DriverStatsController {
   constructor(private readonly statsService: DriverStatsService) {}
 
