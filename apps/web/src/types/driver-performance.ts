@@ -83,7 +83,6 @@ export type SortField =
   | 'totalJobs'
   | 'completionRate'
   | 'jobsChange'
-  | 'totalEarnings'
   | 'jobsPerDay'
   | 'activeDays'
   | 'lastActive';

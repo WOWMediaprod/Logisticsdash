@@ -116,10 +116,6 @@ export default function DriverPerformancePage() {
           aValue = a.trends.jobsChange;
           bValue = b.trends.jobsChange;
           break;
-        case "totalEarnings":
-          aValue = a.stats.totalEarnings;
-          bValue = b.stats.totalEarnings;
-          break;
         case "jobsPerDay":
           aValue = a.stats.jobsPerDay;
           bValue = b.stats.jobsPerDay;
@@ -246,15 +242,6 @@ export default function DriverPerformancePage() {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-LK", {
-      style: "currency",
-      currency: "LKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
 
   if (!companyId) {
@@ -419,15 +406,6 @@ export default function DriverPerformancePage() {
               </div>
               <div className="hidden sm:block w-px h-10 bg-blue-400/30" />
               <div>
-                <div className="text-blue-200 text-xs uppercase tracking-wider mb-1">
-                  Avg Earnings
-                </div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(data.data.companyAverages.avgEarnings)}
-                </div>
-              </div>
-              <div className="hidden sm:block w-px h-10 bg-blue-400/30" />
-              <div>
                 <div className="text-blue-200 text-xs uppercase tracking-wider mb-1">Period</div>
                 <div className="text-2xl font-bold">{data.data.period.label}</div>
               </div>
@@ -491,15 +469,6 @@ export default function DriverPerformancePage() {
                       </div>
                     </th>
                     <th
-                      className="px-4 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort("totalEarnings")}
-                    >
-                      <div className="flex items-center justify-end gap-2">
-                        Earnings
-                        <SortIcon field="totalEarnings" />
-                      </div>
-                    </th>
-                    <th
                       className="px-4 py-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100"
                       onClick={() => handleSort("jobsPerDay")}
                     >
@@ -531,7 +500,7 @@ export default function DriverPerformancePage() {
                 <tbody className="divide-y divide-slate-100">
                   {sortedDrivers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
+                      <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                         No drivers found for this period
                       </td>
                     </tr>
@@ -580,9 +549,6 @@ export default function DriverPerformancePage() {
                         </td>
                         <td className="px-4 py-4 text-center">
                           <TrendIndicator value={driver.trends.jobsChange} />
-                        </td>
-                        <td className="px-4 py-4 text-right font-medium text-slate-900">
-                          {formatCurrency(driver.stats.totalEarnings)}
                         </td>
                         <td className="px-4 py-4 text-center text-slate-600">
                           {driver.stats.jobsPerDay}
