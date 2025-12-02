@@ -388,26 +388,26 @@ export default function DriverPerformancePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-3 text-white shadow-sm"
           >
-            <div className="flex flex-wrap items-center justify-around gap-4 text-center">
+            <div className="flex flex-wrap items-center justify-around gap-3 text-center">
               <div>
-                <div className="text-blue-200 text-xs uppercase tracking-wider mb-1">
+                <div className="text-blue-200 text-xs uppercase tracking-wide mb-0.5">
                   Avg Completion Rate
                 </div>
-                <div className="text-2xl font-bold">{data.data.companyAverages.completionRate}%</div>
+                <div className="text-lg font-semibold">{data.data.companyAverages.completionRate}%</div>
               </div>
-              <div className="hidden sm:block w-px h-10 bg-blue-400/30" />
+              <div className="hidden sm:block w-px h-8 bg-blue-400/30" />
               <div>
-                <div className="text-blue-200 text-xs uppercase tracking-wider mb-1">
+                <div className="text-blue-200 text-xs uppercase tracking-wide mb-0.5">
                   Avg Jobs/Day
                 </div>
-                <div className="text-2xl font-bold">{data.data.companyAverages.jobsPerDay}</div>
+                <div className="text-lg font-semibold">{data.data.companyAverages.jobsPerDay}</div>
               </div>
-              <div className="hidden sm:block w-px h-10 bg-blue-400/30" />
+              <div className="hidden sm:block w-px h-8 bg-blue-400/30" />
               <div>
-                <div className="text-blue-200 text-xs uppercase tracking-wider mb-1">Period</div>
-                <div className="text-2xl font-bold">{data.data.period.label}</div>
+                <div className="text-blue-200 text-xs uppercase tracking-wide mb-0.5">Period</div>
+                <div className="text-lg font-semibold">{data.data.period.label}</div>
               </div>
             </div>
           </motion.div>
