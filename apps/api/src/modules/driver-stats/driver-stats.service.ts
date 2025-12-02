@@ -363,4 +363,285 @@ export class DriverStatsService {
 
     return Math.round(totalMinutes / jobs.length);
   }
+
+  /**
+   * Get comprehensive driver performance overview for admin dashboard
+   * Includes all drivers with stats, trends, and intelligent alerts
+   */
+  async getDriverOverview(companyId: string, period: 'today' | 'week' | 'month' | '30days' = 'week') {
+    const now = new Date();
+    let periodStart: Date;
+    let periodEnd: Date = now;
+    let previousStart: Date;
+    let previousEnd: Date;
+    let periodLabel: string;
+
+    // Calculate current and previous period date ranges
+    switch (period) {
+      case 'today':
+        periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        previousStart = new Date(periodStart);
+        previousStart.setDate(previousStart.getDate() - 1);
+        previousEnd = new Date(periodStart);
+        periodLabel = 'Today';
+        break;
+      case 'week':
+        periodStart = new Date(now);
+        periodStart.setDate(periodStart.getDate() - 7);
+        previousStart = new Date(periodStart);
+        previousStart.setDate(previousStart.getDate() - 7);
+        previousEnd = periodStart;
+        periodLabel = 'This Week';
+        break;
+      case 'month':
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        previousEnd = periodStart;
+        periodLabel = 'This Month';
+        break;
+      case '30days':
+      default:
+        periodStart = new Date(now);
+        periodStart.setDate(periodStart.getDate() - 30);
+        previousStart = new Date(periodStart);
+        previousStart.setDate(previousStart.getDate() - 30);
+        previousEnd = periodStart;
+        periodLabel = 'Last 30 Days';
+        break;
+    }
+
+    // Get all active drivers for the company
+    const drivers = await this.prisma.driver.findMany({
+      where: {
+        companyId,
+        isActive: true,
+      },
+      include: {
+        jobs: {
+          where: {
+            OR: [
+              // Jobs in current period
+              { createdAt: { gte: previousStart, lte: periodEnd } },
+            ],
+          },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            completedAt: true,
+            updatedAt: true,
+          },
+        },
+        earnings: {
+          where: {
+            earnedAt: { gte: previousStart, lte: periodEnd },
+          },
+          select: {
+            totalAmount: true,
+            earnedAt: true,
+          },
+        },
+      },
+    });
+
+    // Calculate days in period (excluding weekends for jobs/day calculation)
+    const daysInPeriod = this.countWorkingDays(periodStart, periodEnd);
+    const daysInPreviousPeriod = this.countWorkingDays(previousStart, previousEnd);
+
+    // Process each driver's stats
+    const driverStats = drivers.map((driver) => {
+      // Current period stats
+      const currentJobs = driver.jobs.filter(
+        (j) => j.createdAt >= periodStart && j.createdAt <= periodEnd
+      );
+      const currentCompletedJobs = currentJobs.filter((j) => j.status === 'COMPLETED');
+      const currentEarnings = driver.earnings.filter(
+        (e) => e.earnedAt >= periodStart && e.earnedAt <= periodEnd
+      );
+
+      // Previous period stats
+      const previousJobs = driver.jobs.filter(
+        (j) => j.createdAt >= previousStart && j.createdAt < previousEnd
+      );
+      const previousCompletedJobs = previousJobs.filter((j) => j.status === 'COMPLETED');
+      const previousEarnings = driver.earnings.filter(
+        (e) => e.earnedAt >= previousStart && e.earnedAt < previousEnd
+      );
+
+      // Calculate current period metrics
+      const totalJobs = currentJobs.length;
+      const completedJobs = currentCompletedJobs.length;
+      const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
+      const totalEarnings = currentEarnings.reduce(
+        (sum, e) => sum + Number(e.totalAmount),
+        0
+      );
+      const jobsPerDay = daysInPeriod > 0 ? totalJobs / daysInPeriod : 0;
+
+      // Calculate active days (unique days with jobs)
+      const activeDays = new Set(
+        currentJobs.map((j) => j.createdAt.toISOString().split('T')[0])
+      ).size;
+      const idleDays = Math.max(0, daysInPeriod - activeDays);
+
+      // Calculate previous period metrics for trends
+      const prevTotalJobs = previousJobs.length;
+      const prevCompletedJobs = previousCompletedJobs.length;
+      const prevCompletionRate = prevTotalJobs > 0 ? (prevCompletedJobs / prevTotalJobs) * 100 : 0;
+      const prevTotalEarnings = previousEarnings.reduce(
+        (sum, e) => sum + Number(e.totalAmount),
+        0
+      );
+
+      // Calculate trend percentages
+      const jobsChange = this.calculatePercentChange(totalJobs, prevTotalJobs);
+      const earningsChange = this.calculatePercentChange(totalEarnings, prevTotalEarnings);
+      const completionRateChange = completionRate - prevCompletionRate;
+
+      // Check for idle streak (last 3 days with no jobs)
+      const threeDaysAgo = new Date(now);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const recentJobs = driver.jobs.filter((j) => j.createdAt >= threeDaysAgo);
+      const hasIdleStreak = recentJobs.length === 0;
+
+      // Check if new driver (first job less than 7 days ago)
+      const firstJobDate = driver.jobs.length > 0
+        ? driver.jobs.reduce((min, j) => (j.createdAt < min ? j.createdAt : min), driver.jobs[0].createdAt)
+        : null;
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const isNewDriver = firstJobDate ? firstJobDate > sevenDaysAgo : true;
+
+      return {
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone || '',
+        isOnline: driver.isOnline,
+        lastLocation: driver.lastLocationLat && driver.lastLocationLng
+          ? {
+              lat: Number(driver.lastLocationLat),
+              lng: Number(driver.lastLocationLng),
+              updatedAt: driver.lastLocationUpdate,
+            }
+          : null,
+        stats: {
+          totalJobs,
+          completedJobs,
+          completionRate: Math.round(completionRate * 10) / 10,
+          totalEarnings: Math.round(totalEarnings * 100) / 100,
+          jobsPerDay: Math.round(jobsPerDay * 10) / 10,
+          activeDays,
+          idleDays,
+        },
+        trends: {
+          jobsChange: Math.round(jobsChange * 10) / 10,
+          earningsChange: Math.round(earningsChange * 10) / 10,
+          completionRateChange: Math.round(completionRateChange * 10) / 10,
+        },
+        alerts: {
+          isTopPerformer: false, // Will be calculated after company averages
+          isUnderperforming: false, // Will be calculated after company averages
+          hasIdleStreak,
+          isNewDriver,
+        },
+        lastActive: driver.lastLocationUpdate || driver.updatedAt,
+      };
+    });
+
+    // Calculate company averages
+    const driversWithJobs = driverStats.filter((d) => d.stats.totalJobs > 0);
+    const companyAverages = {
+      completionRate:
+        driversWithJobs.length > 0
+          ? driversWithJobs.reduce((sum, d) => sum + d.stats.completionRate, 0) / driversWithJobs.length
+          : 0,
+      jobsPerDay:
+        driversWithJobs.length > 0
+          ? driversWithJobs.reduce((sum, d) => sum + d.stats.jobsPerDay, 0) / driversWithJobs.length
+          : 0,
+      avgEarnings:
+        driversWithJobs.length > 0
+          ? driversWithJobs.reduce((sum, d) => sum + d.stats.totalEarnings, 0) / driversWithJobs.length
+          : 0,
+    };
+
+    // Set performance alerts based on company averages
+    let topPerformers = 0;
+    let needsAttention = 0;
+
+    driverStats.forEach((driver) => {
+      if (driver.stats.totalJobs > 0 && companyAverages.completionRate > 0) {
+        // Top performer: > 120% of company average completion rate
+        if (driver.stats.completionRate >= companyAverages.completionRate * 1.2) {
+          driver.alerts.isTopPerformer = true;
+          topPerformers++;
+        }
+        // Underperforming: < 80% of company average completion rate
+        else if (driver.stats.completionRate <= companyAverages.completionRate * 0.8) {
+          driver.alerts.isUnderperforming = true;
+          needsAttention++;
+        }
+      }
+      // Also flag drivers with idle streak as needing attention
+      if (driver.alerts.hasIdleStreak && !driver.alerts.isNewDriver) {
+        needsAttention++;
+      }
+    });
+
+    // Summary counts
+    const summary = {
+      totalDrivers: driverStats.length,
+      onlineNow: driverStats.filter((d) => d.isOnline).length,
+      topPerformers,
+      needsAttention,
+    };
+
+    return {
+      success: true,
+      data: {
+        period: {
+          start: periodStart,
+          end: periodEnd,
+          label: periodLabel,
+        },
+        previousPeriod: {
+          start: previousStart,
+          end: previousEnd,
+        },
+        companyAverages: {
+          completionRate: Math.round(companyAverages.completionRate * 10) / 10,
+          jobsPerDay: Math.round(companyAverages.jobsPerDay * 10) / 10,
+          avgEarnings: Math.round(companyAverages.avgEarnings * 100) / 100,
+        },
+        drivers: driverStats,
+        summary,
+      },
+    };
+  }
+
+  /**
+   * Calculate working days between two dates (excludes weekends)
+   */
+  private countWorkingDays(start: Date, end: Date): number {
+    let count = 0;
+    const current = new Date(start);
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return Math.max(count, 1); // At least 1 to avoid division by zero
+  }
+
+  /**
+   * Calculate percent change between current and previous values
+   */
+  private calculatePercentChange(current: number, previous: number): number {
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
+    }
+    return ((current - previous) / previous) * 100;
+  }
 }

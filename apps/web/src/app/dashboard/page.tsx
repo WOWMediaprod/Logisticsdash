@@ -295,6 +295,12 @@ export default function DashboardPage() {
             >
               Manage Resources
             </Link>
+            <Link
+              href="/dashboard/driver-performance"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-indigo-500 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-400"
+            >
+              Driver Performance
+            </Link>
           </div>
         </header>
 
