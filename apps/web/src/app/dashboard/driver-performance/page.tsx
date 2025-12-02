@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   Users,
   Wifi,
@@ -16,6 +17,7 @@ import {
   MapPin,
   Clock,
   RefreshCw,
+  ArrowLeft,
 } from "lucide-react";
 import { useCompany } from "../../../contexts/CompanyContext";
 import { getApiUrl } from "../../../lib/api-config";
@@ -256,11 +258,21 @@ export default function DriverPerformancePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Driver Performance</h1>
-          <p className="text-slate-500 mt-1">
-            Bird&apos;s eye view of all driver metrics and insights
-          </p>
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm mt-0.5"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Driver Performance</h1>
+            <p className="text-slate-500 mt-1">
+              Bird&apos;s eye view of all driver metrics and insights
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
