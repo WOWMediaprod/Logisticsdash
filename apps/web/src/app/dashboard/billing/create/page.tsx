@@ -577,8 +577,7 @@ export default function CreateBillPage() {
                       </div>
 
                       {/* Driver Reported Times */}
-                      {(cdnDetails.emptyPickupTime || cdnDetails.factoryInTime || cdnDetails.factoryOutTime ||
-                        cdnDetails.portInTime || cdnDetails.portOutTime) && (
+                      {cdnDetails.cdnDocumentId && (
                         <div className="border-t border-slate-200 pt-4 mt-4">
                           <h4 className="text-md font-semibold text-slate-900 mb-3 flex items-center gap-2">
                             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
