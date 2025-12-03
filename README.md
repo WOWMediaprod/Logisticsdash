@@ -29,12 +29,13 @@ logistics-platform/
 ### Recent Additions (Nov 2025)
 - ✅ **Driver Performance Dashboard**: Comprehensive real-time driver metrics and intelligent performance insights
   - Quick time filtering (Today, This Week, This Month, Last 30 Days)
-  - Sortable table with 9 performance metrics (jobs, completion rate, earnings, utilization)
-  - Company average benchmarks for performance comparison
+  - Sortable table with 8 performance metrics (jobs, completion rate, trends, utilization)
+  - Company average benchmarks for performance comparison (completion rate, jobs/day)
   - Intelligent alert system (Top Performers, Needs Attention, Idle Streaks, New Drivers)
   - Trend indicators showing performance change vs previous period
   - Interactive map with real-time driver locations (green=online, gray=offline)
   - Color-coded completion rates (Green ≥85%, Yellow 70-85%, Red <70%)
+  - Back button for easy navigation to main dashboard
   - Route: `/dashboard/driver-performance` | API: `GET /api/v1/driver-stats/overview`
 - ✅ **Complete Shipment Details Integration**: All job request details now stored and visible in job portal
   - 17 fields from JobRequest copied to Job model on creation

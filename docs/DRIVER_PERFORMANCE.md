@@ -6,6 +6,10 @@ The Driver Performance dashboard provides admins and dispatchers with a comprehe
 
 **Access**: `/dashboard/driver-performance`
 
+## Navigation
+
+**Back Button**: A back button in the header allows easy navigation to the main dashboard (`/dashboard`). The button features a clean, rounded design with hover effects matching the UI theme.
+
 ## Features
 
 ### 1. Time Period Filtering
@@ -26,11 +30,12 @@ Quick overview of key metrics:
 Performance benchmarks showing:
 - Average completion rate across all drivers
 - Average jobs per day
-- Average earnings per driver
 - Current selected time period
 
+**UI Design**: Compact blue bar with refined sizing (text-lg, reduced padding) for better visual balance with the rest of the dashboard.
+
 ### 4. Sortable Driver Table
-Comprehensive metrics for each driver with sorting capabilities:
+Comprehensive metrics for each driver with sorting capabilities (8 columns):
 
 | Column | Description |
 |--------|-------------|
@@ -39,7 +44,6 @@ Comprehensive metrics for each driver with sorting capabilities:
 | **Jobs** | Completed jobs / Total assigned jobs in period |
 | **Rate** | Completion rate % with color coding |
 | **Trend** | Job count change vs previous period (arrow + %) |
-| **Earnings** | Total earnings for the period |
 | **Jobs/Day** | Average jobs completed per working day |
 | **Active Days** | Days worked / Total days in period |
 | **Last Seen** | Relative time since last location update |
